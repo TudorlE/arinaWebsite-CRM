@@ -1,0 +1,13 @@
+{
+  "name": "arry-production",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"WEBSITE,CRM\" --prefix-colors \"yellow,cyan\" \"npm run dev --prefix website\" \"npm run dev --prefix crm\"",
+    "build": "npm run build --prefix website && npm run build --prefix crm",
+    "install:all": "npm install --prefix website && npm install --prefix crm"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
