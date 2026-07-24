@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     const jwtToken = await signToken({ userId: user.id, email: user.email, role: user.role });
 
-    const response = NextResponse.redirect(`${baseUrl}/`);
+    const response = NextResponse.redirect(`${baseUrl}/admin`);
     response.cookies.set('auth-token', jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

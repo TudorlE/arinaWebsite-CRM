@@ -14,16 +14,16 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: '/',              label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/schedule',      label: 'Program',     icon: CalendarDays,   studentAllowed: true, teacherAllowed: true },
-  { href: '/cabinets',      label: 'Cabinete',    icon: DoorOpen,                            teacherAllowed: true },
-  { href: '/payments',      label: 'Plăți',       icon: CreditCard },
-  { href: '/teachers',      label: 'Profesori',   icon: Music2,                              teacherAllowed: true },
-  { href: '/students',      label: 'Elevi',       icon: Users,                               teacherAllowed: true },
-  { href: '/registrations', label: 'Cereri Site', icon: Globe,          adminOnly: true },
-  { href: '/admin/users',   label: 'Aprobări',    icon: UserCheck,      adminOnly: true },
-  { href: '/roles',         label: 'Roluri',      icon: ShieldCheck,    adminOnly: true },
-  { href: '/settings',      label: 'Setări',      icon: Settings,                            teacherAllowed: true },
+  { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/admin/schedule',     label: 'Program',     icon: CalendarDays,   studentAllowed: true, teacherAllowed: true },
+  { href: '/admin/cabinets',     label: 'Cabinete',    icon: DoorOpen,                            teacherAllowed: true },
+  { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
+  { href: '/admin/teachers',     label: 'Profesori',   icon: Music2,                              teacherAllowed: true },
+  { href: '/admin/students',     label: 'Elevi',       icon: Users,                               teacherAllowed: true },
+  { href: '/admin/registrations',label: 'Cereri Site', icon: Globe,          adminOnly: true },
+  { href: '/admin/approvals',    label: 'Aprobări',    icon: UserCheck,      adminOnly: true },
+  { href: '/admin/roles',        label: 'Roluri',      icon: ShieldCheck,    adminOnly: true },
+  { href: '/admin/settings',     label: 'Setări',      icon: Settings,                            teacherAllowed: true },
 ];
 
 const BARS = [38, 78, 50, 100, 66, 88, 42, 72];
@@ -62,7 +62,7 @@ export default function Sidebar() {
   };
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001';
 

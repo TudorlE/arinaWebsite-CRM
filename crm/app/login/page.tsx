@@ -39,7 +39,7 @@ export default function LoginPage() {
         if (data.status === 'pending' || data.status === 'rejected') setPendingNotice(data.status);
         setError(data.error ?? 'Conectare eșuată');
       } else {
-        router.push('/'); router.refresh();
+        router.push('/admin'); router.refresh();
       }
     } catch {
       setError('Eroare de rețea. Te rugăm să încerci din nou.');
