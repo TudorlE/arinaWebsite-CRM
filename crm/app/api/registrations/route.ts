@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getRegistrations, createRegistration } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status');
+  const status = searchParams.get('status') ?? undefined;
 
-  let query = supabase.from('registrations').select('*').order('created_at', { ascending: false });
-  if (status) query = query.eq('status', status);
+  const registrations = getRegistrations(status);
+  return NextResponse.json({ registrations });
+}
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ registrations: data ?? [] });
+// Public endpoint — called server-side by the marketing website's registration form.
+export async function POST(request: NextRequest) {
+  try {
+    const { name, phone, email, age, course, message } = await request.json();
+
+    if (!name?.trim() || !phone?.trim() || !email?.trim()) {
+      return NextResponse.json({ error: 'Câmpurile obligatorii lipsesc' }, { status: 400 });
+    }
+
+    const registration = createRegistration({
+      name, phone, email,
+      age: age || null,
+      course: course || null,
+      message: message || null,
+    });
+
+    return NextResponse.json({ registration }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Eroare internă' }, { status: 500 });
+  }
 }

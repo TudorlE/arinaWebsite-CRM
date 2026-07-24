@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getStudents, createStudent } from '@/lib/db';
 import { createPaymentForStudent } from '@/lib/payments';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const search     = searchParams.get('search');
-  const instrument = searchParams.get('instrument');
-  const level      = searchParams.get('level');
+  const search     = searchParams.get('search') ?? undefined;
+  const instrument = searchParams.get('instrument') ?? undefined;
+  const level      = searchParams.get('level') ?? undefined;
 
-  let query = supabase
-    .from('students')
-    .select('*, teachers(name)')
-    .order('name');
-
-  if (instrument) query = query.contains('instruments', [instrument]);
-  if (level)      query = query.eq('level', level);
-  if (search)     query = query.ilike('name', `%${search}%`);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const students = (data ?? []).map(({ teachers, ...s }: { teachers: { name: string } | null; [key: string]: unknown }) => ({
-    ...s,
-    teacher_name: teachers?.name ?? null,
-  }));
-
+  const students = getStudents(search, instrument, level);
   return NextResponse.json({ students });
 }
 
@@ -34,21 +18,18 @@ export async function POST(request: NextRequest) {
     if (!name || !age || !phone || !email || !instruments?.length || !level || !monthly_fee) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    const { data, error } = await supabase
-      .from('students')
-      .insert({
-        name, age: Number(age), phone, email, instruments, level,
-        monthly_fee: Number(monthly_fee),
-        teacher_id: teacher_id ? Number(teacher_id) : null,
-      })
-      .select()
-      .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    const student = createStudent({
+      name, age: Number(age), phone, email, instruments, level,
+      monthly_fee: Number(monthly_fee),
+      teacher_id: teacher_id ? Number(teacher_id) : null,
+    });
+
     // Automation: auto-create the current month "unpaid" payment for the new student.
-    if (data?.id) {
-      try { await createPaymentForStudent(data.id, Number(monthly_fee)); } catch { /* non-fatal */ }
+    if (student?.id) {
+      try { await createPaymentForStudent(Number(student.id), Number(monthly_fee)); } catch { /* non-fatal */ }
     }
-    return NextResponse.json({ student: data }, { status: 201 });
+    return NextResponse.json({ student }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

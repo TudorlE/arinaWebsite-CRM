@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getLessons, createLesson } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -7,36 +7,15 @@ export async function GET(request: NextRequest) {
   const date      = searchParams.get('date');
   const status    = searchParams.get('status');
   const teacherId = searchParams.get('teacher_id');
-
   const cabinetId = searchParams.get('cabinet_id');
 
-  let query = supabase
-    .from('lessons')
-    .select('*, students(name), teachers(name), cabinets(name, color)')
-    .order('date', { ascending: false })
-    .order('time', { ascending: true });
-
-  if (studentId)  query = query.eq('student_id', studentId);
-  if (date)       query = query.eq('date', date);
-  if (status)     query = query.eq('status', status);
-  if (teacherId)  query = query.eq('teacher_id', teacherId);
-  if (cabinetId)  query = query.eq('cabinet_id', cabinetId);
-
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const lessons = (data ?? []).map(({ students, teachers, cabinets, ...l }: {
-    students: { name: string } | null;
-    teachers: { name: string } | null;
-    cabinets: { name: string; color: string } | null;
-    [key: string]: unknown;
-  }) => ({
-    ...l,
-    student_name: students?.name ?? null,
-    teacher_name: teachers?.name ?? null,
-    cabinet_name: cabinets?.name ?? null,
-    cabinet_color: cabinets?.color ?? null,
-  }));
+  const lessons = getLessons(
+    studentId ? Number(studentId) : undefined,
+    date ?? undefined,
+    status ?? undefined,
+    teacherId ? Number(teacherId) : undefined,
+    cabinetId ? Number(cabinetId) : undefined,
+  );
 
   return NextResponse.json({ lessons });
 }
@@ -47,21 +26,15 @@ export async function POST(request: NextRequest) {
     if (!student_id || !teacher_id || !date || !time || !duration) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    const { data, error } = await supabase
-      .from('lessons')
-      .insert({
-        student_id: Number(student_id),
-        teacher_id: Number(teacher_id),
-        date, time,
-        duration: Number(duration),
-        notes: notes ?? null,
-        status: 'scheduled',
-        cabinet_id: cabinet_id ? Number(cabinet_id) : null,
-      })
-      .select()
-      .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ lesson: data }, { status: 201 });
+    const lesson = createLesson({
+      student_id: Number(student_id),
+      teacher_id: Number(teacher_id),
+      date, time,
+      duration: Number(duration),
+      notes: notes ?? null,
+      cabinet_id: cabinet_id ? Number(cabinet_id) : null,
+    });
+    return NextResponse.json({ lesson }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
