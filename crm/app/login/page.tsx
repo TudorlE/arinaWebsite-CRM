@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 
 const BARS = [38, 78, 50, 100, 66, 88, 42, 72, 56, 84];
 
