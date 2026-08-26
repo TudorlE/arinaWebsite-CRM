@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
   Settings, LogOut, CalendarDays, ShieldCheck, UserCheck, DoorOpen, Globe, ExternalLink,
-  CalendarRange, Repeat, Mic2, ClipboardList, BookOpen,
+  CalendarRange, Repeat, Mic2, ClipboardList, BookOpen, Menu, X,
 } from 'lucide-react';
 
 type NavItem = {
@@ -42,6 +42,9 @@ export default function Sidebar() {
   const [role, setRole] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [newRegistrations, setNewRegistrations] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
@@ -75,12 +78,43 @@ export default function Sidebar() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001';
 
   return (
-    <aside style={{
-      width: 256, minWidth: 256, height: '100vh', position: 'sticky', top: 0,
-      display: 'flex', flexDirection: 'column',
-      background: 'var(--ink)', zIndex: 30, overflowY: 'auto',
-    }}>
-      {/* Logo */}
+    <>
+      {/* Mobile hamburger trigger */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        aria-label="Deschide meniul"
+        className="lg:hidden fixed top-3 left-3 z-40 p-2.5 rounded-xl shadow-lg"
+        style={{ background: 'var(--ink)' }}
+      >
+        <Menu style={{ width: 20, height: 20, color: '#fff' }} />
+      </button>
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+        />
+      )}
+
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-200 ease-out
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{
+          width: 256, minWidth: 256, height: '100vh', top: 0,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--ink)', overflowY: 'auto',
+        }}
+      >
+        <button
+          onClick={() => setMobileOpen(false)}
+          aria-label="Închide meniul"
+          className="lg:hidden absolute top-3 right-3 p-2 rounded-lg"
+          style={{ background: 'rgba(255,255,255,0.08)' }}
+        >
+          <X style={{ width: 16, height: 16, color: '#fff' }} />
+        </button>
+        {/* Logo */}
       <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           display: 'flex', alignItems: 'flex-end', gap: 2, height: 38, minWidth: 48, flexShrink: 0,
@@ -171,7 +205,8 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <style>{`@keyframes crm-bar { 0% { transform: scaleY(0.25); } 100% { transform: scaleY(1); } }`}</style>
-    </aside>
+        <style>{`@keyframes crm-bar { 0% { transform: scaleY(0.25); } 100% { transform: scaleY(1); } }`}</style>
+      </aside>
+    </>
   );
 }
