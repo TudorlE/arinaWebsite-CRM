@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!name || !birth_date || !phone || !email || !instruments?.length || !level || !monthly_fee) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    const { data, error } = await supabase
+    const { data: student, error } = await supabase
       .from('students')
       .insert({
         name, birth_date, phone, email, instruments, level,
@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     // Automation: auto-create the current month "unpaid" payment for the new student.
-    if (data?.id) {
-      try { await createPaymentForStudent(data.id, Number(monthly_fee)); } catch { /* non-fatal */ }
+    if (student?.id) {
+      try { await createPaymentForStudent(Number(student.id), Number(monthly_fee)); } catch { /* non-fatal */ }
     }
-    return NextResponse.json({ student: data }, { status: 201 });
+    return NextResponse.json({ student }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

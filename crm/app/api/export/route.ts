@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudents, getLessons, getPayments } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 function toCSV(rows: Record<string, unknown>[], headers: string[]): string {
   const escape = (val: unknown) => {
@@ -22,16 +22,32 @@ export async function GET(request: NextRequest) {
   let filename = '';
 
   if (type === 'students') {
-    const students = getStudents() as Record<string, unknown>[];
-    csv = toCSV(students, ['id', 'name', 'age', 'phone', 'email', 'instrument', 'level', 'monthly_fee', 'teacher_name', 'created_at']);
+    const { data, error } = await supabase.from('students').select('*, teachers(name)').order('name');
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const rows = (data ?? []).map(({ teachers, ...s }: { teachers: { name: string } | null; [key: string]: unknown }) => ({
+      ...s,
+      teacher_name: teachers?.name ?? null,
+    }));
+    csv = toCSV(rows, ['id', 'name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_name', 'created_at']);
     filename = 'students.csv';
   } else if (type === 'lessons') {
-    const lessons = getLessons() as Record<string, unknown>[];
-    csv = toCSV(lessons, ['id', 'student_name', 'teacher_name', 'date', 'time', 'duration', 'status', 'notes', 'created_at']);
+    const { data, error } = await supabase.from('lessons').select('*, students(name), teachers(name)').order('date', { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const rows = (data ?? []).map(({ students, teachers, ...l }: { students: { name: string } | null; teachers: { name: string } | null; [key: string]: unknown }) => ({
+      ...l,
+      student_name: students?.name ?? null,
+      teacher_name: teachers?.name ?? null,
+    }));
+    csv = toCSV(rows, ['id', 'student_name', 'teacher_name', 'date', 'time', 'duration', 'status', 'notes', 'created_at']);
     filename = 'lessons.csv';
   } else if (type === 'payments') {
-    const payments = getPayments() as Record<string, unknown>[];
-    csv = toCSV(payments, ['id', 'student_name', 'amount', 'month', 'year', 'status', 'payment_date', 'notes', 'created_at']);
+    const { data, error } = await supabase.from('payments').select('*, students(name)').order('year', { ascending: false }).order('month', { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const rows = (data ?? []).map(({ students, ...p }: { students: { name: string } | null; [key: string]: unknown }) => ({
+      ...p,
+      student_name: students?.name ?? null,
+    }));
+    csv = toCSV(rows, ['id', 'student_name', 'amount', 'month', 'year', 'status', 'payment_date', 'notes', 'created_at']);
     filename = 'payments.csv';
   } else {
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });

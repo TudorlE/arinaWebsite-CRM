@@ -13,3 +13,6 @@ yarn-error.log*
 .pnpm-debug.log*
 .vercel
 .turbo
+*.db
+*.db-shm
+*.db-wal

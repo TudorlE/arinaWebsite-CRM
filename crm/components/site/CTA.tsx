@@ -32,7 +32,7 @@ export default function CTA() {
     setLoading(true);
     setApiError(null);
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch('/api/registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

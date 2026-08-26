@@ -31,9 +31,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const body = await request.json();
     const allowed = ['name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_id', 'cabinet_id', 'notes', 'status'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
-    const { data, error } = await supabase.from('students').update(update).eq('id', id).select().single();
-    if (error || !data) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
-    return NextResponse.json({ student: data });
+    const { data: student, error } = await supabase.from('students').update(update).eq('id', id).select().single();
+    if (error || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    return NextResponse.json({ student });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -51,17 +51,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     if (body.action === 'add_note') {
-      const { data, error } = await supabase
+      const { data: note, error } = await supabase
         .from('student_notes')
         .insert({ student_id: Number(id), content: body.content })
         .select()
         .single();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      return NextResponse.json({ note: data }, { status: 201 });
+      return NextResponse.json({ note }, { status: 201 });
     }
     if (body.action === 'delete_note') {
-      const { error } = await supabase.from('student_notes').delete().eq('id', body.note_id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      const { error } = await supabase.from('student_notes').delete().eq('id', Number(body.note_id));
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ success: true });
     }
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

@@ -7,17 +7,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const { data, error } = await supabase
     .from('lessons')
-    .select('*, students(name), teachers(name)')
+    .select('*, students(name), teachers(name), cabinets(name, color)')
     .eq('id', id)
     .single();
   if (error || !data) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
-  const { students, teachers, ...lesson } = data as {
-    students: { name: string } | null;
-    teachers: { name: string } | null;
-    [key: string]: unknown;
-  };
+  const { students, teachers, cabinets, ...rest } = data as { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; [key: string]: unknown };
   return NextResponse.json({
-    lesson: { ...lesson, student_name: students?.name ?? null, teacher_name: teachers?.name ?? null },
+    lesson: { ...rest, student_name: students?.name ?? null, teacher_name: teachers?.name ?? null, cabinet_name: cabinets?.name ?? null, cabinet_color: cabinets?.color ?? null },
   });
 }
 

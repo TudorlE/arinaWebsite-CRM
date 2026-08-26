@@ -1,18 +1,8 @@
 /**
  * Payments automation module — reusable helpers for the music school CRM.
- * Uses the local SQLite database (better-sqlite3) via lib/db.ts.
+ * Uses Supabase (the app's shared data layer for business data).
  */
-import Database from 'better-sqlite3';
-import path from 'path';
-
-declare global { var _arryDb: Database.Database | undefined; }
-function getDb(): Database.Database {
-  if (global._arryDb) return global._arryDb;
-  const db = new Database(path.join(process.cwd(), 'arrycrm.db'));
-  db.pragma('journal_mode = WAL');
-  global._arryDb = db;
-  return db;
-}
+import { supabase } from './supabase';
 
 /* ─────────────────────────────────────────────────────────────
  *  Types
@@ -53,25 +43,32 @@ export async function createMonthlyPayments(
   year?: number,
 ): Promise<{ created: number; skipped: number; error?: string }> {
   const period = (month && year) ? { month, year } : currentPeriod();
-  const db = getDb();
 
-  const students = db.prepare('SELECT id, monthly_fee FROM students').all() as StudentRow[];
-  const existing = db.prepare('SELECT student_id FROM payments WHERE month = ? AND year = ?')
-    .all(period.month, period.year) as { student_id: number }[];
-  const existingIds = new Set(existing.map(p => p.student_id));
+  const { data: students, error: studentsErr } = await supabase.from('students').select('id, monthly_fee');
+  if (studentsErr) return { created: 0, skipped: 0, error: studentsErr.message };
 
-  const toInsert = students.filter(s => !existingIds.has(s.id));
+  const { data: existing, error: existingErr } = await supabase
+    .from('payments')
+    .select('student_id')
+    .eq('month', period.month)
+    .eq('year', period.year);
+  if (existingErr) return { created: 0, skipped: 0, error: existingErr.message };
+
+  const existingIds = new Set((existing ?? []).map((p: { student_id: number }) => p.student_id));
+  const toInsert = ((students ?? []) as StudentRow[]).filter(s => !existingIds.has(s.id));
   if (toInsert.length === 0) return { created: 0, skipped: existingIds.size };
 
-  const stmt = db.prepare(
-    'INSERT INTO payments (student_id, amount, month, year, status) VALUES (?,?,?,?,?)'
+  const { error: insertErr } = await supabase.from('payments').insert(
+    toInsert.map(s => ({
+      student_id: s.id,
+      amount: Number(s.monthly_fee) || 0,
+      month: period.month,
+      year: period.year,
+      status: 'unpaid',
+    })),
   );
-  const insertMany = db.transaction(() => {
-    for (const s of toInsert) {
-      stmt.run(s.id, Number(s.monthly_fee) || 0, period.month, period.year, 'unpaid');
-    }
-  });
-  insertMany();
+  if (insertErr) return { created: 0, skipped: existingIds.size, error: insertErr.message };
+
   return { created: toInsert.length, skipped: existingIds.size };
 }
 
@@ -85,14 +82,20 @@ export async function createPaymentForStudent(
   monthlyFee: number,
 ): Promise<void> {
   const { month, year } = currentPeriod();
-  const db = getDb();
-  const existing = db.prepare(
-    'SELECT id FROM payments WHERE student_id = ? AND month = ? AND year = ?'
-  ).get(studentId, month, year);
+  const { data: existing } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('student_id', studentId)
+    .eq('month', month)
+    .eq('year', year)
+    .maybeSingle();
   if (existing) return;
-  db.prepare('INSERT INTO payments (student_id, amount, month, year, status) VALUES (?,?,?,?,?)').run(
-    studentId, Number(monthlyFee) || 0, month, year, 'unpaid'
-  );
+  await supabase.from('payments').insert({
+    student_id: studentId,
+    amount: Number(monthlyFee) || 0,
+    month, year,
+    status: 'unpaid',
+  });
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -109,13 +112,12 @@ export async function updateOverduePayments(): Promise<{ updated: number; error?
  *     Sets status=paid + paid_at=now() (and payment_date today).
  * ────────────────────────────────────────────────────────────*/
 export async function markPaymentAsPaid(paymentId: number): Promise<{ error?: string }> {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    getDb().prepare("UPDATE payments SET status = 'paid', payment_date = ? WHERE id = ?").run(today, paymentId);
-    return {};
-  } catch (e) {
-    return { error: String(e) };
-  }
+  const today = new Date().toISOString().split('T')[0];
+  const { error } = await supabase
+    .from('payments')
+    .update({ status: 'paid', payment_date: today })
+    .eq('id', paymentId);
+  return error ? { error: error.message } : {};
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -139,17 +141,19 @@ export async function calculateRevenue(
   year?: number,
 ): Promise<RevenueSummary> {
   const period = (month && year) ? { month, year } : currentPeriod();
-  const db = getDb();
 
   // All-time paid total
-  const totalRow = db.prepare("SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE status='paid'").get() as { t: number };
-  const total = totalRow.t;
+  const { data: totalRows } = await supabase.from('payments').select('amount').eq('status', 'paid');
+  const total = (totalRows ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0);
 
   // Current period rows
   type PRow = { amount: number; status: string; student_id: number };
-  const rows = db.prepare(
-    'SELECT amount, status, student_id FROM payments WHERE month = ? AND year = ?'
-  ).all(period.month, period.year) as PRow[];
+  const { data: rowsData } = await supabase
+    .from('payments')
+    .select('amount, status, student_id')
+    .eq('month', period.month)
+    .eq('year', period.year);
+  const rows = (rowsData ?? []) as PRow[];
 
   const monthRevenue   = rows.filter(r => r.status === 'paid').reduce((s, r) => s + r.amount, 0);
   const outstanding    = rows.filter(r => r.status === 'unpaid' || r.status === 'overdue').reduce((s, r) => s + r.amount, 0);

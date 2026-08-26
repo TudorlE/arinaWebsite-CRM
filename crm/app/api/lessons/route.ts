@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
   const date      = searchParams.get('date');
   const status    = searchParams.get('status');
   const teacherId = searchParams.get('teacher_id');
-
   const cabinetId = searchParams.get('cabinet_id');
 
   let query = supabase
@@ -16,21 +15,16 @@ export async function GET(request: NextRequest) {
     .order('date', { ascending: false })
     .order('time', { ascending: true });
 
-  if (studentId)  query = query.eq('student_id', studentId);
-  if (date)       query = query.eq('date', date);
-  if (status)     query = query.eq('status', status);
-  if (teacherId)  query = query.eq('teacher_id', teacherId);
-  if (cabinetId)  query = query.eq('cabinet_id', cabinetId);
+  if (studentId) query = query.eq('student_id', Number(studentId));
+  if (date)      query = query.eq('date', date);
+  if (status)    query = query.eq('status', status);
+  if (teacherId) query = query.eq('teacher_id', Number(teacherId));
+  if (cabinetId) query = query.eq('cabinet_id', Number(cabinetId));
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const lessons = (data ?? []).map(({ students, teachers, cabinets, ...l }: {
-    students: { name: string } | null;
-    teachers: { name: string } | null;
-    cabinets: { name: string; color: string } | null;
-    [key: string]: unknown;
-  }) => ({
+  const lessons = (data ?? []).map(({ students, teachers, cabinets, ...l }: { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; [key: string]: unknown }) => ({
     ...l,
     student_name: students?.name ?? null,
     teacher_name: teachers?.name ?? null,
