@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"/c/Users/admin/Desktop/ArryProduction/crm/app/api/recurring-schedules/[id]/generate\")",
+      "Bash(mkdir -p \"/c/Users/admin/Desktop/ArryProduction/crm/app/api/auditions/[id]\")",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(git diff *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/admin/schedule)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/admin/cabinets)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/admin/students)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/admin/recurring-schedule)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/admin/general-schedule)",
+      "Bash(curl -s \"http://localhost:3001/api/lessons?status=scheduled\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({path:'.env.local'}\\); console.log\\('URL set:', !!process.env.NEXT_PUBLIC_SUPABASE_URL\\); console.log\\('KEY set:', !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\\);\")",
+      "Bash(awk -F= '/^NEXT_PUBLIC_SUPABASE_URL=/{print \"URL length:\", length\\($2\\)} /^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=/{print \"KEY length:\", length\\($2\\)}' .env.local)",
+      "Bash(mkdir -p \"/c/Users/admin/Desktop/ArryProduction/crm/app/api/cabinets/[id]/day-status\")",
+      "Bash(curl -s -o /dev/null -w \"cabinets: %{http_code}\\\\n\" http://localhost:3001/admin/cabinets)",
+      "Bash(curl -s -o /dev/null -w \"students: %{http_code}\\\\n\" http://localhost:3001/admin/students)",
+      "Bash(curl -s -o /dev/null -w \"students-attendance: %{http_code}\\\\n\" http://localhost:3001/admin/students-attendance)",
+      "Bash(curl -s -o /dev/null -w \"teachers: %{http_code}\\\\n\" http://localhost:3001/admin/teachers)",
+      "Bash(curl -s -o /dev/null -w \"teachers-attendance: %{http_code}\\\\n\" http://localhost:3001/admin/teachers-attendance)",
+      "Bash(npm run *)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\admin\\Desktop\\ArryProduction\\crm\\app\\api\\recurring-schedules\\[id]",
+      "C:\\Users\\admin\\Desktop\\ArryProduction\\crm\\app\\api\\auditions",
+      "C:\\Users\\admin\\Desktop\\ArryProduction\\crm\\app\\api\\cabinets\\[id]"
+    ]
+  }
+}

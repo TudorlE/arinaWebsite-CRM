@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export async function GET() {
-  const [cabinetsRes, assignmentsRes] = await Promise.all([
+  const [cabinetsRes, assignmentsRes, dayStatusRes] = await Promise.all([
     supabase.from('cabinets').select('*').order('name'),
     supabase.from('cabinet_teacher_assignments').select('*, teachers(name)'),
+    supabase.from('cabinet_day_status').select('*'),
   ]);
 
   if (cabinetsRes.error) return NextResponse.json({ error: cabinetsRes.error.message }, { status: 500 });
@@ -14,7 +15,7 @@ export async function GET() {
     teacher_name: (teachers as { name: string } | null)?.name ?? null,
   }));
 
-  return NextResponse.json({ cabinets: cabinetsRes.data, assignments });
+  return NextResponse.json({ cabinets: cabinetsRes.data, assignments, dayStatuses: dayStatusRes.data ?? [] });
 }
 
 export async function POST(request: NextRequest) {

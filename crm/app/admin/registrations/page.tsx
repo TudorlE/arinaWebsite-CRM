@@ -72,7 +72,7 @@ export default function RegistrationsPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-blue-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="relative flex items-center gap-4">
           <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
@@ -80,7 +80,7 @@ export default function RegistrationsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Cereri de pe Site</h1>
-            <p className="text-indigo-200 text-sm font-medium mt-0.5">Înregistrări primite prin formularul de pe arryproduction.ro</p>
+            <p className="text-brand-200 text-sm font-medium mt-0.5">Înregistrări primite prin formularul de pe arryproduction.ro</p>
           </div>
           <div className="ml-auto flex gap-3">
             <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white/20 text-white">
@@ -103,7 +103,7 @@ export default function RegistrationsPage() {
             ...Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label, count: data?.registrations?.filter((r: Registration) => r.status === k).length ?? 0 })),
           ].map(f => (
             <button key={f.value} onClick={() => setFilterStatus(f.value)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 border-2 ${filterStatus === f.value ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300'}`}>
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 border-2 ${filterStatus === f.value ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-300'}`}>
               {f.label}
               <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs flex items-center justify-center font-bold ${filterStatus === f.value ? 'bg-white/25 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>
                 {f.count}
@@ -115,8 +115,8 @@ export default function RegistrationsPage() {
         {/* Cards */}
         {registrations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-              <UserPlus className="w-10 h-10 text-indigo-300" />
+            <div className="w-20 h-20 rounded-3xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+              <UserPlus className="w-10 h-10 text-brand-300" />
             </div>
             <p className="text-lg font-bold text-slate-700 dark:text-slate-200">
               {filterStatus ? 'Nicio cerere cu acest status' : 'Nu există cereri încă'}
@@ -153,11 +153,11 @@ export default function RegistrationsPage() {
                   <div className="px-5 py-4 space-y-2.5">
                     <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                       <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <a href={`tel:${r.phone}`} className="hover:text-indigo-600 transition-colors font-medium">{r.phone}</a>
+                      <a href={`tel:${r.phone}`} className="hover:text-brand-600 transition-colors font-medium">{r.phone}</a>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                       <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <a href={`mailto:${r.email}`} className="hover:text-indigo-600 transition-colors font-medium truncate">{r.email}</a>
+                      <a href={`mailto:${r.email}`} className="hover:text-brand-600 transition-colors font-medium truncate">{r.email}</a>
                     </div>
                     {r.course && (
                       <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -179,7 +179,7 @@ export default function RegistrationsPage() {
                       <select
                         value={r.status}
                         onChange={e => updateStatus(r.id, e.target.value)}
-                        className="flex-1 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        className="flex-1 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
                       >
                         {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                           <option key={k} value={k}>{v.label}</option>

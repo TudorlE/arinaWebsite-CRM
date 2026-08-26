@@ -150,6 +150,12 @@ function initializeTables(db: Database.Database): void {
         COMMIT;
       `);
     }
+    // Migration: add teacher_id column — links a `role='teacher'` user to their
+    // Supabase `teachers` row (no real FK possible across the two databases).
+    const colsForTeacherLink = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    if (!colsForTeacherLink.some(c => c.name === 'teacher_id')) {
+      db.exec('ALTER TABLE users ADD COLUMN teacher_id INTEGER');
+    }
   } catch (e) { console.error('[db migration]', e); }
 }
 
@@ -418,27 +424,28 @@ export interface UserRow {
   email: string;
   role: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  teacher_id: number | null;
   created_at: string;
 }
 
 export function getUserByEmail(email: string) {
   return getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) as
-    | { id: number; name: string; email: string; password_hash: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; created_at: string }
+    | { id: number; name: string; email: string; password_hash: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; teacher_id: number | null; created_at: string }
     | undefined;
 }
 
 export function getUserById(id: number) {
-  return getDb().prepare('SELECT id, name, email, role, status, created_at FROM users WHERE id = ?').get(id) as UserRow | undefined;
+  return getDb().prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE id = ?').get(id) as UserRow | undefined;
 }
 
 export function getAllUsers(status?: string) {
   if (status) {
     return getDb()
-      .prepare('SELECT id, name, email, role, status, created_at FROM users WHERE status = ? ORDER BY id ASC')
+      .prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE status = ? ORDER BY id ASC')
       .all(status) as UserRow[];
   }
   return getDb()
-    .prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY id ASC')
+    .prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users ORDER BY id ASC')
     .all() as UserRow[];
 }
 
@@ -449,8 +456,12 @@ export function createUser(data: { name: string; email: string; password_hash: s
   return getUserById(Number(info.lastInsertRowid));
 }
 
-export function approveUser(id: number, role: string) {
-  getDb().prepare("UPDATE users SET status = 'approved', role = ? WHERE id = ?").run(role, id);
+export function approveUser(id: number, role: string, teacherId?: number | null) {
+  if (role === 'teacher' && teacherId != null) {
+    getDb().prepare("UPDATE users SET status = 'approved', role = ?, teacher_id = ? WHERE id = ?").run(role, teacherId, id);
+  } else {
+    getDb().prepare("UPDATE users SET status = 'approved', role = ? WHERE id = ?").run(role, id);
+  }
   return getUserById(id);
 }
 

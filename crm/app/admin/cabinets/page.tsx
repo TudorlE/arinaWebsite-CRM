@@ -3,61 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import {
-  ChevronLeft, ChevronRight, DoorOpen, Plus, Pencil, Trash2,
-  Settings2, X, Check, UserRound,
+  DoorOpen, Plus, Pencil, Trash2, Settings2, X, Check, UserRound, Lock, Unlock,
 } from 'lucide-react';
-import LessonForm from '@/components/lessons/LessonForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Lesson, Cabinet, CabinetTeacherAssignment } from '@/lib/types';
+import { Cabinet, CabinetTeacherAssignment, CabinetDayStatus } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-// 45-minute slots 08:00 → 17:45
-const TIME_SLOTS: string[] = (() => {
-  const slots: string[] = [];
-  let min = 8 * 60;
-  while (min < 18 * 60) {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-    min += 45;
-  }
-  return slots;
-})();
-
 const DAYS_RO = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
-const SHORT_DAYS = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
-
-function fmtDate(d: Date) {
-  return d.toISOString().split('T')[0];
-}
-
-function getWeekDates(ref: Date): Date[] {
-  const day = ref.getDay();
-  const monday = new Date(ref);
-  monday.setDate(ref.getDate() - day + 1);
-  return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
-// Find closest 45-min slot to a lesson's time
-function snapToSlot(time: string): string {
-  const [h, m] = time.split(':').map(Number);
-  const totalMin = h * 60 + m;
-  let best = TIME_SLOTS[0];
-  let bestDiff = Infinity;
-  for (const slot of TIME_SLOTS) {
-    const [sh, sm] = slot.split(':').map(Number);
-    const diff = Math.abs(totalMin - (sh * 60 + sm));
-    if (diff < bestDiff) { bestDiff = diff; best = slot; }
-  }
-  return best;
-}
+// Displayed Monday-first, matching how the studio's week is organized.
+const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
 const CABINET_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f97316',
@@ -71,10 +28,7 @@ export default function CabinetsPage() {
   }, []);
   const isAdmin = role === 'admin';
 
-  const today = fmtDate(new Date());
-  const [reference, setReference] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [animDir, setAnimDir] = useState<'left' | 'right' | null>(null);
+  const [selectedDow, setSelectedDow] = useState(new Date().getDay());
 
   // Cabinet management modal state
   const [showManage, setShowManage] = useState(false);
@@ -82,79 +36,34 @@ export default function CabinetsPage() {
   const [cabinetForm, setCabinetForm] = useState({ name: '', color: '#6366f1' });
   const [savingCabinet, setSavingCabinet] = useState(false);
   const [deletingCabinetId, setDeletingCabinetId] = useState<number | null>(null);
-
-  // Lesson form state
-  const [addCell, setAddCell] = useState<{ cabinetId: number; time: string; teacherId: number | null } | null>(null);
-  const [editLesson, setEditLesson] = useState<Lesson | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const { toasts, toast, remove } = useToast();
 
-  // Data fetching
   const { data: cabData, mutate: mutateCabs } = useSWR('/api/cabinets', fetcher);
-  const { data: lessonsData, mutate: mutateLessons } = useSWR(
-    `/api/lessons?date=${selectedDate}`,
-    fetcher,
-  );
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
 
-  const cabinets: Cabinet[]                     = cabData?.cabinets ?? [];
+  const cabinets: Cabinet[] = cabData?.cabinets ?? [];
   const allAssignments: CabinetTeacherAssignment[] = (cabData?.assignments ?? []).map((a: CabinetTeacherAssignment & { teachers?: { name: string } | null }) => ({
     ...a,
     teacher_name: (a as unknown as { teachers?: { name: string } | null }).teachers?.name ?? a.teacher_name ?? null,
   }));
-  const lessons: Lesson[] = lessonsData?.lessons ?? [];
+  const dayStatuses: CabinetDayStatus[] = cabData?.dayStatuses ?? [];
   const teachers: { id: number; name: string }[] = teachersData?.teachers ?? [];
 
-  const weekDates = getWeekDates(reference);
-  const selectedDow = new Date(selectedDate + 'T00:00:00').getDay();
-
-  // Get teacher assignment for a cabinet on a given day-of-week
   const getAssignment = useCallback(
     (cabinetId: number, dow: number) =>
       allAssignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === dow) ?? null,
     [allAssignments],
   );
 
-  // Get lesson for a specific cabinet + time slot
-  const getCellLesson = (cabinetId: number, slot: string): Lesson | null => {
-    return lessons.find(l => l.cabinet_id === cabinetId && snapToSlot(l.time ?? '') === slot) ?? null;
-  };
-
-  // Lessons without cabinet assignment (to show in info strip)
-  const unassignedCount = lessons.filter(l => !l.cabinet_id).length;
-
-  // ── Navigation ──────────────────────────────────────────────────────────────
-  const navigate = (dir: 'prev' | 'next') => {
-    setAnimDir(dir === 'prev' ? 'right' : 'left');
-    setTimeout(() => {
-      const d = new Date(reference);
-      d.setDate(d.getDate() + (dir === 'prev' ? -7 : 7));
-      setReference(d);
-      // Keep same day-of-week, update date
-      const newWeek = getWeekDates(d);
-      const sameDoW = newWeek.find(wd => wd.getDay() === selectedDow);
-      if (sameDoW) setSelectedDate(fmtDate(sameDoW));
-      setAnimDir(null);
-    }, 180);
-  };
-
-  const goToday = () => {
-    setAnimDir('right');
-    setTimeout(() => {
-      setReference(new Date());
-      setSelectedDate(today);
-      setAnimDir(null);
-    }, 180);
-  };
+  const getDayStatus = useCallback(
+    (cabinetId: number, dow: number) =>
+      dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === dow)?.status ?? 'liber',
+    [dayStatuses],
+  );
 
   // ── Cabinet CRUD ─────────────────────────────────────────────────────────────
-  const openAddCabinet = () => {
-    setManagingCabinet(null);
-    setCabinetForm({ name: '', color: '#6366f1' });
-  };
-
   const openEditCabinet = (cab: Cabinet) => {
     setManagingCabinet(cab);
     setCabinetForm({ name: cab.name, color: cab.color });
@@ -194,7 +103,6 @@ export default function CabinetsPage() {
     else toast('Eroare la ștergere', 'error');
   };
 
-  // ── Teacher assignment ───────────────────────────────────────────────────────
   const setTeacherAssignment = async (cabinetId: number, dow: number, teacherId: number | null) => {
     await fetch(`/api/cabinets/${cabinetId}/assignments`, {
       method: 'PUT',
@@ -204,33 +112,28 @@ export default function CabinetsPage() {
     mutateCabs();
   };
 
-  // ── Lesson actions ───────────────────────────────────────────────────────────
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  // ── Ocupat / Liber — editabil oricând, fără blocare după salvare ───────────
+  const toggleDayStatus = async (cabinetId: number, dow: number, current: 'liber' | 'ocupat') => {
+    const next = current === 'liber' ? 'ocupat' : 'liber';
+    setTogglingId(cabinetId);
     try {
-      const res = await fetch(`/api/lessons/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { toast('Lecție ștearsă', 'success'); mutateLessons(); }
-      else toast('Eroare la ștergere', 'error');
+      const res = await fetch(`/api/cabinets/${cabinetId}/day-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day_of_week: dow, status: next }),
+      });
+      if (res.ok) mutateCabs();
+      else toast('Eroare la salvare', 'error');
     } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
+      setTogglingId(null);
     }
-  };
-
-  // ── Render ──────────────────────────────────────────────────────────────────
-  const fmtWeekRange = () => {
-    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    const a = weekDates[0].toLocaleDateString('ro-RO', opts);
-    const b = weekDates[5].toLocaleDateString('ro-RO', opts);
-    return `${a} – ${b} ${weekDates[0].getFullYear()}`;
   };
 
   return (
     <div className="flex flex-col flex-1">
 
       {/* ── Header banner ──────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-accent-600 to-brand-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -238,9 +141,9 @@ export default function CabinetsPage() {
             <DoorOpen className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Orar pe Cabinete</h1>
-            <p className="text-purple-200 text-sm font-medium mt-0.5">
-              Vizualizează și gestionează programul pe încăperi
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Cabinete General</h1>
+            <p className="text-accent-200 text-sm font-medium mt-0.5">
+              Șablon recurent pe zilele săptămânii — profesor alocat și status Ocupat/Liber
             </p>
           </div>
           <div className="ml-auto flex gap-3">
@@ -248,54 +151,35 @@ export default function CabinetsPage() {
               <span className="text-2xl font-extrabold leading-none">{cabinets.length}</span>
               <span className="text-xs font-medium opacity-80 mt-0.5">Cabinete</span>
             </div>
-            <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white/20 text-white">
-              <span className="text-2xl font-extrabold leading-none">{lessons.filter(l => l.cabinet_id).length}</span>
-              <span className="text-xs font-medium opacity-80 mt-0.5">Lecții azi</span>
-            </div>
           </div>
         </div>
       </div>
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
 
-        {/* ── Week navigation ─────────────────────────────────────────── */}
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={() => navigate('prev')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
-          >
-            <ChevronLeft className="w-6 h-6 text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors duration-200" />
-          </button>
-
-          <div
-            className="flex flex-col items-center min-w-64 select-none transition-all duration-200"
-            style={{
-              opacity: animDir ? 0 : 1,
-              transform: animDir === 'left' ? 'translateX(-20px) scale(0.97)' : animDir === 'right' ? 'translateX(20px) scale(0.97)' : 'translateX(0) scale(1)',
-            }}
-          >
-            <span className="text-xs font-semibold uppercase tracking-widest text-violet-500 dark:text-violet-400 mb-0.5">Săptămâna</span>
-            <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">{fmtWeekRange()}</span>
+        {/* ── Day tabs (recurring, no date) ────────────────────────────── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+            {DISPLAY_DAYS.map(dow => {
+              const isSelected = dow === selectedDow;
+              return (
+                <button
+                  key={dow}
+                  onClick={() => setSelectedDow(dow)}
+                  className={`flex-shrink-0 px-5 py-3 rounded-2xl border-2 text-sm font-bold transition-all duration-200 hover:scale-105 active:scale-95
+                    ${isSelected
+                      ? 'bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-200 dark:shadow-brand-900/40'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-300 dark:hover:border-brand-700'}`}
+                >
+                  {DAYS_RO[dow]}
+                </button>
+              );
+            })}
           </div>
-
-          <button
-            onClick={() => navigate('next')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
-          >
-            <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors duration-200" />
-          </button>
-
-          <button
-            onClick={goToday}
-            className="ml-1 px-5 py-2 text-sm font-bold rounded-2xl bg-violet-600 text-white shadow-md hover:bg-violet-500 hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
-          >
-            Azi
-          </button>
-
           {isAdmin && (
             <button
               onClick={() => setShowManage(true)}
-              className="ml-2 flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-md hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all duration-200 hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-md hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-all duration-200 hover:scale-105"
             >
               <Settings2 className="w-4 h-4" />
               Gestionare
@@ -303,50 +187,11 @@ export default function CabinetsPage() {
           )}
         </div>
 
-        {/* ── Day tabs ────────────────────────────────────────────────── */}
-        <div
-          className="flex gap-2 overflow-x-auto pb-1"
-          style={{
-            opacity: animDir ? 0 : 1,
-            transition: 'opacity 0.18s ease',
-          }}
-        >
-          {weekDates.map((d, i) => {
-            const ds = fmtDate(d);
-            const isSelected = ds === selectedDate;
-            const isToday = ds === today;
-            const dow = d.getDay();
-            return (
-              <button
-                key={i}
-                onClick={() => setSelectedDate(ds)}
-                className={`flex-shrink-0 flex flex-col items-center px-5 py-3 rounded-2xl border-2 transition-all duration-200 hover:scale-105 active:scale-95
-                  ${isSelected
-                    ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-200 dark:shadow-violet-900/40'
-                    : isToday
-                      ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300 dark:hover:border-violet-700'}`}
-              >
-                <span className="text-xs font-semibold uppercase tracking-wider opacity-80">{SHORT_DAYS[dow]}</span>
-                <span className="text-lg font-extrabold leading-tight mt-0.5">{d.getDate()}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Unassigned lessons notice ───────────────────────────────── */}
-        {unassignedCount > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm font-medium">
-            <span className="text-lg">⚠️</span>
-            <span>{unassignedCount} {unassignedCount === 1 ? 'lecție' : 'lecții'} din această zi nu {unassignedCount === 1 ? 'are' : 'au'} cabinet alocat — {unassignedCount === 1 ? 'apare' : 'apar'} doar în „Program".</span>
-          </div>
-        )}
-
         {/* ── No cabinets state ───────────────────────────────────────── */}
         {cabinets.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-16 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-              <DoorOpen className="w-10 h-10 text-violet-400" />
+            <div className="w-20 h-20 rounded-3xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+              <DoorOpen className="w-10 h-10 text-brand-400" />
             </div>
             <div>
               <p className="text-lg font-bold text-slate-700 dark:text-slate-200">Nu există cabinete</p>
@@ -362,114 +207,56 @@ export default function CabinetsPage() {
           </div>
         )}
 
-        {/* ── Cabinet grid ─────────────────────────────────────────────── */}
+        {/* ── Cabinets for the selected day ────────────────────────────── */}
         {cabinets.length > 0 && (
-          <div
-            className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
-            style={{
-              opacity: animDir ? 0 : 1,
-              transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)',
-              transition: 'opacity 0.18s ease, transform 0.18s ease',
-            }}
-          >
-            <div style={{ minWidth: `${Math.max(600, cabinets.length * 220 + 80)}px` }}>
-
-              {/* Column headers */}
-              <div
-                className="grid border-b-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10"
-                style={{ gridTemplateColumns: `80px repeat(${cabinets.length}, 1fr)` }}
-              >
-                <div className="py-4 px-3 text-xs font-mono text-slate-400 text-right select-none">Ora</div>
-                {cabinets.map(cab => {
-                  const asgn = getAssignment(cab.id, selectedDow);
-                  return (
-                    <div
-                      key={cab.id}
-                      className="py-4 px-4 text-center border-l border-slate-200 dark:border-slate-700"
-                    >
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <span
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: cab.color }}
-                        />
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{cab.name}</p>
-                      </div>
-                      {asgn?.teacher_name ? (
-                        <p className="text-xs font-semibold" style={{ color: cab.color }}>
-                          {asgn.teacher_name}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic">Fără profesor</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Time-slot rows */}
-              {TIME_SLOTS.map(slot => (
-                <div
-                  key={slot}
-                  className="grid border-b border-slate-100 dark:border-slate-800"
-                  style={{ gridTemplateColumns: `80px repeat(${cabinets.length}, 1fr)`, minHeight: '72px' }}
-                >
-                  <div className="py-3 px-3 text-xs font-mono text-slate-400 text-right pt-3 border-r border-slate-100 dark:border-slate-800 select-none">
-                    {slot}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {cabinets.map(cab => {
+              const asgn = getAssignment(cab.id, selectedDow);
+              const status = getDayStatus(cab.id, selectedDow);
+              const isOcupat = status === 'ocupat';
+              return (
+                <div key={cab.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: cab.color }} />
+                    <p className="font-bold text-slate-800 dark:text-slate-100 flex-1">{cab.name}</p>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${isOcupat ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                      {isOcupat ? 'Ocupat' : 'Liber'}
+                    </span>
                   </div>
 
-                  {cabinets.map(cab => {
-                    const lesson = getCellLesson(cab.id, slot);
-                    const asgn   = getAssignment(cab.id, selectedDow);
-                    return (
-                      <div
-                        key={cab.id}
-                        className="group relative border-l border-slate-100 dark:border-slate-800 p-2 flex flex-col gap-1 transition-colors duration-150 hover:bg-violet-50/40 dark:hover:bg-violet-900/10"
-                      >
-                        {lesson ? (
-                          <LessonCell
-                            lesson={lesson}
-                            color={cab.color}
-                            onEdit={() => setEditLesson(lesson)}
-                            onDelete={() => setDeleteTarget(lesson)}
-                            isAdmin={isAdmin}
-                          />
-                        ) : (
-                          isAdmin && (
-                            <button
-                              onClick={() => setAddCell({
-                                cabinetId: cab.id,
-                                time: slot,
-                                teacherId: asgn?.teacher_id ?? null,
-                              })}
-                              className="absolute inset-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center gap-1 rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-700 text-violet-400 dark:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:border-violet-400 hover:text-violet-600 text-xs font-semibold"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> Adaugă
-                            </button>
-                          )
-                        )}
-                      </div>
-                    );
-                  })}
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4">
+                    <UserRound className="w-3.5 h-3.5 flex-shrink-0" />
+                    {asgn?.teacher_name ? (
+                      <span className="font-semibold" style={{ color: cab.color }}>{asgn.teacher_name}</span>
+                    ) : (
+                      <span className="italic">Fără profesor alocat</span>
+                    )}
+                  </div>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => toggleDayStatus(cab.id, selectedDow, status)}
+                      disabled={togglingId === cab.id}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all
+                        ${isOcupat
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                          : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40'}`}
+                    >
+                      {isOcupat ? <><Unlock className="w-4 h-4" /> Marchează Liber</> : <><Lock className="w-4 h-4" /> Marchează Ocupat</>}
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
 
         {/* ── Legend ─────────────────────────────────────────────────── */}
         {cabinets.length > 0 && (
           <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
-            {cabinets.map(c => (
-              <span key={c.id} className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
-                {c.name}
-              </span>
-            ))}
-            {isAdmin && (
-              <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">
-                Click pe celulă goală pentru a adăuga o lecție
-              </span>
-            )}
+            <span className="ml-auto text-[11px] opacity-60 italic">
+              Rezervarea lecțiilor se face din Program General sau Orar Fix — aici doar statusul Ocupat/Liber pe zi.
+            </span>
           </div>
         )}
       </main>
@@ -490,7 +277,7 @@ export default function CabinetsPage() {
                   value={cabinetForm.name}
                   onChange={e => setCabinetForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="ex. Cabinet 1"
-                  className="w-full px-3 py-2 text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 />
               </div>
               <div>
@@ -539,7 +326,7 @@ export default function CabinetsPage() {
                     <p className="font-bold text-slate-800 dark:text-slate-100 flex-1">{cab.name}</p>
                     <button
                       onClick={() => openEditCabinet(cab)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -568,7 +355,7 @@ export default function CabinetsPage() {
                             <select
                               value={asgn?.teacher_id ?? ''}
                               onChange={e => setTeacherAssignment(cab.id, dow, e.target.value ? Number(e.target.value) : null)}
-                              className="w-full px-1.5 py-1 text-[11px] rounded-lg border bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                              className="w-full px-1.5 py-1 text-[11px] rounded-lg border bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-400"
                             >
                               <option value="">—</option>
                               {teachers.map(t => (
@@ -587,101 +374,7 @@ export default function CabinetsPage() {
         </div>
       </Modal>
 
-      {/* ── Add lesson form ─────────────────────────────────────────────── */}
-      <LessonForm
-        open={!!addCell}
-        onClose={() => setAddCell(null)}
-        onSaved={() => mutateLessons()}
-        defaultDate={selectedDate}
-        defaultTime={addCell?.time}
-        defaultCabinetId={addCell?.cabinetId}
-        defaultTeacherId={addCell?.teacherId}
-        showToast={toast}
-      />
-
-      {/* ── Edit lesson form ────────────────────────────────────────────── */}
-      <LessonForm
-        open={!!editLesson}
-        onClose={() => setEditLesson(null)}
-        onSaved={() => mutateLessons()}
-        lesson={editLesson}
-        showToast={toast}
-      />
-
-      {/* ── Delete confirmation ─────────────────────────────────────────── */}
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge lecția" size="sm">
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Șterge lecția cu <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
-          {deleteTarget && <> din {deleteTarget.date} la {deleteTarget.time?.slice(0, 5)}</>}?
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
-          <Button variant="danger" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Se șterge…' : 'Șterge'}
-          </Button>
-        </div>
-      </Modal>
-
       <ToastContainer toasts={toasts} onRemove={remove} />
-    </div>
-  );
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function LessonCell({
-  lesson, color, onEdit, onDelete, isAdmin,
-}: {
-  lesson: Lesson;
-  color: string;
-  onEdit: () => void;
-  onDelete: () => void;
-  isAdmin: boolean;
-}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const statusBg: Record<string, string> = {
-    scheduled: 'bg-indigo-500/90 border-indigo-400',
-    completed:  'bg-emerald-500/90 border-emerald-400',
-    cancelled:  'bg-slate-400/60 border-slate-300',
-  };
-
-  return (
-    <div
-      onClick={() => isAdmin && setMenuOpen(v => !v)}
-      className={`relative text-xs px-2.5 py-2 rounded-xl border text-white select-none
-        transition-all duration-200
-        ${statusBg[lesson.status] ?? statusBg.scheduled}
-        ${isAdmin ? 'cursor-pointer hover:scale-[1.03] hover:shadow-lg hover:-translate-y-0.5' : 'cursor-default'}
-        ${lesson.status === 'cancelled' ? 'line-through opacity-60' : ''}`}
-      style={{ borderLeftWidth: '3px', borderLeftColor: color }}
-    >
-      <p className="font-bold truncate">{lesson.student_name}</p>
-      <p className="opacity-80 truncate text-[10px] mt-0.5">
-        {lesson.time?.slice(0, 5)} · {lesson.duration}min
-        {lesson.teacher_name && ` · ${lesson.teacher_name.split(' ')[0]}`}
-      </p>
-
-      {isAdmin && menuOpen && (
-        <div
-          onClick={e => e.stopPropagation()}
-          className="absolute z-30 left-1/2 -translate-x-1/2 bottom-full mb-1 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl"
-        >
-          <button
-            onClick={() => { onEdit(); setMenuOpen(false); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
-          >
-            <Pencil className="w-3 h-3" /> Editează
-          </button>
-          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-          <button
-            onClick={() => { onDelete(); setMenuOpen(false); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors"
-          >
-            <Trash2 className="w-3 h-3" /> Șterge
-          </button>
-        </div>
-      )}
     </div>
   );
 }

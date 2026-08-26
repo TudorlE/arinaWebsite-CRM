@@ -22,7 +22,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
         {/* Notification bell (decorative) */}
         <button className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <Bell className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full" />
         </button>
 
         {/* Theme toggle */}

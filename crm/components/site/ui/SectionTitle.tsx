@@ -20,7 +20,7 @@ export default function SectionTitle({ tag, title, subtitle, center = true, ligh
     >
       {tag && (
         <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4"
-          style={{ background: 'rgba(255, 213, 74, 0.18)', color: '#B8860B' }}>
+          style={{ background: 'rgba(244,168,92, 0.18)', color: '#9C4A1E' }}>
           {tag}
         </span>
       )}

@@ -90,7 +90,7 @@ export default function LoginPage() {
             {BARS.map((h, i) => (
               <div key={i} style={{
                 width: 2.5, borderRadius: 2, height: `${h}%`,
-                background: 'linear-gradient(to top, #9b7515, #c9a020, #f4d060)',
+                background: 'linear-gradient(to top, #9C4A1E, #E08A3C, #F7C98A)',
                 animation: `loginBar ${0.65 + (i % 4) * 0.14}s ease-in-out ${i * 0.09}s infinite alternate`,
                 transformOrigin: 'bottom',
               }} />
@@ -191,7 +191,7 @@ export default function LoginPage() {
           <button type="submit" disabled={loading}
             style={{
               width: '100%', height: 48, borderRadius: 99,
-              background: 'linear-gradient(135deg, var(--gold-dark), var(--gold), #f4d060)',
+              background: 'linear-gradient(135deg, var(--gold-dark), var(--gold), #F7C98A)',
               color: '#0a0a0a', fontSize: 14.5, fontWeight: 700,
               border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.65 : 1, transition: 'all 0.22s',

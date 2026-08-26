@@ -13,9 +13,12 @@ import Badge, { paymentBadge, lessonBadge } from '@/components/ui/Badge';
 import StudentForm from '@/components/students/StudentForm';
 import LessonForm from '@/components/lessons/LessonForm';
 import PaymentForm from '@/components/payments/PaymentForm';
+import StudentAttendanceGrid from '@/components/attendance/StudentAttendanceGrid';
+import StudentMonthlyStats from '@/components/students/StudentMonthlyStats';
 import Modal from '@/components/ui/Modal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Student, Lesson, Payment, StudentNote, MONTHS } from '@/lib/types';
+import { Student, Lesson, Payment, StudentNote, MONTHS, STUDENT_STATUSES } from '@/lib/types';
+import { formatBirthDate } from '@/lib/dateUtils';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -156,13 +159,16 @@ export default function StudentProfilePage({ params }: PageProps) {
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{initials}</span>
+                <div className="w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                  <span className="text-xl font-bold text-brand-600 dark:text-brand-400">{initials}</span>
                 </div>
                 <div>
                   <h2 className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Vârstă {student.age}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatBirthDate(student.birth_date)}</p>
                 </div>
+                <Badge variant={student.status === 'inactive' ? 'gray' : student.status === 'paused' ? 'yellow' : 'green'} className="ml-auto">
+                  {STUDENT_STATUSES.find(s => s.value === (student.status ?? 'active'))?.label}
+                </Badge>
               </div>
 
               <div className="space-y-3 text-sm">
@@ -178,16 +184,31 @@ export default function StudentProfilePage({ params }: PageProps) {
                   <Music2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <div className="flex flex-wrap gap-1">
                     {(student.instruments ?? []).map((instr: string) => (
-                      <span key={instr} className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">{instr}</span>
+                      <span key={instr} className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300">{instr}</span>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
                 <p className="text-xs text-slate-400">Profesor: {student.teacher_name ?? 'Neatribuit'}</p>
-                <p className="text-xs text-slate-400 mt-1">Total achitat: {totalPaid.toLocaleString()} MDL</p>
+                <p className="text-xs text-slate-400">Cabinet: {student.cabinet_name ?? 'Neatribuit'}</p>
+                <p className="text-xs text-slate-400">Data înscrierii: {new Date(student.created_at).toLocaleDateString('ro-RO')}</p>
+                <p className="text-xs text-slate-400">Total achitat: {totalPaid.toLocaleString()} MDL</p>
+                {student.notes && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 italic">
+                    {student.notes}
+                  </p>
+                )}
               </div>
+            </div>
+
+            {/* Statistici lunare — citite live din Program */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistici lunare</h3>
+              </div>
+              <StudentMonthlyStats studentId={student.id} />
             </div>
           </div>
 
@@ -264,6 +285,14 @@ export default function StudentProfilePage({ params }: PageProps) {
               )}
             </div>
 
+            {/* Frecvență */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Frecvență</h3>
+              </div>
+              <StudentAttendanceGrid studentId={student.id} />
+            </div>
+
             {/* Notes */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
               <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
@@ -278,7 +307,7 @@ export default function StudentProfilePage({ params }: PageProps) {
                     placeholder="Adaugă o notă de progres…"
                     className="flex-1 px-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800
                       text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700
-                      placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                   />
                   <Button type="submit" size="sm" disabled={savingNote || !noteText.trim()}>
                     Adaugă

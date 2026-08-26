@@ -127,7 +127,7 @@ export default function PaymentsPage() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-indigo-500" />
+                <Target className="w-4 h-4 text-brand-500" />
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Rată de colectare</p>
                 <span className="text-xs text-slate-400 dark:text-slate-500">— {MONTHS[Number(monthFilter) - 1]}</span>
               </div>
@@ -140,7 +140,7 @@ export default function PaymentsPage() {
             <div className="h-4 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex">
               <div className="h-full bg-emerald-500 transition-all duration-700 ease-out" title="Plătit"
                 style={{ width: `${pct(summary.paidCount)}%` }} />
-              <div className="h-full bg-purple-400 transition-all duration-700 ease-out" title="Parțial"
+              <div className="h-full bg-accent-400 transition-all duration-700 ease-out" title="Parțial"
                 style={{ width: `${pct(summary.partialCount)}%` }} />
               <div className="h-full bg-amber-400 transition-all duration-700 ease-out" title="Neplătit"
                 style={{ width: `${pct(summary.unpaidCount)}%` }} />
@@ -149,7 +149,7 @@ export default function PaymentsPage() {
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
               {[
                 { label: 'Plătit',   color: 'bg-emerald-500', count: summary.paidCount,    amt: paidAmt },
-                { label: 'Parțial',  color: 'bg-purple-400',  count: summary.partialCount, amt: partialAmt },
+                { label: 'Parțial',  color: 'bg-accent-400',  count: summary.partialCount, amt: partialAmt },
                 { label: 'Neplătit', color: 'bg-amber-400',   count: summary.unpaidCount,  amt: unpaidAmt },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-1.5 text-xs">
@@ -200,7 +200,7 @@ export default function PaymentsPage() {
             </div>
           </div>
           {/* Total */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl p-4 shadow-md">
+          <div className="relative overflow-hidden bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-4 shadow-md">
             <div className="flex items-start justify-between mb-2">
               <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
                 <Activity className="w-4 h-4 text-white" />
@@ -222,7 +222,7 @@ export default function PaymentsPage() {
           {/* Status Breakdown Panel */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-4 h-4 text-indigo-500" />
+              <Zap className="w-4 h-4 text-brand-500" />
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Analiză status</h3>
             </div>
 
@@ -388,7 +388,7 @@ export default function PaymentsPage() {
                 const isPartial = payment.status === 'partial';
                 const borderColor =
                   isPaid    ? 'border-l-emerald-500' :
-                  isPartial ? 'border-l-purple-400' :
+                  isPartial ? 'border-l-accent-400' :
                               'border-l-amber-400';
                 const bgExtra = 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50';
                 return (
@@ -399,7 +399,7 @@ export default function PaymentsPage() {
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${
                         isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
-                        isPartial ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+                        isPartial ? 'bg-accent-100 dark:bg-accent-900/40 text-accent-700 dark:text-accent-300' :
                                     'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
                       }`}>
                         {(payment.student_name ?? '?').charAt(0).toUpperCase()}

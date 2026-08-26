@@ -113,7 +113,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
 
         {/* Participanți */}
         <div className="animate-slide-up" style={{ animationDelay: '40ms' }}>
-          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <GraduationCap className="w-4 h-4" />
             Participanți
           </div>
@@ -139,7 +139,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
 
         {/* Programare */}
         <div className="animate-slide-up" style={{ animationDelay: '120ms' }}>
-          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <Calendar className="w-4 h-4" />
             Programare
           </div>
@@ -151,7 +151,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
 
         {/* Cabinet */}
         <div className="animate-slide-up" style={{ animationDelay: '160ms' }}>
-          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <DoorOpen className="w-4 h-4" />
             Cabinet
           </div>
@@ -168,7 +168,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
               href="/cabinets"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-dashed border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/20 text-sm text-brand-500 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors"
             >
               <DoorOpen className="w-4 h-4 flex-shrink-0" />
               <span>Nu există cabinete — <strong>configurează-le aici</strong></span>
@@ -178,7 +178,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
 
         {/* Note */}
         <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <FileText className="w-4 h-4" />
             Note
           </div>
@@ -189,7 +189,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
             placeholder="Adaugă observații despre lecție…"
             className="w-full px-3.5 py-2.5 text-sm rounded-xl border bg-white dark:bg-slate-800
               text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700
-              placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all duration-150"
+              placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none transition-all duration-150"
           />
         </div>
 

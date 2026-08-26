@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const courses = [
   {
-    emoji: '🎹', title: 'Pian', accent: '#FFD54A', glow: 'rgba(255,213,74,0.18)',
+    emoji: '🎹', title: 'Pian', accent: '#F4A85C', glow: 'rgba(244,168,92,0.18)',
     image: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=600&q=80&fit=crop',
     desc: 'De la primele note la piese complexe. Cursuri pentru toate vârstele, de la 5 ani. Metodă Suzuki și clasică.',
     tags: ['Începători', 'Avansați', '5+ ani'],
@@ -21,7 +21,7 @@ const courses = [
     tags: ['Voce', 'Tehnică', '6+ ani'],
   },
   {
-    emoji: '🎼', title: 'Solfegiu', accent: '#A78BFA', glow: 'rgba(167,139,250,0.18)',
+    emoji: '🎼', title: 'Solfegiu', accent: '#C97B5E', glow: 'rgba(201,123,94,0.18)',
     image: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=600&q=80&fit=crop',
     desc: 'Teoria care îți deschide orizonturile muzicale. Citire note, dicteu muzical, armonie și compoziție.',
     tags: ['Teorie', 'Note', 'Armonie'],
@@ -36,13 +36,13 @@ const courses = [
 
 export default function Courses() {
   return (
-    <section id="cursuri" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #07040f 0%, #0a0618 50%, #07040f 100%)' }}>
+    <section id="cursuri" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #0D0905 0%, #100A06 50%, #0D0905 100%)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* Title */}
         <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.7 }}
           style={{ textAlign: 'center', marginBottom: 72 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(255,213,74,0.1)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>
+          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(244,168,92,0.1)', color: '#F4A85C', border: '1px solid rgba(244,168,92,0.2)' }}>
             Cursuri
           </span>
           <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '0 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>
@@ -84,7 +84,7 @@ export default function Courses() {
                 <img src={c.image} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.55s ease', display: 'block' }}
                   onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'scale(1.08)'; }}
                   onMouseLeave={e => { (e.target as HTMLElement).style.transform = 'scale(1)'; }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,4,15,0.92) 0%, rgba(7,4,15,0.2) 55%, transparent 100%)' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(13,9,5,0.92) 0%, rgba(13,9,5,0.2) 55%, transparent 100%)' }} />
                 {/* Color accent glow overlay */}
                 <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top right, ${c.glow} 0%, transparent 60%)`, mixBlendMode: 'screen' }} />
                 <div style={{ position: 'absolute', bottom: 18, left: 18, display: 'flex', alignItems: 'center', gap: 10 }}>

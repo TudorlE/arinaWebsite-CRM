@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, Pencil, Trash2, Eye, GraduationCap, X } from 'lucide-react';
+import { Plus, Search, Filter, Pencil, Trash2, Eye, GraduationCap, X, Info } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import StudentForm from '@/components/students/StudentForm';
+import StudentDetailsModal from '@/components/students/StudentDetailsModal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import Select from '@/components/ui/Select';
-import { Student, INSTRUMENTS } from '@/lib/types';
+import { Student, INSTRUMENTS, STUDENT_STATUSES } from '@/lib/types';
+import { formatBirthDate } from '@/lib/dateUtils';
 import Modal from '@/components/ui/Modal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -18,6 +20,9 @@ const INSTRUMENT_COLOR: Record<string, string> = {
   'Piano': 'indigo', 'Chitară': 'purple', 'Tobe': 'yellow',
   'Canto': 'blue', 'Teoria muzicii': 'green', 'Solfegiu': 'red',
 };
+
+const STATUS_COLOR: Record<string, string> = { active: 'green', paused: 'yellow', inactive: 'gray' };
+const STATUS_LABEL = Object.fromEntries(STUDENT_STATUSES.map(s => [s.value, s.label]));
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -32,6 +37,7 @@ export default function StudentsPage() {
   const [showForm, setShowForm]   = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [detailsTarget, setDetailsTarget] = useState<Student | null>(null);
   const [deleting, setDeleting]   = useState(false);
   const { toasts, toast, remove } = useToast();
 
@@ -71,7 +77,7 @@ export default function StudentsPage() {
             <GraduationCap className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Elevi</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Elevi General</h1>
             <p className="text-orange-100 text-sm font-medium mt-0.5">{students.length} elevi înscriși</p>
           </div>
         </div>
@@ -133,13 +139,13 @@ export default function StudentsPage() {
           {/* Add student card — hidden for read-only roles */}
           {!isReadOnly && <button
             onClick={() => { setEditStudent(null); setShowForm(true); }}
-            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[156px] cursor-pointer"
+            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[156px] cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/60 group-hover:scale-110 transition-all duration-200">
-              <Plus className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center group-hover:bg-brand-200 dark:group-hover:bg-brand-800/60 group-hover:scale-110 transition-all duration-200">
+              <Plus className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">Adaugă elev</p>
+              <p className="text-sm font-bold text-brand-600 dark:text-brand-400">Adaugă elev</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Înregistrează un elev nou</p>
             </div>
           </button>}
@@ -156,9 +162,12 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-tight">{student.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Vârstă {student.age}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatBirthDate(student.birth_date)}</p>
                   </div>
                 </div>
+                <Badge variant={(STATUS_COLOR[student.status ?? 'active'] ?? 'gray') as Parameters<typeof Badge>[0]['variant']}>
+                  {STATUS_LABEL[student.status ?? 'active']}
+                </Badge>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
@@ -174,7 +183,10 @@ export default function StudentsPage() {
 
               <div className="flex items-center justify-end mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  <Button variant="ghost" size="sm" onClick={() => router.push(`/students/${student.id}`)}>
+                  <Button variant="ghost" size="sm" onClick={() => setDetailsTarget(student)} title="Detalii">
+                    <Info className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => router.push(`/admin/students/${student.id}`)} title="Profil complet">
                     <Eye className="w-3.5 h-3.5" />
                   </Button>
                   {!isReadOnly && <>
@@ -191,6 +203,8 @@ export default function StudentsPage() {
           ))}
         </div>
       </main>
+
+      <StudentDetailsModal open={!!detailsTarget} onClose={() => setDetailsTarget(null)} student={detailsTarget} />
 
       {/* Student form modal */}
       <StudentForm

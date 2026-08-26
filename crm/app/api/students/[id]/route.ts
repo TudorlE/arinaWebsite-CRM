@@ -7,7 +7,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const { data: student, error } = await supabase
     .from('students')
-    .select('*, teachers(name)')
+    .select('*, teachers(name), cabinets(name)')
     .eq('id', id)
     .single();
   if (error || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -18,9 +18,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
     .eq('student_id', id)
     .order('created_at', { ascending: false });
 
-  const { teachers, ...rest } = student as { teachers: { name: string } | null; [key: string]: unknown };
+  const { teachers, cabinets, ...rest } = student as { teachers: { name: string } | null; cabinets: { name: string } | null; [key: string]: unknown };
   return NextResponse.json({
-    student: { ...rest, teacher_name: teachers?.name ?? null },
+    student: { ...rest, teacher_name: teachers?.name ?? null, cabinet_name: cabinets?.name ?? null },
     notes: notes ?? [],
   });
 }
@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    const allowed = ['name', 'age', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_id'];
+    const allowed = ['name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_id', 'cabinet_id', 'notes', 'status'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
     const { data, error } = await supabase.from('students').update(update).eq('id', id).select().single();
     if (error || !data) return NextResponse.json({ error: 'Student not found' }, { status: 404 });

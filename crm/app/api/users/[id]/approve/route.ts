@@ -16,11 +16,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const target = getUserById(userId);
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const { role } = await request.json();
+  const { role, teacher_id } = await request.json();
   if (!ASSIGNABLE_ROLES.includes(role)) {
     return NextResponse.json({ error: 'Rolul trebuie să fie teacher sau student' }, { status: 400 });
   }
 
-  const updated = approveUser(userId, role);
+  const updated = approveUser(userId, role, teacher_id ? Number(teacher_id) : null);
   return NextResponse.json({ user: updated });
 }

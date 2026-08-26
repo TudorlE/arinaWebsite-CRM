@@ -5,10 +5,10 @@ import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ShieldCheck } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
-  admin:    { label: 'Admin',    color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  admin:    { label: 'Admin',    color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
   profesor: { label: 'Profesor', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   elev:     { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  teacher:  { label: 'Profesor', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
+  teacher:  { label: 'Profesor', color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
   student:  { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 };
 
@@ -54,7 +54,7 @@ export default function RolesPage() {
   if (me && me.role !== 'admin') {
     return (
       <div className="flex flex-col flex-1">
-        <div className="relative overflow-hidden bg-gradient-to-r from-indigo-700 via-violet-700 to-purple-700 px-8 py-6 shadow-lg">
+        <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
           <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
           <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
           <div className="relative flex items-center gap-4">
@@ -63,7 +63,7 @@ export default function RolesPage() {
             </div>
             <div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">Roluri</h1>
-              <p className="text-indigo-200 text-sm font-medium mt-0.5">Gestionare conturi și permisiuni</p>
+              <p className="text-brand-200 text-sm font-medium mt-0.5">Gestionare conturi și permisiuni</p>
             </div>
           </div>
         </div>
@@ -77,7 +77,7 @@ export default function RolesPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-700 via-violet-700 to-purple-700 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -86,7 +86,7 @@ export default function RolesPage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Roluri</h1>
-            <p className="text-indigo-200 text-sm font-medium mt-0.5">{users.length} conturi gestionate</p>
+            <p className="text-brand-200 text-sm font-medium mt-0.5">{users.length} conturi gestionate</p>
           </div>
         </div>
       </div>
@@ -112,8 +112,8 @@ export default function RolesPage() {
             <div key={u.id} className="grid grid-cols-[2fr_2fr_1fr_auto] gap-4 items-center px-5 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
               {/* Avatar + name */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                     {u.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -138,7 +138,7 @@ export default function RolesPage() {
                 value={u.role ?? ''}
                 disabled={updating === u.id || u.id === me?.id || u.role === 'admin'}
                 onChange={e => handleRoleChange(u.id, e.target.value)}
-                className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 {!u.role && <option value="" disabled>Fără rol</option>}
                 {u.role === 'admin' && <option value="admin">Admin</option>}

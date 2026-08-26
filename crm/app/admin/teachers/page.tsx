@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { Plus, Pencil, Trash2, Mail, Phone, Music2, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Phone, Music2, Search, X, Cake, Info } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
+import DatePicker from '@/components/ui/DatePicker';
+import TeacherDetailsModal from '@/components/teachers/TeacherDetailsModal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Teacher } from '@/lib/types';
+import { formatBirthDate } from '@/lib/dateUtils';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-const blank = { name: '', email: '', phone: '', bio: '' };
+const blank = { name: '', email: '', phone: '', bio: '', birth_date: '' };
 
 export default function TeachersPage() {
   const { data, mutate } = useSWR('/api/teachers', fetcher);
@@ -27,6 +30,7 @@ export default function TeachersPage() {
   const [showForm, setShowForm]         = useState(false);
   const [editTeacher, setEditTeacher]   = useState<Teacher | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
+  const [detailsTarget, setDetailsTarget] = useState<Teacher | null>(null);
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading]   = useState(false);
@@ -36,7 +40,7 @@ export default function TeachersPage() {
   const openAdd = () => { setEditTeacher(null); setForm(blank); setErrors({}); setShowForm(true); };
   const openEdit = (t: Teacher) => {
     setEditTeacher(t);
-    setForm({ name: t.name, email: t.email, phone: t.phone, bio: t.bio ?? '' });
+    setForm({ name: t.name, email: t.email, phone: t.phone, bio: t.bio ?? '', birth_date: t.birth_date ?? '' });
     setErrors({});
     setShowForm(true);
   };
@@ -91,7 +95,7 @@ export default function TeachersPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-accent-600 to-accent-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -99,8 +103,8 @@ export default function TeachersPage() {
             <Music2 className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Profesori</h1>
-            <p className="text-violet-200 text-sm font-medium mt-0.5">{teachers.length} instructori înregistrați</p>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Profesori General</h1>
+            <p className="text-brand-200 text-sm font-medium mt-0.5">{teachers.length} instructori înregistrați</p>
           </div>
         </div>
       </div>
@@ -116,7 +120,7 @@ export default function TeachersPage() {
               placeholder="Caută profesori…"
               className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl border bg-slate-50 dark:bg-slate-800
                 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700
-                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent
+                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
                 transition-shadow duration-200"
             />
             {search && (
@@ -138,13 +142,13 @@ export default function TeachersPage() {
           {/* Add teacher card — hidden for read-only roles */}
           {!isReadOnly && <button
             onClick={openAdd}
-            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[180px] cursor-pointer"
+            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[180px] cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-2xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center group-hover:bg-violet-200 dark:group-hover:bg-violet-800/60 group-hover:scale-110 transition-all duration-200">
-              <Plus className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+            <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center group-hover:bg-brand-200 dark:group-hover:bg-brand-800/60 group-hover:scale-110 transition-all duration-200">
+              <Plus className="w-6 h-6 text-brand-600 dark:text-brand-400" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-bold text-violet-600 dark:text-violet-400">Adaugă profesor</p>
+              <p className="text-sm font-bold text-brand-600 dark:text-brand-400">Adaugă profesor</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Înregistrează un profesor nou</p>
             </div>
           </button>}
@@ -156,8 +160,8 @@ export default function TeachersPage() {
             <div key={teacher.id} className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col gap-3 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-violet-600 dark:text-violet-400">
+                  <div className="w-11 h-11 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
                       {teacher.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                     </span>
                   </div>
@@ -167,6 +171,9 @@ export default function TeachersPage() {
                   </div>
                 </div>
                 <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <Button variant="ghost" size="sm" onClick={() => setDetailsTarget(teacher)} title="Detalii">
+                    <Info className="w-3.5 h-3.5" />
+                  </Button>
                   {!isReadOnly && <>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(teacher)}>
                       <Pencil className="w-3.5 h-3.5" />
@@ -187,6 +194,12 @@ export default function TeachersPage() {
                   <Phone className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="text-xs">{teacher.phone}</span>
                 </div>
+                {teacher.birth_date && (
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <Cake className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="text-xs">{formatBirthDate(teacher.birth_date)}</span>
+                  </div>
+                )}
               </div>
 
               {teacher.bio && (
@@ -199,12 +212,15 @@ export default function TeachersPage() {
         </div>
       </main>
 
+      <TeacherDetailsModal open={!!detailsTarget} onClose={() => setDetailsTarget(null)} teacher={detailsTarget} />
+
       {/* Add/Edit modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editTeacher ? 'Editează profesor' : 'Adaugă profesor'}>
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="Nume complet" value={form.name} onChange={set('name')} shake={errors.name} placeholder="Maria Ionescu" />
           <Input label="Email" value={form.email} onChange={set('email')} type="email" shake={errors.email} placeholder="profesor@arrymusic.com" />
           <Input label="Telefon" value={form.phone} onChange={set('phone')} shake={errors.phone} placeholder="+373 69 000 000" />
+          <DatePicker label="Data nașterii" value={form.birth_date} onChange={v => setForm(prev => ({ ...prev, birth_date: v }))} />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Bio</label>
             <textarea
@@ -214,7 +230,7 @@ export default function TeachersPage() {
               placeholder="Bio scurt sau specialități…"
               className="w-full px-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800
                 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700
-                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">

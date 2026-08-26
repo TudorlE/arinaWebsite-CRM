@@ -19,16 +19,16 @@ function SoundBarsLogo() {
     <div style={{
       display: 'flex', alignItems: 'flex-end', gap: 2.5,
       padding: '6px 11px 5px',
-      background: 'linear-gradient(145deg, #0d0820, #1e1240)',
+      background: 'linear-gradient(145deg, #150F09, #2A1C0E)',
       borderRadius: 13,
-      border: '1.5px solid rgba(255,213,74,0.55)',
-      boxShadow: '0 0 22px rgba(255,213,74,0.22), 0 0 50px rgba(109,40,217,0.12), inset 0 1px 0 rgba(255,255,255,0.07)',
+      border: '1.5px solid rgba(244,168,92,0.55)',
+      boxShadow: '0 0 22px rgba(244,168,92,0.22), 0 0 50px rgba(156,74,30,0.12), inset 0 1px 0 rgba(255,255,255,0.07)',
       height: 44, minWidth: 60, flexShrink: 0,
     }}>
       {BARS.map((h, i) => (
         <div key={i} className="bar-pulse" style={{
           width: 3, borderRadius: 2,
-          background: `linear-gradient(to top, #B8820A, #FFD54A, #FFE890)`,
+          background: `linear-gradient(to top, #9C4A1E, #F4A85C, #F7C98A)`,
           height: `${h}%`,
           animationDelay: `${i * 0.09}s`,
           animationDuration: `${0.65 + (i % 4) * 0.14}s`,
@@ -62,11 +62,11 @@ export default function Navbar() {
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          background: scrolled ? 'rgba(5, 2, 16, 0.96)' : 'transparent',
+          background: scrolled ? 'rgba(11,7,4, 0.96)' : 'transparent',
           backdropFilter: scrolled ? 'blur(28px)' : 'none',
           WebkitBackdropFilter: scrolled ? 'blur(28px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,213,74,0.1)' : 'none',
-          boxShadow: scrolled ? '0 4px 40px rgba(0,0,0,0.6), 0 0 80px rgba(109,40,217,0.05)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(244,168,92,0.1)' : 'none',
+          boxShadow: scrolled ? '0 4px 40px rgba(0,0,0,0.6), 0 0 80px rgba(156,74,30,0.05)' : 'none',
           transition: 'all 0.35s ease',
         }}
       >
@@ -77,9 +77,9 @@ export default function Navbar() {
             <SoundBarsLogo />
             <div style={{ textAlign: 'left' }}>
               <p style={{ fontWeight: 900, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.15, margin: 0, color: '#ffffff', fontFamily: 'var(--font-inter), sans-serif' }}>
-                ARRY <span style={{ color: '#FFD54A' }}>PRODUCTION</span>
+                ARRY <span style={{ color: '#F4A85C' }}>PRODUCTION</span>
               </p>
-              <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', margin: '3px 0 0', color: 'rgba(255,213,74,0.7)', fontFamily: 'var(--font-inter), sans-serif' }}>
+              <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', margin: '3px 0 0', color: 'rgba(244,168,92,0.7)', fontFamily: 'var(--font-inter), sans-serif' }}>
                 Music School
               </p>
             </div>
@@ -90,7 +90,7 @@ export default function Navbar() {
             {links.map(l => (
               <button key={l.href} onClick={() => go(l.href)}
                 style={{ padding: '8px 14px', borderRadius: 99, fontSize: 13.5, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 0.2s', letterSpacing: '0.01em', fontFamily: 'var(--font-inter), sans-serif' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,213,74,0.1)'; el.style.color = '#FFD54A'; }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(244,168,92,0.1)'; el.style.color = '#F4A85C'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'none'; el.style.color = 'rgba(255,255,255,0.7)'; }}
               >{l.label}</button>
             ))}
@@ -100,14 +100,14 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} className="hide-mobile">
             {crmUrl && (
               <a href={crmUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, fontSize: 12.5, fontWeight: 700, background: 'rgba(255,213,74,0.08)', color: 'rgba(255,213,74,0.85)', border: '1px solid rgba(255,213,74,0.22)', transition: 'all 0.2s', fontFamily: 'var(--font-inter), sans-serif' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, fontSize: 12.5, fontWeight: 700, background: 'rgba(244,168,92,0.08)', color: 'rgba(244,168,92,0.85)', border: '1px solid rgba(244,168,92,0.22)', transition: 'all 0.2s', fontFamily: 'var(--font-inter), sans-serif' }}>
                 CRM <ExternalLink style={{ width: 12, height: 12 }} />
               </a>
             )}
             <button onClick={() => go('#inscriere')}
-              style={{ padding: '10px 24px', borderRadius: 99, fontSize: 13.5, fontWeight: 700, background: 'linear-gradient(135deg, #C9A020, #FFD54A, #F5C440)', color: '#0d0a00', boxShadow: '0 4px 20px rgba(255,213,74,0.45), 0 0 0 1px rgba(255,213,74,0.25)', transition: 'all 0.22s', fontFamily: 'var(--font-inter), sans-serif' }}
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1.05) translateY(-1px)'; el.style.boxShadow = '0 8px 30px rgba(255,213,74,0.6)'; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1)'; el.style.boxShadow = '0 4px 20px rgba(255,213,74,0.45), 0 0 0 1px rgba(255,213,74,0.25)'; }}>
+              style={{ padding: '10px 24px', borderRadius: 99, fontSize: 13.5, fontWeight: 700, background: 'linear-gradient(135deg, #E08A3C, #F4A85C, #F7C98A)', color: '#0d0a00', boxShadow: '0 4px 20px rgba(244,168,92,0.45), 0 0 0 1px rgba(244,168,92,0.25)', transition: 'all 0.22s', fontFamily: 'var(--font-inter), sans-serif' }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1.05) translateY(-1px)'; el.style.boxShadow = '0 8px 30px rgba(244,168,92,0.6)'; }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1)'; el.style.boxShadow = '0 4px 20px rgba(244,168,92,0.45), 0 0 0 1px rgba(244,168,92,0.25)'; }}>
               Înscrie-te
             </button>
           </div>
@@ -125,7 +125,7 @@ export default function Navbar() {
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: 'rgba(5,2,16,0.98)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,213,74,0.1)', boxShadow: '0 12px 50px rgba(0,0,0,0.7)' }}>
+            style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: 'rgba(11,7,4,0.98)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(244,168,92,0.1)', boxShadow: '0 12px 50px rgba(0,0,0,0.7)' }}>
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {links.map(l => (
                 <button key={l.href} onClick={() => go(l.href)}
@@ -134,8 +134,8 @@ export default function Navbar() {
                 </button>
               ))}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {crmUrl && <a href={crmUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 12, fontWeight: 700, background: 'rgba(255,213,74,0.08)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>CRM <ExternalLink style={{ width: 15, height: 15 }} /></a>}
-                <button onClick={() => go('#inscriere')} style={{ padding: '14px', borderRadius: 12, fontWeight: 700, background: 'linear-gradient(135deg,#C9A020,#FFD54A)', color: '#0d0a00', fontSize: 15 }}>Înscrie-te acum</button>
+                {crmUrl && <a href={crmUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 12, fontWeight: 700, background: 'rgba(244,168,92,0.08)', color: '#F4A85C', border: '1px solid rgba(244,168,92,0.2)' }}>CRM <ExternalLink style={{ width: 15, height: 15 }} /></a>}
+                <button onClick={() => go('#inscriere')} style={{ padding: '14px', borderRadius: 12, fontWeight: 700, background: 'linear-gradient(135deg,#E08A3C,#F4A85C)', color: '#0d0a00', fontSize: 15 }}>Înscrie-te acum</button>
               </div>
             </div>
           </motion.div>

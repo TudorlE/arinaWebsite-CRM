@@ -57,7 +57,7 @@ function getMonthDates(ref: Date): Date[] {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  scheduled: 'bg-indigo-500/90 border-indigo-400 text-white',
+  scheduled: 'bg-brand-500/90 border-brand-400 text-white',
   completed:  'bg-emerald-500/90 border-emerald-400 text-white',
   cancelled:  'bg-slate-400/60 border-slate-300 text-white line-through',
 };
@@ -196,7 +196,7 @@ export default function SchedulePage() {
     <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>
 
       {/* ── Animated Banner ───────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-accent-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -205,11 +205,11 @@ export default function SchedulePage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Program {view === 'week' ? 'săptămânal' : 'lunar'}</h1>
-            <p className="text-indigo-200 text-sm font-medium mt-0.5">{isStudent ? `Vizualizează lecțiile tale${view === 'week' ? ' din această săptămână' : ' din această lună'}` : `Gestionează lecțiile${view === 'week' ? ' din această săptămână' : ' din această lună'}`}</p>
+            <p className="text-brand-200 text-sm font-medium mt-0.5">{isStudent ? `Vizualizează lecțiile tale${view === 'week' ? ' din această săptămână' : ' din această lună'}` : `Gestionează lecțiile${view === 'week' ? ' din această săptămână' : ' din această lună'}`}</p>
           </div>
           <div className="ml-auto hidden sm:flex gap-3">
             <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
-            <StatBadge label="Programate" value={scheduled} color="bg-indigo-300/30 text-white" />
+            <StatBadge label="Programate" value={scheduled} color="bg-brand-300/30 text-white" />
             <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
             {cancelled > 0 && <StatBadge label="Anulate" value={cancelled} color="bg-red-300/30 text-white" />}
           </div>
@@ -219,7 +219,7 @@ export default function SchedulePage() {
       {/* ── Mobile stats ─────────────────────────────────── */}
       <div className="flex sm:hidden gap-3 px-4 pt-4">
         <MobileStat label="Total"  value={totalWeek} color="bg-slate-800 text-white" />
-        <MobileStat label="Prog."  value={scheduled} color="bg-indigo-600 text-white" />
+        <MobileStat label="Prog."  value={scheduled} color="bg-brand-600 text-white" />
         <MobileStat label="Fin."   value={completed}  color="bg-emerald-600 text-white" />
       </div>
 
@@ -229,10 +229,10 @@ export default function SchedulePage() {
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => navigate('prev')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
+            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
             title="Săptămâna anterioară"
           >
-            <ChevronLeft className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200" />
+            <ChevronLeft className="w-6 h-6 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200" />
           </button>
 
           <div
@@ -242,7 +242,7 @@ export default function SchedulePage() {
               transform: animDir === 'left' ? 'translateX(-20px) scale(0.97)' : animDir === 'right' ? 'translateX(20px) scale(0.97)' : 'translateX(0) scale(1)',
             }}
           >
-            <span className="text-xs font-semibold uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-0.5">
+            <span className="text-xs font-semibold uppercase tracking-widest text-brand-500 dark:text-brand-400 mb-0.5">
               {navSubLabel}
             </span>
             <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
@@ -252,28 +252,28 @@ export default function SchedulePage() {
 
           <button
             onClick={() => navigate('next')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
+            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
             title="Săptămâna următoare"
           >
-            <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200" />
+            <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200" />
           </button>
 
           <button
             onClick={goToday}
-            className="ml-1 px-5 py-2 text-sm font-bold rounded-2xl bg-indigo-600 text-white shadow-md hover:bg-indigo-500 hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            className="ml-1 px-5 py-2 text-sm font-bold rounded-2xl bg-brand-600 text-white shadow-md hover:bg-brand-500 hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
           >
             Azi
           </button>
           <div className="flex ml-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
             <button
               onClick={() => setView('week')}
-              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'week' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'week' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
             >
               Săptămânal
             </button>
             <button
               onClick={() => setView('month')}
-              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'month' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'month' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
             >
               Lunar
             </button>
@@ -290,7 +290,7 @@ export default function SchedulePage() {
               placeholder="Caută elev în program…"
               className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl border bg-slate-50 dark:bg-slate-800
                 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700
-                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
                 transition-shadow duration-200"
             />
             {searchStudent && (
@@ -310,7 +310,7 @@ export default function SchedulePage() {
             </div>
             {[
               { value: '', label: 'Toate', color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700' },
-              { value: 'scheduled', label: 'Programate', color: statusFilterSched === 'scheduled' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' },
+              { value: 'scheduled', label: 'Programate', color: statusFilterSched === 'scheduled' ? 'bg-brand-600 text-white border-brand-600' : 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-800' },
               { value: 'completed', label: 'Finalizate', color: statusFilterSched === 'completed' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
               { value: 'cancelled', label: 'Anulate', color: statusFilterSched === 'cancelled' ? 'bg-slate-500 text-white border-slate-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700' },
             ].map(opt => (
@@ -361,11 +361,11 @@ export default function SchedulePage() {
               {weekDates.map((d, i) => {
                 const isToday = fmtDate(d) === todayStr;
                 return (
-                  <div key={i} className={`py-4 text-center border-l border-slate-200 dark:border-slate-700 ${isToday ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <div key={i} className={`py-4 text-center border-l border-slate-200 dark:border-slate-700 ${isToday ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? 'text-brand-500' : 'text-slate-400 dark:text-slate-500'}`}>
                       {SHORT_DAYS[d.getDay()]}
                     </p>
-                    <div className={`mt-1.5 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-200'}`}>
+                    <div className={`mt-1.5 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-brand-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-200'}`}>
                       {d.getDate()}
                     </div>
                   </div>
@@ -397,9 +397,9 @@ export default function SchedulePage() {
                       onDragLeave={() => { if (dropCell === cellKey) setDropCell(null); }}
                       onDrop={e => { if (isStudent) return; e.preventDefault(); handleDrop(dateStr, hour); }}
                       className={`group relative border-l border-slate-100 dark:border-slate-800 p-1.5 flex flex-col gap-1 transition-all duration-150 hover:z-40
-                        ${isToday ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''}
+                        ${isToday ? 'bg-brand-50/40 dark:bg-brand-900/10' : ''}
                         ${isDropTarget
-                          ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-2 ring-indigo-400 ring-inset scale-[0.99]'
+                          ? 'bg-brand-100 dark:bg-brand-900/40 ring-2 ring-brand-400 ring-inset scale-[0.99]'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
                     >
                       {cells.map(l => {
@@ -491,7 +491,7 @@ export default function SchedulePage() {
                               >
                                 <button
                                   onClick={() => { setEditLesson(l); setActiveMenu(null); }}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40 transition-colors"
                                 >
                                   <Pencil className="w-3 h-3" /> Editează
                                 </button>
@@ -511,7 +511,7 @@ export default function SchedulePage() {
                       {/* Hover add button - hidden for students */}
                       {!isStudent && <button
                         onClick={() => openAddLesson(dateStr, hour)}
-                        className={`absolute inset-x-1.5 bottom-1.5 opacity-0 group-hover:opacity-100 hover:opacity-100 scale-90 group-hover:scale-100 hover:scale-100 transition-all duration-300 ease-out flex items-center justify-center gap-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 hover:shadow-2xl text-white text-xs font-bold shadow-lg pointer-events-none group-hover:pointer-events-auto hover:pointer-events-auto z-50 ring-2 ring-white/40
+                        className={`absolute inset-x-1.5 bottom-1.5 opacity-0 group-hover:opacity-100 hover:opacity-100 scale-90 group-hover:scale-100 hover:scale-100 transition-all duration-300 ease-out flex items-center justify-center gap-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 hover:shadow-2xl text-white text-xs font-bold shadow-lg pointer-events-none group-hover:pointer-events-auto hover:pointer-events-auto z-50 ring-2 ring-white/40
                           ${cells.length >= 1
                             ? 'group-hover:translate-y-full hover:translate-y-full'
                             : ''}`}
@@ -530,7 +530,7 @@ export default function SchedulePage() {
 
         {/* ── Legend ──────────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-indigo-500" />Programat</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-brand-500" />Programat</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" />Finalizat</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-slate-400" />Anulat</span>
           {!isStudent && <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">Trage lecția în alt patrat · Click pentru editare</span>}
@@ -618,12 +618,12 @@ function MonthCalendar({
                 key={di}
                 onClick={() => { if (!isStudent) { openAddLesson(dateStr, 9); setActiveMenu(null); } }}
                 className={`relative min-h-[110px] p-2 border-r border-slate-100 dark:border-slate-800 last:border-r-0 flex flex-col gap-1 transition-colors
-                  ${isToday ? 'bg-indigo-50/60 dark:bg-indigo-900/15' : ''}
+                  ${isToday ? 'bg-brand-50/60 dark:bg-brand-900/15' : ''}
                   ${!inMonth ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}
-                  ${!isStudent ? 'cursor-pointer hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10' : ''}`}
+                  ${!isStudent ? 'cursor-pointer hover:bg-brand-50/40 dark:hover:bg-brand-900/10' : ''}`}
               >
                 <span className={`self-start text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
-                  ${isToday ? 'bg-indigo-600 text-white shadow-md' : inMonth ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>
+                  ${isToday ? 'bg-brand-600 text-white shadow-md' : inMonth ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>
                   {d.getDate()}
                 </span>
                 <div className="flex flex-col gap-0.5 overflow-hidden">
@@ -634,13 +634,13 @@ function MonthCalendar({
                         <button
                           onClick={e => { if (isStudent) return; e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
                           className={`w-full text-left text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate flex items-center gap-1
-                            ${l.status === 'scheduled' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : ''}
+                            ${l.status === 'scheduled' ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300' : ''}
                             ${l.status === 'completed' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : ''}
                             ${l.status === 'cancelled' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 line-through' : ''}
                             ${!isStudent ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}
-                            ${isMenu ? 'ring-1 ring-indigo-400' : ''}`}
+                            ${isMenu ? 'ring-1 ring-brand-400' : ''}`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${l.status === 'completed' ? 'bg-emerald-500' : l.status === 'cancelled' ? 'bg-slate-400' : 'bg-indigo-500'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${l.status === 'completed' ? 'bg-emerald-500' : l.status === 'cancelled' ? 'bg-slate-400' : 'bg-brand-500'}`} />
                           <span className="truncate">{l.time?.slice(0, 5)} {l.student_name}</span>
                         </button>
                         {!isStudent && isMenu && (
@@ -649,7 +649,7 @@ function MonthCalendar({
                             className="absolute z-30 left-0 top-full mt-0.5 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl"
                           >
                             <button onClick={() => { setEditLesson(l); setActiveMenu(null); }}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40">
                               <Pencil className="w-3 h-3" /> Editează
                             </button>
                             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />

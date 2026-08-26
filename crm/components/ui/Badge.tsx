@@ -11,9 +11,9 @@ const styles: Record<BadgeVariant, string> = {
   yellow: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   red:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   blue:   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  purple: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
   gray:   'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-  indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  indigo: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
 };
 
 export default function Badge({ variant = 'gray', children, className = '' }: BadgeProps) {
@@ -42,7 +42,10 @@ export function paymentLabel(status: string): string {
 
 /** Helper: returns the Badge variant for a lesson status */
 export function lessonBadge(status: string): BadgeVariant {
-  return status === 'completed' ? 'green' : status === 'cancelled' ? 'red' : 'blue';
+  if (status === 'completed') return 'green';
+  if (status === 'cancelled') return 'red';
+  if (status === 'recovered') return 'purple';
+  return 'blue';
 }
 
 /** Helper: returns the Badge variant for a level */

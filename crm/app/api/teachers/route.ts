@@ -12,13 +12,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, phone, bio } = await request.json();
+    const { name, email, phone, bio, birth_date } = await request.json();
     if (!name || !email || !phone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const { data, error } = await supabase
       .from('teachers')
-      .insert({ name, email, phone, bio })
+      .insert({ name, email, phone, bio, birth_date: birth_date ?? null })
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

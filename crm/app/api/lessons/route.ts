@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { student_id, teacher_id, date, time, duration, notes, cabinet_id } = await request.json();
+    const { student_id, teacher_id, date, time, duration, notes, cabinet_id, discipline } = await request.json();
     if (!student_id || !teacher_id || !date || !time || !duration) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         notes: notes ?? null,
         status: 'scheduled',
         cabinet_id: cabinet_id ? Number(cabinet_id) : null,
+        discipline: discipline ?? null,
       })
       .select()
       .single();

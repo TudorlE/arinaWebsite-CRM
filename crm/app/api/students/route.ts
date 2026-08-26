@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('students')
-    .select('*, teachers(name)')
+    .select('*, teachers(name), cabinets(name)')
     .order('name');
 
   if (instrument) query = query.contains('instruments', [instrument]);
@@ -20,9 +20,10 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const students = (data ?? []).map(({ teachers, ...s }: { teachers: { name: string } | null; [key: string]: unknown }) => ({
+  const students = (data ?? []).map(({ teachers, cabinets, ...s }: { teachers: { name: string } | null; cabinets: { name: string } | null; [key: string]: unknown }) => ({
     ...s,
     teacher_name: teachers?.name ?? null,
+    cabinet_name: cabinets?.name ?? null,
   }));
 
   return NextResponse.json({ students });
@@ -30,16 +31,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, age, phone, email, instruments, level, monthly_fee, teacher_id } = await request.json();
-    if (!name || !age || !phone || !email || !instruments?.length || !level || !monthly_fee) {
+    const { name, birth_date, phone, email, instruments, level, monthly_fee, teacher_id, cabinet_id, notes, status } = await request.json();
+    if (!name || !birth_date || !phone || !email || !instruments?.length || !level || !monthly_fee) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const { data, error } = await supabase
       .from('students')
       .insert({
-        name, age: Number(age), phone, email, instruments, level,
+        name, birth_date, phone, email, instruments, level,
         monthly_fee: Number(monthly_fee),
         teacher_id: teacher_id ? Number(teacher_id) : null,
+        cabinet_id: cabinet_id ? Number(cabinet_id) : null,
+        notes: notes ?? null,
+        status: status ?? 'active',
       })
       .select()
       .single();

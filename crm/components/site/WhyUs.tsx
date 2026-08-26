@@ -20,17 +20,17 @@ const reasons = [
 
 export default function WhyUs() {
   return (
-    <section style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #0a0618 0%, #0d0820 50%, #0a0618 100%)' }}>
+    <section style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #100A06 0%, #150F09 50%, #100A06 100%)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* Title */}
         <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.7 }}
           style={{ textAlign: 'center', marginBottom: 72 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(167,139,250,0.1)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.2)' }}>
+          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(201,123,94,0.1)', color: '#C97B5E', border: '1px solid rgba(201,123,94,0.2)' }}>
             De ce noi
           </span>
           <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '0 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>
-            De ce să alegi <span style={{ color: '#FFD54A' }}>Arry Production</span>?
+            De ce să alegi <span style={{ color: '#F4A85C' }}>Arry Production</span>?
           </h2>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.42)', maxWidth: 540, margin: '0 auto', lineHeight: 1.7 }}>
             Nu suntem doar o școală — suntem o comunitate de artiști în devenire.
@@ -49,10 +49,10 @@ export default function WhyUs() {
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.borderColor = 'rgba(255,213,74,0.4)';
+                el.style.borderColor = 'rgba(244,168,92,0.4)';
                 el.style.transform = 'translateY(-6px)';
-                el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(255,213,74,0.1)';
-                el.style.background = 'linear-gradient(145deg, rgba(255,213,74,0.07), rgba(255,213,74,0.02))';
+                el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(244,168,92,0.1)';
+                el.style.background = 'linear-gradient(145deg, rgba(244,168,92,0.07), rgba(244,168,92,0.02))';
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement;
@@ -62,7 +62,7 @@ export default function WhyUs() {
                 el.style.background = 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))';
               }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>{s.icon}</div>
-              <p style={{ fontSize: 52, fontWeight: 900, color: '#FFD54A', lineHeight: 1, margin: '0 0 8px', textShadow: '0 0 30px rgba(255,213,74,0.3)' }}>
+              <p style={{ fontSize: 52, fontWeight: 900, color: '#F4A85C', lineHeight: 1, margin: '0 0 8px', textShadow: '0 0 30px rgba(244,168,92,0.3)' }}>
                 <AnimatedCounter to={s.val} suffix={s.suf} />
               </p>
               <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>{s.label}</p>
@@ -75,7 +75,7 @@ export default function WhyUs() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="reasons-grid">
           <motion.div initial={{ opacity: 0, x: -44 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
             <h3 style={{ fontSize: 'clamp(28px, 3vw, 38px)', fontWeight: 900, color: '#fff', margin: '0 0 32px', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-              Ceea ce ne<br /><span style={{ color: '#FFD54A' }}>diferențiază</span>
+              Ceea ce ne<br /><span style={{ color: '#F4A85C' }}>diferențiază</span>
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {reasons.map((r, i) => (
@@ -83,8 +83,8 @@ export default function WhyUs() {
                   style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 18px', borderRadius: 14, transition: 'all 0.22s', cursor: 'default', border: '1px solid transparent' }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLElement;
-                    el.style.background = 'rgba(255,213,74,0.06)';
-                    el.style.borderColor = 'rgba(255,213,74,0.15)';
+                    el.style.background = 'rgba(244,168,92,0.06)';
+                    el.style.borderColor = 'rgba(244,168,92,0.15)';
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLElement;
@@ -100,13 +100,13 @@ export default function WhyUs() {
 
           <motion.div initial={{ opacity: 0, x: 44 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ position: 'relative' }}>
             {/* Glow behind image */}
-            <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(ellipse, rgba(109,40,217,0.2) 0%, transparent 70%)', borderRadius: 40, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', inset: -20, background: 'radial-gradient(ellipse, rgba(156,74,30,0.2) 0%, transparent 70%)', borderRadius: 40, pointerEvents: 'none' }} />
             <div style={{ borderRadius: 28, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)', position: 'relative' }}>
               <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=85&fit=crop" alt="Concert" style={{ width: '100%', height: 440, objectFit: 'cover', display: 'block' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,4,15,0.6) 0%, transparent 50%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(13,9,5,0.6) 0%, transparent 50%)' }} />
             </div>
             {/* Badge */}
-            <div style={{ position: 'absolute', bottom: -20, left: -20, background: 'rgba(10,6,24,0.92)', backdropFilter: 'blur(16px)', borderRadius: 18, padding: '16px 22px', boxShadow: '0 12px 40px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid rgba(255,213,74,0.2)' }}>
+            <div style={{ position: 'absolute', bottom: -20, left: -20, background: 'rgba(16,10,6,0.92)', backdropFilter: 'blur(16px)', borderRadius: 18, padding: '16px 22px', boxShadow: '0 12px 40px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid rgba(244,168,92,0.2)' }}>
               <span style={{ fontSize: 30 }}>🏆</span>
               <div>
                 <p style={{ fontWeight: 800, fontSize: 14, color: '#fff', margin: 0 }}>Premiați la concursuri</p>

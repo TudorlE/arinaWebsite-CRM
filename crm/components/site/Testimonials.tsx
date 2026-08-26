@@ -17,11 +17,11 @@ export default function Testimonials() {
   const go = (i: number) => { setDir(i > idx ? 1 : -1); setIdx(i); };
 
   return (
-    <section style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #07040f 0%, #0a0516 50%, #07040f 100%)', overflow: 'hidden' }}>
+    <section style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #0D0905 0%, #100906 50%, #0D0905 100%)', overflow: 'hidden' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
           style={{ textAlign: 'center', marginBottom: 64 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(255,213,74,0.1)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>
+          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(244,168,92,0.1)', color: '#F4A85C', border: '1px solid rgba(244,168,92,0.2)' }}>
             Testimoniale
           </span>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, color: '#fff', margin: '0 0 16px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>
@@ -46,11 +46,11 @@ export default function Testimonials() {
                 textAlign: 'center', backdropFilter: 'blur(10px)',
               }}>
               {/* Quote mark */}
-              <div style={{ fontSize: 80, lineHeight: 0.8, color: 'rgba(255,213,74,0.15)', fontFamily: 'Georgia, serif', marginBottom: 20, userSelect: 'none' }}>"</div>
+              <div style={{ fontSize: 80, lineHeight: 0.8, color: 'rgba(244,168,92,0.15)', fontFamily: 'Georgia, serif', marginBottom: 20, userSelect: 'none' }}>"</div>
               {/* Stars */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 24 }}>
                 {[1,2,3,4,5].map(s => (
-                  <span key={s} style={{ color: '#FFD54A', fontSize: 18, textShadow: '0 0 12px rgba(255,213,74,0.6)' }}>★</span>
+                  <span key={s} style={{ color: '#F4A85C', fontSize: 18, textShadow: '0 0 12px rgba(244,168,92,0.6)' }}>★</span>
                 ))}
               </div>
               <p style={{ fontSize: 19, color: 'rgba(255,255,255,0.78)', lineHeight: 1.78, fontStyle: 'italic', maxWidth: 580, margin: '0 auto 40px' }}>
@@ -58,10 +58,10 @@ export default function Testimonials() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
                 <img src={data[idx].avatar} alt={data[idx].name}
-                  style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,213,74,0.4)', boxShadow: '0 0 24px rgba(255,213,74,0.2)' }} />
+                  style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(244,168,92,0.4)', boxShadow: '0 0 24px rgba(244,168,92,0.2)' }} />
                 <div>
                   <p style={{ fontWeight: 900, fontSize: 17, color: '#fff', margin: '0 0 4px' }}>{data[idx].name}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#FFD54A', margin: 0, opacity: 0.85 }}>{data[idx].role}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#F4A85C', margin: 0, opacity: 0.85 }}>{data[idx].role}</p>
                 </div>
               </div>
             </motion.div>
@@ -72,19 +72,19 @@ export default function Testimonials() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 36 }}>
           <button onClick={() => go((idx - 1 + data.length) % data.length)}
             style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,213,74,0.12)'; el.style.borderColor = 'rgba(255,213,74,0.3)'; el.style.color = '#FFD54A'; }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(244,168,92,0.12)'; el.style.borderColor = 'rgba(244,168,92,0.3)'; el.style.color = '#F4A85C'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.06)'; el.style.borderColor = 'rgba(255,255,255,0.1)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
             ‹
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
             {data.map((_, i) => (
               <button key={i} onClick={() => go(i)}
-                style={{ height: 8, borderRadius: 99, border: 'none', cursor: 'pointer', transition: 'all 0.3s', background: i === idx ? '#FFD54A' : 'rgba(255,255,255,0.15)', width: i === idx ? 28 : 8, boxShadow: i === idx ? '0 0 12px rgba(255,213,74,0.5)' : 'none' }} />
+                style={{ height: 8, borderRadius: 99, border: 'none', cursor: 'pointer', transition: 'all 0.3s', background: i === idx ? '#F4A85C' : 'rgba(255,255,255,0.15)', width: i === idx ? 28 : 8, boxShadow: i === idx ? '0 0 12px rgba(244,168,92,0.5)' : 'none' }} />
             ))}
           </div>
           <button onClick={() => go((idx + 1) % data.length)}
             style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,213,74,0.12)'; el.style.borderColor = 'rgba(255,213,74,0.3)'; el.style.color = '#FFD54A'; }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(244,168,92,0.12)'; el.style.borderColor = 'rgba(244,168,92,0.3)'; el.style.color = '#F4A85C'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.06)'; el.style.borderColor = 'rgba(255,255,255,0.1)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
             ›
           </button>

@@ -77,7 +77,7 @@ function PaymentStatusCard({
   const rows = [
     { label: 'Plătit',   count: summary?.paidCount    ?? 0, bar: 'bg-emerald-500', amt: summary?.monthRevenue ?? 0 },
     { label: 'Neplătit', count: summary?.unpaidCount  ?? 0, bar: 'bg-amber-400',   amt: null },
-    { label: 'Parțial',  count: summary?.partialCount ?? 0, bar: 'bg-purple-400',  amt: null },
+    { label: 'Parțial',  count: summary?.partialCount ?? 0, bar: 'bg-accent-400',  amt: null },
   ];
 
   void payments;
@@ -92,7 +92,7 @@ function PaymentStatusCard({
         </div>
         <button
           onClick={() => router.push('/payments')}
-          className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors"
+          className="flex items-center gap-1 text-xs text-brand-500 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium transition-colors"
         >
           Detalii <ChevronRight className="w-3 h-3" />
         </button>
@@ -175,7 +175,7 @@ function PaymentStatusCard({
 }
 
 const INSTRUMENT_COLORS: Record<string, string> = {
-  'Piano':          'bg-indigo-500',
+  'Piano':          'bg-brand-500',
   'Chitară':        'bg-amber-500',
   'Tobe':           'bg-red-500',
   'Canto':          'bg-pink-500',
@@ -194,18 +194,18 @@ function UpcomingLessonRow({ lesson, index }: {
 
   const dayLabel = isToday ? 'Azi' : isTomorrow ? 'Mâine' : lesson.date;
   const dayColor = isToday
-    ? 'bg-indigo-500 text-white'
+    ? 'bg-brand-500 text-white'
     : isTomorrow
     ? 'bg-amber-400 text-white'
     : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
 
   const initials = (lesson.student_name ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const avatarColors = ['bg-indigo-500','bg-violet-500','bg-emerald-500','bg-sky-500','bg-pink-500','bg-amber-500'];
+  const avatarColors = ['bg-brand-500','bg-brand-500','bg-emerald-500','bg-sky-500','bg-pink-500','bg-amber-500'];
   const avatarColor  = avatarColors[index % avatarColors.length];
 
   return (
     <div className={`group flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
-      isToday ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''
+      isToday ? 'bg-brand-50/40 dark:bg-brand-950/20' : ''
     }`}>
       {/* Avatar */}
       <div className={`w-10 h-10 rounded-xl ${avatarColor} flex items-center justify-center flex-shrink-0 shadow-sm`}>
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         {/* ── Stats cards ──────────────────────────────────── */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-indigo-500" sub="Elevi activi" trend={{ value: 12, label: 'față de luna trecută' }} />
+          <StatCard label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-brand-500" sub="Elevi activi" trend={{ value: 12, label: 'față de luna trecută' }} />
           <StatCard label="Venituri lunare" value={stats ? `${stats.totalMonthlyIncome.toLocaleString()} MDL` : '—'} icon={DollarSign} color="bg-emerald-500" sub={`${stats?.paidThisMonth?.toLocaleString() ?? 0} MDL colectate`} trend={{ value: 8, label: 'față de luna trecută' }} />
           <StatCard label="Lecții azi" value={stats?.upcomingLessonsToday ?? '—'} icon={Calendar} color="bg-blue-500" sub="Programate" trend={{ value: 0, label: '' }} />
           <StatCard label="Neachitate luna aceasta" value={stats?.unpaidCount ?? '—'} icon={AlertCircle} color="bg-amber-500" sub={`${stats?.pendingPayments ?? 0} în total în așteptare`} trend={{ value: -5, label: 'față de luna trecută' }} />
@@ -344,8 +344,8 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-800/50">
-            <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-indigo-500" />
+            <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-brand-500" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Lecții viitoare</h2>

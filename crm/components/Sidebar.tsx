@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
   Settings, LogOut, CalendarDays, ShieldCheck, UserCheck, DoorOpen, Globe, ExternalLink,
+  CalendarRange, Repeat, Mic2, ClipboardList, BookOpen,
 } from 'lucide-react';
 
 type NavItem = {
@@ -16,14 +17,21 @@ type NavItem = {
 const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/schedule',     label: 'Program',     icon: CalendarDays,   studentAllowed: true, teacherAllowed: true },
-  { href: '/admin/cabinets',     label: 'Cabinete',    icon: DoorOpen,                            teacherAllowed: true },
+  { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true },
+  { href: '/admin/recurring-schedule', label: 'Orar Fix',           icon: Repeat,        adminOnly: true },
+  { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true },
+  { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true },
+  { href: '/admin/cabinets',     label: 'Cabinete General', icon: DoorOpen,                       teacherAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
-  { href: '/admin/teachers',     label: 'Profesori',   icon: Music2,                              teacherAllowed: true },
-  { href: '/admin/students',     label: 'Elevi',       icon: Users,                               teacherAllowed: true },
+  { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true },
+  { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true },
+  { href: '/admin/students',     label: 'Elevi General', icon: Users,                              teacherAllowed: true },
+  { href: '/admin/students-attendance', label: 'Elevi Frecvență', icon: ClipboardList,             teacherAllowed: true },
   { href: '/admin/registrations',label: 'Cereri Site', icon: Globe,          adminOnly: true },
   { href: '/admin/approvals',    label: 'Aprobări',    icon: UserCheck,      adminOnly: true },
   { href: '/admin/roles',        label: 'Roluri',      icon: ShieldCheck,    adminOnly: true },
   { href: '/admin/settings',     label: 'Setări',      icon: Settings,                            teacherAllowed: true },
+  { href: '/admin/ghid',         label: 'Ghid',        icon: BookOpen,                            teacherAllowed: true },
 ];
 
 const BARS = [38, 78, 50, 100, 66, 88, 42, 72];

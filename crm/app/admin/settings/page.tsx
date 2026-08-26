@@ -7,7 +7,7 @@ import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Key, UserCircle, SlidersHorizontal, ChevronDown } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
-  admin:    { label: 'Admin',    color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  admin:    { label: 'Admin',    color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
   profesor: { label: 'Profesor', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   elev:     { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 };
@@ -55,7 +55,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-700 via-slate-600 to-indigo-700 px-8 py-6 shadow-lg">
+      <div className="relative overflow-hidden bg-gradient-to-r from-slate-700 via-slate-600 to-brand-700 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -74,7 +74,7 @@ export default function SettingsPage() {
         {/* ── My Role ──────────────────────────────────────── */}
         <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-            <UserCircle className="w-4 h-4 text-indigo-500" />
+            <UserCircle className="w-4 h-4 text-brand-500" />
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Contul meu</h2>
           </div>
           <div className="p-5">
@@ -101,7 +101,7 @@ export default function SettingsPage() {
             onClick={() => { setShowPassForm(p => !p); setPasswords({ current: '', newPass: '', confirm: '' }); }}
             className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-xl"
           >
-            <Key className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+            <Key className="w-4 h-4 text-brand-500 flex-shrink-0" />
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex-1 text-left">Schimbă Parola</h2>
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${showPassForm ? 'rotate-180' : ''}`} />
           </button>

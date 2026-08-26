@@ -29,7 +29,7 @@ export default function Gallery() {
     return (
       <motion.div key={ci} initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: ci * 0.1, duration: 0.6 }}
         onClick={() => setLb(idx)} style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, cursor: 'pointer', marginBottom: 20, height: img.h, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.3s' }}
-        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,213,74,0.2)'; el.style.transform = 'scale(1.02)'; }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(244,168,92,0.2)'; el.style.transform = 'scale(1.02)'; }}
         onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)'; el.style.transform = 'scale(1)'; }}>
         <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s' }}
           onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'scale(1.06)'; }}
@@ -44,10 +44,10 @@ export default function Gallery() {
   });
 
   return (
-    <section id="galerie" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #0a0618 0%, #07040f 100%)' }}>
+    <section id="galerie" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #100A06 0%, #0D0905 100%)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} style={{ textAlign: 'center', marginBottom: 68 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(255,213,74,0.1)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>Galerie</span>
+          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(244,168,92,0.1)', color: '#F4A85C', border: '1px solid rgba(244,168,92,0.2)' }}>Galerie</span>
           <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '0 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>Momente muzicale</h2>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.42)', maxWidth: 500, margin: '0 auto', lineHeight: 1.7 }}>Fiecare imagine surprinde o poveste. Acesta este universul Arry Production.</p>
         </motion.div>

@@ -8,11 +8,11 @@
   --foreground: #0f172a;
 
   /* Arry Production brand palette */
-  --ink:        #0f0820;
-  --gold:       #c9a020;
-  --gold-dark:  #9b7515;
-  --gold-light: #f4e8c0;
-  --cream:      #f5f3ec;
+  --ink:        #0D0906;
+  --gold:       #E08A3C;
+  --gold-dark:  #C9622E;
+  --gold-light: #F2D9B8;
+  --cream:      #F2E9DD;
 }
 
 .dark {
@@ -30,6 +30,40 @@
   --color-cream:      var(--cream);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* ── CRM 2026 palette ───────────────────────────────────────────
+   brand  = primary (was indigo/violet) — deep electric ultraviolet.
+   accent = secondary (was purple/fuchsia) — rich warm plum/magenta.
+   Kept as two distinct hues so status pairs that relied on
+   indigo-vs-purple (e.g. scheduled vs recovered lessons) stay
+   visually distinct after the recolor.
+   Plain (non-inline) @theme: these are literal values, not wired to
+   a :root custom property, so they belong in a normal theme block. */
+@theme {
+  --color-brand-50:  #F2F0FE;
+  --color-brand-100: #E6E1FD;
+  --color-brand-200: #CDC3FB;
+  --color-brand-300: #AC9BF7;
+  --color-brand-400: #8A6FF2;
+  --color-brand-500: #6D4CEA;
+  --color-brand-600: #5934DC;
+  --color-brand-700: #4726B8;
+  --color-brand-800: #391D93;
+  --color-brand-900: #2C1770;
+  --color-brand-950: #1C0E4A;
+
+  --color-accent-50:  #FDF1FA;
+  --color-accent-100: #FBE3F5;
+  --color-accent-200: #F6C4EB;
+  --color-accent-300: #EE96DA;
+  --color-accent-400: #E065C2;
+  --color-accent-500: #CC3FA6;
+  --color-accent-600: #AC2A88;
+  --color-accent-700: #87206B;
+  --color-accent-800: #661952;
+  --color-accent-900: #4A1339;
+  --color-accent-950: #300C25;
 }
 
 body {
@@ -83,7 +117,7 @@ a *, button *, [role="button"] * {
 @keyframes bounceY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 @keyframes barPulse { 0% { transform: scaleY(0.28); } 100% { transform: scaleY(1); } }
 @keyframes waveScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-@keyframes glowDot { 0%,100% { box-shadow: 0 0 6px #FFD54A; } 50% { box-shadow: 0 0 18px #FFD54A, 0 0 36px rgba(255,213,74,0.4); } }
+@keyframes glowDot { 0%,100% { box-shadow: 0 0 6px #F4A85C; } 50% { box-shadow: 0 0 18px #F4A85C, 0 0 36px rgba(244,168,92,0.4); } }
 @keyframes shimmerGold { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
 
 .fa { animation: floatA 6s ease-in-out infinite; }
