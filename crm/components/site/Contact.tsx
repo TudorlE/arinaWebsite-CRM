@@ -5,7 +5,7 @@ import { BLACK, OFFWHITE, LIME, HAIRLINE_ON_WHITE, display, body } from './theme
 const info = [
   { label: 'Telefon', value: '+40 700 000 000', href: 'tel:+40700000000' },
   { label: 'Email', value: 'contact@arryproduction.ro', href: 'mailto:contact@arryproduction.ro' },
-  { label: 'Adresă', value: 'Str. Muzicii nr. 1, București' },
+  { label: 'Adresă', value: 'Strada Burebista 76, Chișinău' },
   { label: 'Program', value: 'Lun–Vin: 10:00–20:00\nSâmbătă: 10:00–16:00' },
 ];
 
@@ -49,9 +49,9 @@ export default function Contact() {
             style={{ background: BLACK, padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div>
               <p style={{ fontFamily: display, fontSize: 22, color: OFFWHITE, margin: '0 0 8px', textTransform: 'uppercase' }}>Arry Production</p>
-              <p style={{ fontFamily: body, color: 'rgba(244,243,237,0.5)', fontWeight: 500, margin: 0, fontSize: 14 }}>Str. Muzicii nr. 1, București</p>
+              <p style={{ fontFamily: body, color: 'rgba(244,243,237,0.5)', fontWeight: 500, margin: 0, fontSize: 14 }}>Strada Burebista 76, Chișinău</p>
             </div>
-            <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer"
+            <a href="https://maps.app.goo.gl/yaQVySeQyTb18c9B6" target="_blank" rel="noopener noreferrer"
               style={{ display: 'inline-block', padding: '14px 26px', fontWeight: 700, fontSize: 13, background: LIME, color: BLACK, textDecoration: 'none', transition: 'all 0.2s', fontFamily: body, letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = OFFWHITE; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = LIME; }}>

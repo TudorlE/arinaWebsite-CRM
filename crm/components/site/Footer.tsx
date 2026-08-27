@@ -96,12 +96,58 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Location — map + quick contact, literal bottom of the page */}
+        <div style={{ borderTop: `1px solid ${HAIRLINE_ON_BLACK}`, padding: '52px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'stretch' }} className="footer-map-grid">
+          <div style={{ minHeight: 260, border: `1px solid ${HAIRLINE_ON_BLACK}`, overflow: 'hidden', filter: 'grayscale(1) invert(0.92) contrast(0.85)' }}>
+            <iframe
+              title="Locație Arry Production"
+              src="https://www.google.com/maps?q=46.9810799,28.8747168&z=16&output=embed"
+              style={{ width: '100%', height: '100%', minHeight: 260, border: 0, display: 'block' }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
+            <h4 style={{ fontFamily: body, fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: LIME, margin: 0 }}>Locație &amp; Program</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="footer-contact-cols">
+              <div>
+                <p style={{ fontFamily: body, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(244,243,237,0.35)', margin: '0 0 6px' }}>Telefon</p>
+                <a href="tel:+40700000000" style={{ fontFamily: body, fontWeight: 700, fontSize: 15, color: OFFWHITE, textDecoration: 'none' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = LIME; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = OFFWHITE; }}>+40 700 000 000</a>
+              </div>
+              <div>
+                <p style={{ fontFamily: body, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(244,243,237,0.35)', margin: '0 0 6px' }}>Email</p>
+                <a href="mailto:contact@arryproduction.ro" style={{ fontFamily: body, fontWeight: 700, fontSize: 15, color: OFFWHITE, textDecoration: 'none' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = LIME; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = OFFWHITE; }}>contact@arryproduction.ro</a>
+              </div>
+              <div>
+                <p style={{ fontFamily: body, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(244,243,237,0.35)', margin: '0 0 6px' }}>Adresă</p>
+                <p style={{ fontFamily: body, fontWeight: 700, fontSize: 15, color: OFFWHITE, margin: 0 }}>Strada Burebista 76, Chișinău</p>
+              </div>
+              <div>
+                <p style={{ fontFamily: body, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(244,243,237,0.35)', margin: '0 0 6px' }}>Program</p>
+                <p style={{ fontFamily: body, fontWeight: 700, fontSize: 15, color: OFFWHITE, margin: 0, lineHeight: 1.5 }}>Lun–Vin: 10–20<br />Sâmbătă: 10–16</p>
+              </div>
+            </div>
+            <a href="https://maps.app.goo.gl/yaQVySeQyTb18c9B6" target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: body, fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: LIME, textDecoration: 'none', marginTop: 6 }}>
+              Deschide în Google Maps <ExternalLink style={{ width: 13, height: 13 }} />
+            </a>
+          </div>
+        </div>
+
         <div style={{ borderTop: `1px solid ${HAIRLINE_ON_BLACK}`, padding: '26px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <p style={{ fontFamily: body, fontSize: 13, color: 'rgba(244,243,237,0.3)', margin: 0 }}>© {new Date().getFullYear()} Arry Production. Toate drepturile rezervate.</p>
           <p style={{ fontFamily: body, fontSize: 13, color: 'rgba(244,243,237,0.3)', margin: 0 }}>Muzica este limbajul universal al sufletului.</p>
         </div>
       </div>
-      <style>{`@media (max-width: 900px) { .footer-grid { grid-template-columns: 1fr 1fr !important; } } @media (max-width: 480px) { .footer-grid { grid-template-columns: 1fr !important; } }`}</style>
+      <style>{`
+        @media (max-width: 900px) { .footer-grid { grid-template-columns: 1fr 1fr !important; } .footer-map-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 480px) { .footer-grid { grid-template-columns: 1fr !important; } .footer-contact-cols { grid-template-columns: 1fr !important; } }
+      `}</style>
     </footer>
   );
 }
