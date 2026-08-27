@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ExternalLink } from 'lucide-react';
+import { BLACK, OFFWHITE, LIME, HAIRLINE_ON_BLACK, display, body } from './theme';
 
 const links = [
   { href: '#acasa', label: 'Acasă' },
@@ -11,32 +12,6 @@ const links = [
   { href: '#fondator', label: 'Arina Bădulescu' },
   { href: '#contact', label: 'Contact' },
 ];
-
-const BARS = [38, 76, 50, 100, 66, 86, 42, 70, 55, 80];
-
-function SoundBarsLogo() {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-end', gap: 2.5,
-      padding: '6px 11px 5px',
-      background: 'linear-gradient(145deg, #150F09, #2A1C0E)',
-      borderRadius: 13,
-      border: '1.5px solid rgba(244,168,92,0.55)',
-      boxShadow: '0 0 22px rgba(244,168,92,0.22), 0 0 50px rgba(156,74,30,0.12), inset 0 1px 0 rgba(255,255,255,0.07)',
-      height: 44, minWidth: 60, flexShrink: 0,
-    }}>
-      {BARS.map((h, i) => (
-        <div key={i} className="bar-pulse" style={{
-          width: 3, borderRadius: 2,
-          background: `linear-gradient(to top, #9C4A1E, #F4A85C, #F7C98A)`,
-          height: `${h}%`,
-          animationDelay: `${i * 0.09}s`,
-          animationDuration: `${0.65 + (i % 4) * 0.14}s`,
-        }} />
-      ))}
-    </div>
-  );
-}
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -59,39 +34,37 @@ export default function Navbar() {
       <motion.nav
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          background: scrolled ? 'rgba(11,7,4, 0.96)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(28px)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'blur(28px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(244,168,92,0.1)' : 'none',
-          boxShadow: scrolled ? '0 4px 40px rgba(0,0,0,0.6), 0 0 80px rgba(156,74,30,0.05)' : 'none',
-          transition: 'all 0.35s ease',
+          background: scrolled ? BLACK : 'rgba(2,7,7,0.0)',
+          backdropFilter: scrolled ? 'none' : 'none',
+          borderBottom: `1px solid ${scrolled ? HAIRLINE_ON_BLACK : 'transparent'}`,
+          transition: 'background 0.3s ease, border-color 0.3s ease',
         }}
       >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '13px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '18px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
           {/* Logo */}
-          <button onClick={() => go('#acasa')} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <SoundBarsLogo />
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ fontWeight: 900, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.15, margin: 0, color: '#ffffff', fontFamily: 'var(--font-inter), sans-serif' }}>
-                ARRY <span style={{ color: '#F4A85C' }}>PRODUCTION</span>
-              </p>
-              <p style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', margin: '3px 0 0', color: 'rgba(244,168,92,0.7)', fontFamily: 'var(--font-inter), sans-serif' }}>
-                Music School
-              </p>
+          <button onClick={() => go('#acasa')} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <div style={{ width: 34, height: 34, background: LIME, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontFamily: display, fontSize: 18, color: BLACK, lineHeight: 1 }}>A</span>
             </div>
+            <p style={{ fontFamily: display, fontSize: 17, letterSpacing: '0.02em', lineHeight: 1, margin: 0, color: OFFWHITE }}>
+              ARRY <span style={{ color: LIME }}>PRODUCTION</span>
+            </p>
           </button>
 
           {/* Desktop nav */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }} className="hide-mobile">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="hide-mobile">
             {links.map(l => (
               <button key={l.href} onClick={() => go(l.href)}
-                style={{ padding: '8px 14px', borderRadius: 99, fontSize: 13.5, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', transition: 'all 0.2s', letterSpacing: '0.01em', fontFamily: 'var(--font-inter), sans-serif' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(244,168,92,0.1)'; el.style.color = '#F4A85C'; }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'none'; el.style.color = 'rgba(255,255,255,0.7)'; }}
+                style={{
+                  padding: '8px 16px', fontSize: 12, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'rgba(244,243,237,0.65)', transition: 'color 0.18s', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: body,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = LIME; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(244,243,237,0.65)'; }}
               >{l.label}</button>
             ))}
           </div>
@@ -100,42 +73,56 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} className="hide-mobile">
             {crmUrl && (
               <a href={crmUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, fontSize: 12.5, fontWeight: 700, background: 'rgba(244,168,92,0.08)', color: 'rgba(244,168,92,0.85)', border: '1px solid rgba(244,168,92,0.22)', transition: 'all 0.2s', fontFamily: 'var(--font-inter), sans-serif' }}>
-                CRM <ExternalLink style={{ width: 12, height: 12 }} />
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', fontSize: 11, fontWeight: 700,
+                  background: 'transparent', color: OFFWHITE, border: `1px solid ${HAIRLINE_ON_BLACK}`, transition: 'all 0.18s',
+                  fontFamily: body, letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = LIME; (e.currentTarget as HTMLElement).style.color = LIME; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = HAIRLINE_ON_BLACK; (e.currentTarget as HTMLElement).style.color = OFFWHITE; }}>
+                CRM <ExternalLink style={{ width: 11, height: 11 }} />
               </a>
             )}
             <button onClick={() => go('#inscriere')}
-              style={{ padding: '10px 24px', borderRadius: 99, fontSize: 13.5, fontWeight: 700, background: 'linear-gradient(135deg, #E08A3C, #F4A85C, #F7C98A)', color: '#0d0a00', boxShadow: '0 4px 20px rgba(244,168,92,0.45), 0 0 0 1px rgba(244,168,92,0.25)', transition: 'all 0.22s', fontFamily: 'var(--font-inter), sans-serif' }}
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1.05) translateY(-1px)'; el.style.boxShadow = '0 8px 30px rgba(244,168,92,0.6)'; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'scale(1)'; el.style.boxShadow = '0 4px 20px rgba(244,168,92,0.45), 0 0 0 1px rgba(244,168,92,0.25)'; }}>
+              style={{
+                padding: '11px 22px', fontSize: 12, fontWeight: 700, background: LIME, color: BLACK,
+                transition: 'all 0.18s', fontFamily: body, letterSpacing: '0.06em', textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = OFFWHITE; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = LIME; }}>
               Înscrie-te
             </button>
           </div>
 
           {/* Mobile toggle */}
           <button onClick={() => setOpen(v => !v)}
-            style={{ display: 'none', padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#fff' }}
+            style={{ display: 'none', padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: OFFWHITE }}
             className="show-mobile">
-            {open ? <X style={{ width: 24, height: 24 }} /> : <Menu style={{ width: 24, height: 24 }} />}
+            {open ? <X style={{ width: 26, height: 26 }} /> : <Menu style={{ width: 26, height: 26 }} />}
           </button>
         </div>
       </motion.nav>
 
-      {/* Mobile menu */}
+      {/* Mobile fullscreen menu */}
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: 'rgba(11,7,4,0.98)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(244,168,92,0.1)', boxShadow: '0 12px 50px rgba(0,0,0,0.7)' }}>
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {links.map(l => (
-                <button key={l.href} onClick={() => go(l.href)}
-                  style={{ textAlign: 'left', padding: '12px 16px', borderRadius: 12, fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 45, background: BLACK, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {links.map((l, i) => (
+                <motion.button key={l.href} onClick={() => go(l.href)}
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                  style={{
+                    textAlign: 'left', padding: '14px 4px', fontSize: 'clamp(32px, 9vw, 48px)', lineHeight: 1.05,
+                    color: OFFWHITE, background: 'none', border: 'none', cursor: 'pointer', fontFamily: display, letterSpacing: '0.01em',
+                    borderBottom: `1px solid ${HAIRLINE_ON_BLACK}`, textTransform: 'uppercase',
+                  }}>
                   {l.label}
-                </button>
+                </motion.button>
               ))}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {crmUrl && <a href={crmUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 12, fontWeight: 700, background: 'rgba(244,168,92,0.08)', color: '#F4A85C', border: '1px solid rgba(244,168,92,0.2)' }}>CRM <ExternalLink style={{ width: 15, height: 15 }} /></a>}
-                <button onClick={() => go('#inscriere')} style={{ padding: '14px', borderRadius: 12, fontWeight: 700, background: 'linear-gradient(135deg,#E08A3C,#F4A85C)', color: '#0d0a00', fontSize: 15 }}>Înscrie-te acum</button>
+              <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {crmUrl && <a href={crmUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', fontWeight: 700, color: OFFWHITE, border: `1px solid ${HAIRLINE_ON_BLACK}`, fontFamily: body, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 13 }}>CRM <ExternalLink style={{ width: 15, height: 15 }} /></a>}
+                <button onClick={() => go('#inscriere')} style={{ padding: '16px', fontWeight: 700, background: LIME, color: BLACK, fontSize: 14, border: 'none', cursor: 'pointer', fontFamily: body, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Înscrie-te acum</button>
               </div>
             </div>
           </motion.div>

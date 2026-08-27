@@ -1,13 +1,14 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { BLACK, OFFWHITE, LIME, HAIRLINE_ON_BLACK, display, body } from './theme';
 
 const COURSES = ['Pian', 'Tobe', 'Canto', 'Solfegiu', 'Chitară'];
 
-const inp = (err?: boolean): React.CSSProperties => ({
-  width: '100%', padding: '14px 16px', borderRadius: 14, border: `2px solid ${err ? '#FCA5A5' : '#E5E7EB'}`,
-  fontSize: 14, fontWeight: 500, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit',
-  background: err ? '#FFF5F5' : '#FAFAFA', color: '#1a1a1a',
+const inputStyle = (err?: boolean): React.CSSProperties => ({
+  width: '100%', padding: '14px 4px', border: 'none', borderBottom: `1px solid ${err ? '#FF5C5C' : HAIRLINE_ON_BLACK}`,
+  fontSize: 15, fontWeight: 500, outline: 'none', transition: 'border-color 0.2s', fontFamily: body,
+  background: 'transparent', color: OFFWHITE, borderRadius: 0,
 });
 
 export default function CTA() {
@@ -15,7 +16,6 @@ export default function CTA() {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-
   const [apiError, setApiError] = useState<string | null>(null);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -51,76 +51,75 @@ export default function CTA() {
   };
 
   return (
-    <section id="inscriere" style={{ padding: '112px 24px', background: 'linear-gradient(135deg, #1a1208 0%, #2d2000 50%, #1a1208 100%)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }} className="cta-grid">
+    <section id="inscriere" style={{ position: 'relative', padding: '140px 24px', background: BLACK, overflow: 'hidden' }}>
+      {/* Cinematic backdrop */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backgroundImage: `url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&q=80&fit=crop')`,
+        backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.22, filter: 'grayscale(1) contrast(1.2)',
+      }} />
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'linear-gradient(180deg, #020707 0%, rgba(2,7,7,0.85) 50%, #020707 100%)' }} />
+
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1400, margin: '0 auto', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 80, alignItems: 'start' }} className="cta-grid">
         {/* Left */}
-        <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 24, background: 'rgba(244,168,92,0.18)', color: '#F4A85C' }}>Înscrie-te</span>
-          <h2 style={{ fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 900, color: '#fff', lineHeight: 1.05, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
-            Fă primul pas
-            <span style={{ display: 'block', color: '#F4A85C' }}>către lumea muzicii.</span>
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: body, fontSize: 12, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 24, color: LIME }}>
+            <span style={{ width: 24, height: 1, background: LIME, display: 'inline-block' }} /> Înscrie-te
+          </span>
+          <h2 style={{ fontFamily: display, fontSize: 'clamp(48px, 8vw, 108px)', color: OFFWHITE, lineHeight: 0.86, letterSpacing: '-0.01em', margin: '0 0 32px', textTransform: 'uppercase' }}>
+            Ready<br /><span style={{ color: LIME }}>to find</span><br />your sound?
           </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, margin: '0 0 40px' }}>
+          <p style={{ fontFamily: body, fontSize: 17, color: 'rgba(244,243,237,0.55)', lineHeight: 1.7, margin: '0 0 40px', maxWidth: 460 }}>
             Completează formularul și te vom contacta în cel mai scurt timp pentru prima lecție de probă — gratuită.
           </p>
           {['Prima lecție gratuită', 'Fără contract pe termen lung', 'Program flexibil', 'Profesori certificați'].map((b, i) => (
-            <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 + i * 0.1 }}
-              style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(244,168,92,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#F4A85C', flexShrink: 0 }}>✓</span>
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 500, fontSize: 15 }}>{b}</span>
+            <motion.div key={i} initial={{ opacity: 0, x: -14 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 + i * 0.08 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <span style={{ width: 5, height: 5, background: LIME, flexShrink: 0 }} />
+              <span style={{ fontFamily: body, color: 'rgba(244,243,237,0.75)', fontWeight: 500, fontSize: 14 }}>{b}</span>
             </motion.div>
           ))}
         </motion.div>
 
         {/* Form */}
-        <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          <div style={{ background: '#fff', borderRadius: 28, padding: '40px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}>
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.1 }}>
+          <div style={{ border: `1px solid ${HAIRLINE_ON_BLACK}`, padding: '40px 36px' }}>
             {done ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 56, marginBottom: 20 }}>🎵</div>
-                <h3 style={{ fontSize: 24, fontWeight: 900, color: '#1a1a1a', margin: '0 0 12px' }}>Felicitări!</h3>
-                <p style={{ color: '#6b7280', lineHeight: 1.7, margin: '0 0 28px' }}>Am primit cererea ta și te vom contacta în 24 de ore pentru a stabili prima lecție.</p>
+                <div style={{ width: 64, height: 64, background: LIME, margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: display, fontSize: 28, color: BLACK }}>✓</div>
+                <h3 style={{ fontFamily: display, fontSize: 26, color: OFFWHITE, margin: '0 0 14px', textTransform: 'uppercase' }}>Felicitări!</h3>
+                <p style={{ fontFamily: body, color: 'rgba(244,243,237,0.55)', lineHeight: 1.7, margin: '0 0 28px' }}>Am primit cererea ta și te vom contacta în 24 de ore pentru a stabili prima lecție.</p>
                 <button onClick={() => { setDone(false); setForm({ name: '', phone: '', email: '', age: '', course: '', message: '' }); }}
-                  style={{ padding: '12px 28px', borderRadius: 14, fontWeight: 700, background: 'linear-gradient(135deg,#F4A85C,#F4A85C)', color: '#1a1a1a', border: 'none', cursor: 'pointer', fontSize: 14 }}>
+                  style={{ padding: '13px 28px', fontWeight: 700, background: LIME, color: BLACK, border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: body, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   Trimite altă cerere
                 </button>
               </div>
             ) : (
               <form onSubmit={submit}>
-                <h3 style={{ fontSize: 22, fontWeight: 900, color: '#1a1a1a', margin: '0 0 28px' }}>Înregistrare</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <input placeholder="Numele tău *" value={form.name} onChange={set('name')} style={inp(errors.name)}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#F4A85C'; }}
-                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.name ? '#FCA5A5' : '#E5E7EB'; }} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    <input placeholder="Telefon *" value={form.phone} onChange={set('phone')} style={inp(errors.phone)}
-                      onFocus={e => { (e.target as HTMLElement).style.borderColor = '#F4A85C'; }}
-                      onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.phone ? '#FCA5A5' : '#E5E7EB'; }} />
-                    <input placeholder="Vârsta" value={form.age} onChange={set('age')} style={inp()}
-                      onFocus={e => { (e.target as HTMLElement).style.borderColor = '#F4A85C'; }}
-                      onBlur={e => { (e.target as HTMLElement).style.borderColor = '#E5E7EB'; }} />
+                <h3 style={{ fontFamily: display, fontSize: 22, color: OFFWHITE, margin: '0 0 28px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>Înregistrare</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <input placeholder="Numele tău *" value={form.name} onChange={set('name')} style={inputStyle(errors.name)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                    <input placeholder="Telefon *" value={form.phone} onChange={set('phone')} style={inputStyle(errors.phone)} />
+                    <input placeholder="Vârsta" value={form.age} onChange={set('age')} style={inputStyle()} />
                   </div>
-                  <input placeholder="Email *" type="email" value={form.email} onChange={set('email')} style={inp(errors.email)}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#F4A85C'; }}
-                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.email ? '#FCA5A5' : '#E5E7EB'; }} />
-                  <select value={form.course} onChange={set('course')} style={{ ...inp(errors.course), color: form.course ? '#1a1a1a' : '#9ca3af' }}>
-                    <option value="">Cursul dorit *</option>
-                    {COURSES.map(c => <option key={c} value={c}>{c}</option>)}
+                  <input placeholder="Email *" type="email" value={form.email} onChange={set('email')} style={inputStyle(errors.email)} />
+                  <select value={form.course} onChange={set('course')} style={{ ...inputStyle(errors.course), color: form.course ? OFFWHITE : 'rgba(244,243,237,0.4)', appearance: 'none' }}>
+                    <option value="" style={{ color: BLACK }}>Cursul dorit *</option>
+                    {COURSES.map(c => <option key={c} value={c} style={{ color: BLACK }}>{c}</option>)}
                   </select>
-                  <textarea placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={3}
-                    style={{ ...inp(), resize: 'none' }}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#F4A85C'; }}
-                    onBlur={e => { (e.target as HTMLElement).style.borderColor = '#E5E7EB'; }} />
+                  <textarea placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={2}
+                    style={{ ...inputStyle(), resize: 'none' }} />
                   <button type="submit" disabled={loading}
-                    style={{ width: '100%', padding: '16px', borderRadius: 16, fontSize: 16, fontWeight: 700, background: 'linear-gradient(135deg,#F4A85C,#F4A85C)', color: '#1a1a1a', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'all 0.2s' }}>
-                    {loading ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}><span className="spin" style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(0,0,0,0.2)', borderTopColor: '#1a1a1a' }} />Se trimite…</span> : 'Înscrie-te acum →'}
+                    style={{ width: '100%', padding: '16px', marginTop: 18, fontSize: 14, fontWeight: 700, background: LIME, color: BLACK, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, transition: 'all 0.2s', fontFamily: body, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    {loading ? 'Se trimite…' : 'Înscrie-te acum →'}
                   </button>
                   {apiError && (
-                    <div style={{ padding: '12px 16px', borderRadius: 12, background: '#FFF5F5', border: '1px solid #FCA5A5', color: '#DC2626', fontSize: 13, fontWeight: 500 }}>
-                      ⚠️ {apiError}
+                    <div style={{ padding: '12px 16px', border: '1px solid #FF5C5C', color: '#FF8080', fontSize: 13, fontWeight: 500, fontFamily: body, marginTop: 4 }}>
+                      ⚠ {apiError}
                     </div>
                   )}
-                  <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', margin: 0 }}>Prima lecție de probă este gratuită · Fără obligații</p>
+                  <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(244,243,237,0.35)', margin: '8px 0 0', fontFamily: body, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Prima lecție de probă este gratuită · Fără obligații</p>
                 </div>
               </form>
             )}
