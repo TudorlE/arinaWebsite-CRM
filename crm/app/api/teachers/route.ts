@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, friendlyDbError } from '@/lib/supabase';
 
 export async function GET() {
   const { data, error } = await supabase.from('teachers').select('*').order('name');
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       .insert({ name, email, phone, bio, birth_date: birth_date || null })
       .select()
       .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
     return NextResponse.json({ teacher: data }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

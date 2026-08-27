@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, friendlyDbError } from '@/lib/supabase';
 import { createPaymentForStudent } from '@/lib/payments';
 
 export async function GET(request: NextRequest) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
     // Automation: auto-create the current month "unpaid" payment for the new student.
     if (student?.id) {
       try { await createPaymentForStudent(Number(student.id), Number(monthly_fee)); } catch { /* non-fatal */ }

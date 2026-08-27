@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, friendlyDbError } from '@/lib/supabase';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,7 +18,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
     if (update.birth_date === '') update.birth_date = null;
     const { data, error } = await supabase.from('teachers').update(update).eq('id', id).select().single();
-    if (error || !data) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+    if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
+    if (!data) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
     return NextResponse.json({ teacher: data });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
