@@ -31,6 +31,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const body = await request.json();
     const allowed = ['name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_id', 'cabinet_id', 'notes', 'status'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
+    if (update.birth_date === '') update.birth_date = null;
     const { data: student, error } = await supabase.from('students').update(update).eq('id', id).select().single();
     if (error || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     return NextResponse.json({ student });

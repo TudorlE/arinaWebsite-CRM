@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
     const { data, error } = await supabase
       .from('teachers')
-      .insert({ name, email, phone, bio, birth_date: birth_date ?? null })
+      .insert({ name, email, phone, bio, birth_date: birth_date || null })
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
