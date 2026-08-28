@@ -26,11 +26,10 @@ function daysInMonth(ref: Date): Date[] {
   return Array.from({ length: count }, (_, i) => new Date(year, month, i + 1));
 }
 
-type Mark = 'present' | 'absent' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered';
+type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered';
 
 const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string }[] = [
   { mark: 'present',           char: '✓', label: 'Prezent / Finalizată',   className: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
-  { mark: 'absent',            char: 'A', label: 'Absent',                 className: 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300' },
   { mark: 'excused_absence',   char: 'M', label: 'Absență motivată',       className: 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200' },
   { mark: 'unexcused_absence', char: 'N', label: 'Absență nemotivată',     className: 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200' },
   { mark: 'recovered',         char: 'R', label: 'Recuperare',             className: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200' },
@@ -42,7 +41,6 @@ function symbolFor(l: Lesson): { char: string; className: string; title: string 
   if (l.status === 'recovered') return { char: 'R', className: 'text-sky-700 bg-sky-50', title: 'Recuperare' };
   if (l.attendance_status === 'unexcused_absence') return { char: 'N', className: 'text-rose-700 bg-rose-50', title: 'Absență nemotivată' };
   if (l.attendance_status === 'excused_absence') return { char: 'M', className: 'text-amber-700 bg-amber-50', title: 'Absență motivată' };
-  if (l.attendance_status === 'absent') return { char: 'A', className: 'text-slate-700 bg-slate-100', title: 'Absent' };
   if (l.attendance_status === 'late') return { char: 'Î', className: 'text-blue-700 bg-blue-50', title: 'Întârziere' };
   if (l.status === 'completed' || l.attendance_status === 'present') return { char: '✓', className: 'text-emerald-700 bg-emerald-50', title: 'Prezent / Finalizată' };
   return { char: '•', className: 'text-slate-300', title: `Programată · ${l.time?.slice(0, 5)} · ${l.discipline ?? 'fără disciplină'} — click pentru a marca` };
@@ -83,9 +81,6 @@ export default function AttendanceRegisterPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [activeCell]);
 
-  const [showForm, setShowForm] = useState(false);
-  const [addStudentId, setAddStudentId] = useState<number | undefined>(undefined);
-  const [addDate, setAddDate] = useState('');
   const [editLesson, setEditLesson] = useState<Lesson | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -104,10 +99,8 @@ export default function AttendanceRegisterPage() {
   const to = fmtDate(days[days.length - 1]);
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
-  const disciplineTeacherId = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline)?.teacher_id ?? null : null;
+  const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
   const effectiveTeacherId = role === 'teacher' ? myTeacherId : (fTeacher ? Number(fTeacher) : null);
-  // For the "add lesson" default only — doesn't filter which students/lessons show.
-  const defaultTeacherForAdd = effectiveTeacherId ?? disciplineTeacherId;
   const students = allStudents
     .filter(s => !effectiveTeacherId || s.teacher_id === effectiveTeacherId)
     .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline));
@@ -190,18 +183,13 @@ export default function AttendanceRegisterPage() {
     }
   };
 
-  const openCell = (student: Student, dateStr: string, cellLessons: Lesson[], rect: DOMRect) => {
+  const openCell = (dateStr: string, cellLessons: Lesson[], studentId: number, rect: DOMRect) => {
+    if (cellLessons.length === 0) return; // adding lessons happens only from Program Privat
     if (!canEdit) {
       toast(role === null ? 'Se încarcă permisiunile… mai încearcă o dată în o clipă' : 'Nu ai permisiunea de a edita registrul', 'error');
       return;
     }
-    if (cellLessons.length === 0) {
-      setAddStudentId(student.id);
-      setAddDate(dateStr);
-      setShowForm(true);
-      return;
-    }
-    const key = `${student.id}|${dateStr}`;
+    const key = `${studentId}|${dateStr}`;
     if (activeCell === key) {
       setActiveCell(null);
       setPopoverPos(null);
@@ -269,46 +257,39 @@ export default function AttendanceRegisterPage() {
           ))}
         </div>
 
-        {/* ── Profesor per serviciu ── */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {INSTRUMENTS.map(i => {
-            const assignment = disciplineTeachers.find(a => a.discipline === i);
-            return (
-              <div key={i} className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-                <span className="font-semibold text-slate-400">{i}</span>
-                {role === 'admin' ? (
-                  <select
-                    value={assignment?.teacher_id ?? ''}
-                    onChange={e => setDisciplineTeacher(i, e.target.value)}
-                    className="text-xs font-semibold text-slate-700 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md py-0.5"
-                  >
-                    <option value="">— fără profesor —</option>
-                    {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                ) : (
-                  <span className="font-medium text-slate-600 dark:text-slate-300">{assignment?.teacher_name ?? '—'}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
         {/* ── Excel-style register grid ── */}
         <div className="flex-1 overflow-auto rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-white dark:bg-slate-900 shadow-sm">
-          <table className="border-collapse text-base" style={{ minWidth: 200 + days.length * 56 }}>
+          <table className="border-collapse text-base" style={{ minWidth: 220 + days.length * 64 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 px-4 py-3 text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 text-left" style={{ minWidth: 200, width: 200 }}>
-                  Elev
+                <th className="sticky left-0 top-0 z-20 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 px-4 py-3 text-left align-bottom" style={{ minWidth: 220, width: 220 }}>
+                  {fDiscipline ? (
+                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-700 shadow-sm normal-case">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{fDiscipline}</span>
+                      {role === 'admin' ? (
+                        <select
+                          value={disciplineTeacherAssignment?.teacher_id ?? ''}
+                          onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
+                          className="w-full text-sm font-semibold text-slate-700 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
+                        >
+                          <option value="">— fără profesor —</option>
+                          {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                      ) : (
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
+                      )}
+                    </div>
+                  ) : null}
+                  <span className="text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Elev</span>
                 </th>
                 {days.map(d => {
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = fmtDate(d) === fmtDate(new Date());
                   return (
-                    <th key={d.getDate()} className={`sticky top-0 z-10 border border-amber-200 dark:border-amber-900/40 px-1 py-2.5 text-center font-semibold
-                      ${isToday ? 'bg-amber-200 dark:bg-amber-800/60' : isWeekend ? 'bg-amber-100/70 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-950/40'}`} style={{ minWidth: 56, width: 56 }}>
-                      <div className="text-[10px] uppercase tracking-wide text-amber-700/70 dark:text-amber-400/70">{WEEKDAY_LETTERS[d.getDay()]}</div>
-                      <div className="text-sm text-amber-900 dark:text-amber-200">{d.getDate()}</div>
+                    <th key={d.getDate()} className={`sticky top-0 z-10 border border-amber-200 dark:border-amber-900/40 px-1 py-3 text-center font-semibold
+                      ${isToday ? 'bg-amber-200 dark:bg-amber-800/60' : isWeekend ? 'bg-amber-100/70 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-950/40'}`} style={{ minWidth: 64, width: 64 }}>
+                      <div className="text-xs uppercase tracking-wide text-amber-700/70 dark:text-amber-400/70">{WEEKDAY_LETTERS[d.getDay()]}</div>
+                      <div className="text-base text-amber-900 dark:text-amber-200">{d.getDate()}</div>
                     </th>
                   );
                 })}
@@ -319,7 +300,7 @@ export default function AttendanceRegisterPage() {
                 <tr><td colSpan={days.length + 1} className="text-center py-10 text-slate-400">Niciun elev</td></tr>
               ) : students.map(s => (
                 <tr key={s.id}>
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2.5 text-base font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-base font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
                     {s.name}
                   </td>
                   {days.map(d => {
@@ -333,12 +314,12 @@ export default function AttendanceRegisterPage() {
                     return (
                       <td key={dateStr} className={`relative border border-slate-200 dark:border-slate-800 p-0 text-center ${isWeekend ? 'bg-slate-50/70 dark:bg-slate-800/30' : ''}`}>
                         <button
-                          onClick={e => { e.stopPropagation(); openCell(s, dateStr, cellLessons, e.currentTarget.getBoundingClientRect()); }}
-                          disabled={!canEdit && cellLessons.length === 0}
+                          onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.currentTarget.getBoundingClientRect()); }}
+                          disabled={cellLessons.length === 0}
                           data-cell-trigger
                           title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : sym?.title}
-                          className={`relative w-full h-12 flex items-center justify-center text-lg font-bold transition-colors
-                            ${sym ? sym.className : ''} ${canEdit ? 'hover:brightness-95 cursor-pointer' : cellLessons.length ? 'cursor-default' : 'cursor-default'}
+                          className={`relative w-full h-14 flex items-center justify-center text-xl font-bold transition-colors
+                            ${sym ? sym.className : ''} ${canEdit && cellLessons.length > 0 ? 'hover:brightness-95 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
                           {savingCell === key ? '…' : (sym?.char ?? '')}
@@ -365,7 +346,7 @@ export default function AttendanceRegisterPage() {
                                     <button onClick={() => { setDeleteTarget(l); setActiveCell(null); }} className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-1 mb-1.5">
+                                <div className="grid grid-cols-5 gap-1 mb-1.5">
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
@@ -412,26 +393,14 @@ export default function AttendanceRegisterPage() {
         {/* ── Legend ── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center border border-emerald-200">✓</span>Prezent / Finalizată</span>
-          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-300">A</span>Absent</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-amber-50 text-amber-700 font-bold flex items-center justify-center border border-amber-200">M</span>Absență motivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-sky-50 text-sky-700 font-bold flex items-center justify-center border border-sky-200">R</span>Recuperare</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-red-50 text-red-700 font-bold flex items-center justify-center border border-red-200">X</span>Anulată</span>
-          {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe o celulă goală adaugă o lecție · click pe un marcaj îl schimbă</span>}
+          {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe un marcaj îl schimbă · lecțiile noi se adaugă din Program Privat</span>}
         </div>
       </main>
 
-      <LessonForm
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        onSaved={() => mutateLessons()}
-        defaultStudentId={addStudentId}
-        defaultDate={addDate}
-        defaultTeacherId={defaultTeacherForAdd ?? undefined}
-        defaultDiscipline={fDiscipline || undefined}
-        teacherLocked={role !== 'admin'}
-        showToast={toast}
-      />
       <LessonForm
         open={!!editLesson}
         onClose={() => setEditLesson(null)}

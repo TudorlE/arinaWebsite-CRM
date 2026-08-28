@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    const allowed = ['name', 'email', 'phone', 'bio', 'birth_date'];
+    const allowed = ['name', 'email', 'phone', 'bio', 'birth_date', 'instruments'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
     if (update.birth_date === '') update.birth_date = null;
     const { data, error } = await supabase.from('teachers').update(update).eq('id', id).select().single();

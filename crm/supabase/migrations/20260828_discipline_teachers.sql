@@ -10,9 +10,3 @@ CREATE TABLE IF NOT EXISTS discipline_teachers (
 ALTER TABLE discipline_teachers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all on discipline_teachers" ON discipline_teachers;
 CREATE POLICY "Allow all on discipline_teachers" ON discipline_teachers FOR ALL TO anon USING (true) WITH CHECK (true);
-
--- ── Registru Frecvență: add a plain "Absent" mark alongside the existing
--- Prezent / Absență motivată / Absență nemotivată / Întârziere options.
-ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_status_check;
-ALTER TABLE attendance ADD CONSTRAINT attendance_status_check
-  CHECK (status IN ('present','excused_absence','unexcused_absence','late','absent'));

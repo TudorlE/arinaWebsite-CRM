@@ -9,13 +9,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, phone, bio, birth_date } = await request.json();
+    const { name, email, phone, bio, birth_date, instruments } = await request.json();
     if (!name || !email || !phone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const { data, error } = await supabase
       .from('teachers')
-      .insert({ name, email, phone, bio, birth_date: birth_date || null })
+      .insert({ name, email, phone, bio, birth_date: birth_date || null, instruments: instruments ?? [] })
       .select()
       .single();
     if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });

@@ -9,12 +9,12 @@ import Input from '@/components/ui/Input';
 import DatePicker from '@/components/ui/DatePicker';
 import TeacherDetailsModal from '@/components/teachers/TeacherDetailsModal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Teacher } from '@/lib/types';
+import { Teacher, INSTRUMENTS } from '@/lib/types';
 import { formatBirthDate } from '@/lib/dateUtils';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-const blank = { name: '', email: '', phone: '', bio: '', birth_date: '' };
+const blank = { name: '', email: '', phone: '', bio: '', birth_date: '', instruments: [] as string[] };
 
 export default function TeachersPage() {
   const { data, mutate } = useSWR('/api/teachers', fetcher);
@@ -40,7 +40,7 @@ export default function TeachersPage() {
   const openAdd = () => { setEditTeacher(null); setForm(blank); setErrors({}); setShowForm(true); };
   const openEdit = (t: Teacher) => {
     setEditTeacher(t);
-    setForm({ name: t.name, email: t.email, phone: t.phone, bio: t.bio ?? '', birth_date: t.birth_date ?? '' });
+    setForm({ name: t.name, email: t.email, phone: t.phone, bio: t.bio ?? '', birth_date: t.birth_date ?? '', instruments: t.instruments ?? [] });
     setErrors({});
     setShowForm(true);
   };
@@ -48,6 +48,15 @@ export default function TeachersPage() {
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     setErrors(prev => ({ ...prev, [field]: false }));
+  };
+
+  const toggleInstrument = (instr: string) => {
+    setForm(prev => ({
+      ...prev,
+      instruments: prev.instruments.includes(instr)
+        ? prev.instruments.filter(i => i !== instr)
+        : [...prev.instruments, instr],
+    }));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -202,6 +211,16 @@ export default function TeachersPage() {
                 )}
               </div>
 
+              {teacher.instruments && teacher.instruments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {teacher.instruments.map(i => (
+                    <span key={i} className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
+                      <Music2 className="w-2.5 h-2.5" />{i}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {teacher.bio && (
                 <p className="text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800 line-clamp-2">
                   {teacher.bio}
@@ -221,6 +240,25 @@ export default function TeachersPage() {
           <Input label="Email" value={form.email} onChange={set('email')} type="email" shake={errors.email} placeholder="profesor@arrymusic.com" />
           <Input label="Telefon" value={form.phone} onChange={set('phone')} shake={errors.phone} placeholder="+373 69 000 000" />
           <DatePicker label="Data nașterii" value={form.birth_date} onChange={v => setForm(prev => ({ ...prev, birth_date: v }))} />
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Discipline predate</label>
+            <div className="flex flex-wrap gap-2">
+              {INSTRUMENTS.map(instr => {
+                const selected = form.instruments.includes(instr);
+                return (
+                  <button
+                    key={instr}
+                    type="button"
+                    onClick={() => toggleInstrument(instr)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-150 select-none
+                      ${selected ? 'bg-brand-600 text-white border-brand-600' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400'}`}
+                  >
+                    {instr}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Bio</label>
             <textarea

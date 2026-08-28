@@ -19,7 +19,6 @@ interface Record_ {
 
 const STATUS_DOT: Record<AttendanceStatus, string> = {
   present:           'bg-emerald-500',
-  absent:            'bg-slate-400',
   excused_absence:   'bg-amber-400',
   unexcused_absence: 'bg-red-500',
   late:              'bg-blue-400',

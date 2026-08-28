@@ -29,6 +29,7 @@ export interface Teacher {
   phone: string;
   bio?: string;
   birth_date?: string | null; // YYYY-MM-DD
+  instruments?: string[];
   created_at: string;
 }
 
@@ -100,7 +101,7 @@ export interface RecurringSchedule {
   created_at: string;
 }
 
-export type AttendanceStatus = 'present' | 'excused_absence' | 'unexcused_absence' | 'late' | 'absent';
+export type AttendanceStatus = 'present' | 'excused_absence' | 'unexcused_absence' | 'late';
 
 export interface Attendance {
   id: number;
@@ -168,7 +169,6 @@ export const DAYS_OF_WEEK = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', '
 
 export const ATTENDANCE_STATUSES: { value: AttendanceStatus; label: string; short: string }[] = [
   { value: 'present',            label: 'Prezent',            short: 'P' },
-  { value: 'absent',             label: 'Absent',              short: 'A' },
   { value: 'excused_absence',    label: 'Absență motivată',   short: 'AM' },
   { value: 'unexcused_absence',  label: 'Absență nemotivată', short: 'AN' },
   { value: 'late',                label: 'Întârziere',         short: 'Î' },
