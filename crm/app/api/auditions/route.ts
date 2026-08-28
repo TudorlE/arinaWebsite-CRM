@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('auditions')
-    .select('*, students(name), teachers(name)')
+    .select('*, students(name), teachers(name), cabinets(name, color)')
     .order('date', { ascending: true })
     .order('time', { ascending: true });
 
@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  let auditions = (data ?? []).map(({ students, teachers, ...a }: {
-    students: { name: string } | null; teachers: { name: string } | null; [key: string]: unknown;
-  }) => ({ ...a, student_name: students?.name ?? null, teacher_name: teachers?.name ?? null }));
+  let auditions = (data ?? []).map(({ students, teachers, cabinets, ...a }: {
+    students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; [key: string]: unknown;
+  }) => ({ ...a, student_name: students?.name ?? null, teacher_name: teachers?.name ?? null, cabinet_name: cabinets?.name ?? null, cabinet_color: cabinets?.color ?? null }));
 
   if (search) {
     const q = search.toLowerCase();
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   if (forbidden) return forbidden;
 
   try {
-    const { student_id, teacher_id, discipline, date, time, duration, notes, result, status } = await request.json();
+    const { student_id, teacher_id, discipline, date, time, duration, notes, result, status, cabinet_id } = await request.json();
     if (!student_id || !date || !time) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
         notes: notes ?? null,
         result: result ?? null,
         status: status ?? 'scheduled',
+        cabinet_id: cabinet_id ? Number(cabinet_id) : null,
       })
       .select()
       .single();

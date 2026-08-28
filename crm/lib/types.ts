@@ -134,6 +134,9 @@ export interface Audition {
   notes?: string | null;
   result?: string | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  cabinet_id?: number | null;
+  cabinet_name?: string | null;
+  cabinet_color?: string | null;
   created_at: string;
 }
 

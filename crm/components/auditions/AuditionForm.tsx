@@ -7,7 +7,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { Audition, INSTRUMENTS } from '@/lib/types';
-import { GraduationCap, Calendar, FileText } from 'lucide-react';
+import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+import { GraduationCap, Calendar, DoorOpen, FileText } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -16,12 +17,15 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   audition?: Audition | null;
+  defaultDate?: string;
+  defaultTime?: string;
+  defaultCabinetId?: number;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
 const blank = {
-  student_id: '', teacher_id: '', discipline: '', date: '', time: '10:00',
-  duration: '30', notes: '', result: '', status: 'scheduled',
+  student_id: '', teacher_id: '', discipline: '', date: '', time: DEFAULT_TIME_SLOTS[0],
+  duration: '30', notes: '', result: '', status: 'scheduled', cabinet_id: '',
 };
 
 const STATUS_OPTIONS = [
@@ -31,13 +35,14 @@ const STATUS_OPTIONS = [
   { value: 'no_show',   label: 'Neprezentare' },
 ];
 
-export default function AuditionForm({ open, onClose, onSaved, audition, showToast }: Props) {
+export default function AuditionForm({ open, onClose, onSaved, audition, defaultDate, defaultTime, defaultCabinetId, showToast }: Props) {
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
+  const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
 
   useEffect(() => {
     if (audition) {
@@ -51,12 +56,18 @@ export default function AuditionForm({ open, onClose, onSaved, audition, showToa
         notes: audition.notes ?? '',
         result: audition.result ?? '',
         status: audition.status,
+        cabinet_id: audition.cabinet_id ? String(audition.cabinet_id) : '',
       });
     } else {
-      setForm(blank);
+      setForm({
+        ...blank,
+        date: defaultDate ?? '',
+        time: defaultTime ?? DEFAULT_TIME_SLOTS[0],
+        cabinet_id: defaultCabinetId ? String(defaultCabinetId) : '',
+      });
     }
     setErrors({});
-  }, [audition, open]);
+  }, [audition, open, defaultDate, defaultTime, defaultCabinetId]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -85,6 +96,7 @@ export default function AuditionForm({ open, onClose, onSaved, audition, showToa
           duration: Number(form.duration),
           discipline: form.discipline || null,
           result: form.result || null,
+          cabinet_id: form.cabinet_id ? Number(form.cabinet_id) : null,
         }),
       });
       if (!res.ok) {
@@ -102,6 +114,7 @@ export default function AuditionForm({ open, onClose, onSaved, audition, showToa
 
   const students = studentsData?.students ?? [];
   const teachers = teachersData?.teachers ?? [];
+  const cabinets = cabinetsData?.cabinets ?? [];
 
   return (
     <Modal open={open} onClose={onClose} title={audition ? 'Editează audiție' : 'Audiție nouă'}>
@@ -128,14 +141,24 @@ export default function AuditionForm({ open, onClose, onSaved, audition, showToa
             <Calendar className="w-4 h-4" />
             Programare
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />
-            <Input label="Oră"  value={form.time} onChange={set('time')} shake={errors.time} type="time" />
+          <div className={audition ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-3 gap-3'}>
+            {!audition && <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />}
+            <Select label="Oră" value={form.time} onChange={set('time')} shake={errors.time}
+              placeholder="Selectează ora" options={DEFAULT_TIME_SLOTS.map(t => ({ value: t, label: t }))} />
             <Input label="Durată (min)" value={form.duration} onChange={set('duration')} type="number" min={5} step={5} />
           </div>
           <div className="mt-3">
             <Select label="Status" value={form.status} onChange={set('status')} options={STATUS_OPTIONS} />
           </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+            <DoorOpen className="w-4 h-4" />
+            Cabinet
+          </div>
+          <Select label="" value={form.cabinet_id} onChange={set('cabinet_id')}
+            placeholder="Fără cabinet (opțional)" options={cabinets.map((c: { id: number; name: string }) => ({ value: c.id, label: c.name }))} />
         </div>
 
         <div>
