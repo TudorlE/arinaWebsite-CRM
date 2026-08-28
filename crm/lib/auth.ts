@@ -3,6 +3,7 @@
  */
 import { SignJWT, jwtVerify } from 'jose';
 import { NextRequest } from 'next/server';
+import { getFirstAdmin } from '@/lib/db';
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? 'arry-music-crm-default-secret-change-in-production'
@@ -33,9 +34,13 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   }
 }
 
-/** Reads the auth-token cookie and returns the payload */
-export async function getAuthUser(request: NextRequest): Promise<JWTPayload | null> {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) return null;
-  return verifyToken(token);
+/**
+ * Login is disabled — everyone who reaches the CRM is treated as the admin
+ * account, regardless of any cookie. `signToken`/`verifyToken` are kept
+ * around unused so login/register still work mechanically if re-enabled.
+ */
+export async function getAuthUser(_request: NextRequest): Promise<JWTPayload | null> {
+  const admin = getFirstAdmin();
+  if (!admin) return null;
+  return { userId: admin.id, email: admin.email, role: 'admin' };
 }

@@ -10,6 +10,10 @@ const BARS = [38, 78, 50, 100, 66, 88, 42, 72, 56, 84];
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // Login is disabled — everyone who reaches the CRM is treated as admin.
+  useEffect(() => { router.replace('/admin'); }, [router]);
+
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);

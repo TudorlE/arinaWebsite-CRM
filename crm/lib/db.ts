@@ -612,6 +612,13 @@ export function getUserByEmail(email: string) {
     | undefined;
 }
 
+/** The account everyone is treated as now that login is bypassed (see lib/auth.ts). */
+export function getFirstAdmin() {
+  return getDb()
+    .prepare("SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
+    .get() as UserRow | undefined;
+}
+
 export function getUserById(id: number) {
   return getDb().prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE id = ?').get(id) as UserRow | undefined;
 }
