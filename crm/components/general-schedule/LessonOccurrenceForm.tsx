@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { Lesson, INSTRUMENTS } from '@/lib/types';
+import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import { GraduationCap, Calendar, DoorOpen, FileText, Repeat, CircleDot } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -23,7 +24,7 @@ interface Props {
 
 const blank = {
   student_id: '', teacher_id: '', discipline: '', date: '',
-  time: '09:00', duration: '45', notes: '', cabinet_id: '', status: 'scheduled',
+  time: DEFAULT_TIME_SLOTS[0], duration: '45', notes: '', cabinet_id: '', status: 'scheduled',
 };
 
 const STATUS_OPTIONS = [
@@ -65,7 +66,7 @@ export default function LessonOccurrenceForm({ open, onClose, onSaved, lesson, d
         status: lesson.status,
       });
     } else {
-      setForm({ ...blank, date: defaultDate ?? '', time: defaultTime ?? '09:00' });
+      setForm({ ...blank, date: defaultDate ?? '', time: defaultTime ?? DEFAULT_TIME_SLOTS[0] });
     }
     setPropagate('only');
     setErrors({});
@@ -156,7 +157,11 @@ export default function LessonOccurrenceForm({ open, onClose, onSaved, lesson, d
           </div>
           <div className="grid grid-cols-3 gap-3">
             <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />
-            <Input label="Oră"  value={form.time} onChange={set('time')} shake={errors.time} type="time" />
+            <Select
+              label="Oră" value={form.time} onChange={set('time')} shake={errors.time}
+              placeholder="Selectează ora"
+              options={DEFAULT_TIME_SLOTS.map(t => ({ value: t, label: t }))}
+            />
             <Input label="Durată (min)" value={form.duration} onChange={set('duration')} type="number" min={5} step={5} />
           </div>
         </div>

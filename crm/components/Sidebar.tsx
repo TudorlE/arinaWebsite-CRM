@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
-  Settings, LogOut, CalendarDays, ShieldCheck, UserCheck, DoorOpen, Globe, ExternalLink,
+  Settings, LogOut, CalendarDays, ShieldCheck, UserCheck, Globe, ExternalLink,
   CalendarRange, Repeat, Mic2, ClipboardList, BookOpen, Menu, X,
 } from 'lucide-react';
 
@@ -21,7 +21,6 @@ const nav: NavItem[] = [
   { href: '/admin/recurring-schedule', label: 'Orar Fix',           icon: Repeat,        adminOnly: true },
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true },
   { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true },
-  { href: '/admin/cabinets',     label: 'Cabinete General', icon: DoorOpen,                       teacherAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
   { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true },
   { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true },

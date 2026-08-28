@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { ChevronLeft, ChevronRight, CalendarDays, Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
 import LessonForm from '@/components/lessons/LessonForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Lesson } from '@/lib/types';
+import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+
+const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#14b8a6', '#3b82f6', '#f59e0b'];
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -70,6 +72,7 @@ export default function SchedulePage() {
     fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
   }, []);
   const isStudent = role === 'student';
+  const isAdmin = role === 'admin';
 
   const [reference, setReference] = useState(new Date());
   const [animDir, setAnimDir]     = useState<'left' | 'right' | null>(null);
@@ -85,6 +88,12 @@ export default function SchedulePage() {
   const [draggingId, setDraggingId]     = useState<number | null>(null);
   const [dropCell, setDropCell]         = useState<string | null>(null); // "date|hour"
   const [savingAssignment, setSavingAssignment] = useState<number | null>(null);
+  const [showManageCabinets, setShowManageCabinets] = useState(false);
+  const [managingCabinet, setManagingCabinet] = useState<Cabinet | null>(null);
+  const [cabinetForm, setCabinetForm] = useState({ name: '', color: '#6366f1' });
+  const [savingCabinet, setSavingCabinet] = useState(false);
+  const [deletingCabinetId, setDeletingCabinetId] = useState<number | null>(null);
+  const [togglingStatusId, setTogglingStatusId] = useState<number | null>(null);
   const [searchStudent, setSearchStudent] = useState('');
   const [statusFilterSched, setStatusFilterSched] = useState('');
   const [view, setView] = useState<'week' | 'month'>('week');
@@ -102,8 +111,9 @@ export default function SchedulePage() {
   const { data: allData, mutate } = useSWR('/api/lessons', fetcher);
   const allLessons: Lesson[] = allData?.lessons ?? [];
   const { data: cabinetsData, mutate: mutateCabinets } = useSWR('/api/cabinets', fetcher);
-  const cabinets: { id: number; name: string; color?: string }[] = cabinetsData?.cabinets ?? [];
+  const cabinets: Cabinet[] = cabinetsData?.cabinets ?? [];
   const assignments: { id: number; cabinet_id: number; day_of_week: number; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.assignments ?? [];
+  const dayStatuses: CabinetDayStatus[] = cabinetsData?.dayStatuses ?? [];
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
   const teachersList: { id: number; name: string }[] = teachersData?.teachers ?? [];
   const lessons = allLessons
@@ -135,6 +145,59 @@ export default function SchedulePage() {
   ];
   const selectedDow = weekDates[selectedDayIdx].getDay(); // 0=Sun..6=Sat, matches DB day_of_week
   const assignmentFor = (cabinetId: number) => assignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === selectedDow);
+  const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
+    dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
+
+  const toggleDayStatus = async (cabinetId: number, current: 'liber' | 'ocupat') => {
+    const next = current === 'liber' ? 'ocupat' : 'liber';
+    setTogglingStatusId(cabinetId);
+    try {
+      const res = await fetch(`/api/cabinets/${cabinetId}/day-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day_of_week: selectedDow, status: next }),
+      });
+      if (res.ok) mutateCabinets(); else toast('Eroare la salvare', 'error');
+    } finally {
+      setTogglingStatusId(null);
+    }
+  };
+
+  // ── Cabinet CRUD (Gestionare) ──────────────────────────────
+  const openEditCabinet = (cab: Cabinet) => {
+    setManagingCabinet(cab);
+    setCabinetForm({ name: cab.name, color: cab.color });
+  };
+
+  const saveCabinetForm = async () => {
+    if (!cabinetForm.name.trim()) return;
+    setSavingCabinet(true);
+    try {
+      if (managingCabinet) {
+        const res = await fetch(`/api/cabinets/${managingCabinet.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cabinetForm),
+        });
+        if (res.ok) { toast('Cabinet actualizat', 'success'); mutateCabinets(); setManagingCabinet(null); setCabinetForm({ name: '', color: '#6366f1' }); }
+        else { const d = await res.json().catch(() => ({})); toast(d.error ?? `Eroare ${res.status}`, 'error'); }
+      } else {
+        const res = await fetch('/api/cabinets', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cabinetForm),
+        });
+        if (res.ok) { toast('Cabinet adăugat', 'success'); mutateCabinets(); setCabinetForm({ name: '', color: '#6366f1' }); }
+        else { const d = await res.json().catch(() => ({})); toast(d.error ?? `Eroare ${res.status}`, 'error'); }
+      }
+    } finally {
+      setSavingCabinet(false);
+    }
+  };
+
+  const deleteCabinetRow = async (id: number) => {
+    setDeletingCabinetId(id);
+    const res = await fetch(`/api/cabinets/${id}`, { method: 'DELETE' });
+    setDeletingCabinetId(null);
+    if (res.ok) { toast('Cabinet șters', 'success'); mutateCabinets(); }
+    else toast('Eroare la ștergere', 'error');
+  };
 
   const handleTeacherChange = async (cabinetId: number, teacherId: string) => {
     setSavingAssignment(cabinetId);
@@ -358,7 +421,7 @@ export default function SchedulePage() {
           }}
         >
           {/* Day tabs */}
-          <div className="flex flex-wrap gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+          <div className="flex flex-wrap items-center gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
             {DAY_LABELS.map((label, i) => {
               const d = weekDates[i];
               const isToday = fmtDate(d) === todayStr;
@@ -374,6 +437,14 @@ export default function SchedulePage() {
                 </button>
               );
             })}
+            {isAdmin && (
+              <button
+                onClick={() => setShowManageCabinets(true)}
+                className="ml-auto flex items-center gap-2 px-3.5 py-2 text-sm font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+              >
+                <Settings2 className="w-4 h-4" /> Gestionare cabinete
+              </button>
+            )}
           </div>
 
           {/* Cabinet table — Ora | Cabinet 1 | Cabinet 2 | Cabinet 3 */}
@@ -381,18 +452,38 @@ export default function SchedulePage() {
             {cabinetColumns.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <p className="text-sm font-semibold text-slate-500">Nu există cabinete configurate</p>
-                <a href="/admin/cabinets" className="text-sm text-brand-600 hover:underline">Configurează cabinetele</a>
+                {isAdmin && (
+                  <button onClick={() => setShowManageCabinets(true)} className="text-sm text-brand-600 hover:underline">Configurează cabinetele</button>
+                )}
               </div>
             ) : (
               <table className="w-full border-collapse bg-white" style={{ minWidth: 560 }}>
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left w-24">Ora</th>
-                    {cabinetColumns.map(col => (
-                      <th key={col.id} className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left">
-                        {col.name}
-                      </th>
-                    ))}
+                    {cabinetColumns.map(col => {
+                      const status = typeof col.id === 'number' ? dayStatusFor(col.id) : null;
+                      const label = col.id === 'none' ? col.name : /cabinet/i.test(col.name) ? col.name : `Cabinet ${col.name}`;
+                      return (
+                        <th key={col.id} className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left align-top">
+                          <div className="flex flex-col gap-1.5">
+                            <span>{label}</span>
+                            {status && (
+                              <button
+                                type="button"
+                                disabled={!isAdmin || togglingStatusId === col.id}
+                                onClick={() => isAdmin && typeof col.id === 'number' && toggleDayStatus(col.id, status)}
+                                title={isAdmin ? 'Schimbă statusul' : undefined}
+                                className={`self-start text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full normal-case ${isAdmin ? 'cursor-pointer' : 'cursor-default'}
+                                  ${status === 'ocupat' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}
+                              >
+                                {status === 'ocupat' ? 'Ocupat' : 'Liber'}
+                              </button>
+                            )}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                   {!isStudent && (
                     <tr className="bg-gray-50">
@@ -467,7 +558,10 @@ export default function SchedulePage() {
                                     <GripVertical className="w-3 h-3 mt-0.5 opacity-40 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
                                       <p className="font-semibold truncate">{l.student_name}</p>
-                                      <p className="opacity-70 truncate text-[10px] mt-0.5">{l.discipline || l.teacher_name}</p>
+                                      <p className="truncate text-[10px] mt-0.5">
+                                        <span className="font-semibold" style={{ color: 'inherit' }}>{l.discipline || '—'}</span>
+                                        <span className="opacity-70"> · {l.teacher_name}</span>
+                                      </p>
                                     </div>
                                   </div>
 
@@ -568,6 +662,77 @@ export default function SchedulePage() {
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}
           </Button>
+        </div>
+      </Modal>
+
+      <Modal open={showManageCabinets} onClose={() => { setShowManageCabinets(false); setManagingCabinet(null); setCabinetForm({ name: '', color: '#6366f1' }); }} title="Gestionare Cabinete" size="lg">
+        <div className="space-y-6">
+          {/* Add / Edit form */}
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">
+              {managingCabinet ? `Editează: ${managingCabinet.name}` : 'Adaugă cabinet nou'}
+            </h3>
+            <div className="flex gap-3 items-end flex-wrap">
+              <div className="flex-1 min-w-40">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Nume cabinet</label>
+                <input
+                  value={cabinetForm.name}
+                  onChange={e => setCabinetForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="ex. Cabinet 1"
+                  className="w-full px-3 py-2 text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Culoare</label>
+                <div className="flex gap-1.5 flex-wrap" style={{ maxWidth: '160px' }}>
+                  {CABINET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setCabinetForm(p => ({ ...p, color: c }))}
+                      className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
+                      style={{ backgroundColor: c, borderColor: cabinetForm.color === c ? '#fff' : 'transparent', boxShadow: cabinetForm.color === c ? `0 0 0 2px ${c}` : 'none' }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {managingCabinet && (
+                  <button
+                    onClick={() => { setManagingCabinet(null); setCabinetForm({ name: '', color: '#6366f1' }); }}
+                    className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-500 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                <Button onClick={saveCabinetForm} disabled={savingCabinet || !cabinetForm.name.trim()}>
+                  {savingCabinet ? '…' : managingCabinet ? <Check className="w-4 h-4" /> : <><Plus className="w-4 h-4 mr-1" />Adaugă</>}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Cabinet list */}
+          {cabinets.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">Nu există cabinete. Adaugă unul mai sus.</p>
+          ) : (
+            <div className="space-y-2">
+              {cabinets.map(cab => (
+                <div key={cab.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                  <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cab.color }} />
+                  <p className="font-bold text-slate-800 dark:text-slate-100 flex-1">{cab.name}</p>
+                  <button onClick={() => openEditCabinet(cab)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => deleteCabinetRow(cab.id)} disabled={deletingCabinetId === cab.id} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-slate-400 flex items-center gap-1.5">
+            <Lock className="w-3 h-3" /> Statusul Ocupat/Liber se schimbă direct din antetul tabelului de program, pentru ziua selectată.
+          </p>
         </div>
       </Modal>
 

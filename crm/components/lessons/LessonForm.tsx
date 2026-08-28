@@ -5,7 +5,8 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { Lesson } from '@/lib/types';
+import { Lesson, INSTRUMENTS } from '@/lib/types';
+import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import useSWR from 'swr';
 import { GraduationCap, Calendar, FileText, DoorOpen } from 'lucide-react';
 
@@ -25,8 +26,8 @@ interface Props {
 }
 
 const blank = {
-  student_id: '', teacher_id: '', date: '',
-  time: '09:00', duration: '45', notes: '', cabinet_id: '',
+  student_id: '', teacher_id: '', discipline: '', date: '',
+  time: DEFAULT_TIME_SLOTS[0], duration: '45', notes: '', cabinet_id: '',
 };
 
 export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, showToast }: Props) {
@@ -43,6 +44,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
       setForm({
         student_id: String(lesson.student_id),
         teacher_id: String(lesson.teacher_id),
+        discipline: lesson.discipline ?? '',
         date: lesson.date,
         time: lesson.time,
         duration: String(lesson.duration),
@@ -54,7 +56,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
         ...blank,
         student_id: defaultStudentId ? String(defaultStudentId) : '',
         date: defaultDate ?? '',
-        time: defaultTime ?? '09:00',
+        time: defaultTime ?? DEFAULT_TIME_SLOTS[0],
         cabinet_id: defaultCabinetId ? String(defaultCabinetId) : '',
         teacher_id: defaultTeacherId ? String(defaultTeacherId) : '',
       });
@@ -88,6 +90,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
           teacher_id: Number(form.teacher_id),
           duration: Number(form.duration),
           cabinet_id: form.cabinet_id ? Number(form.cabinet_id) : null,
+          discipline: form.discipline || null,
         }),
       });
       if (!res.ok) {
@@ -135,6 +138,15 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
               options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
             />
           </div>
+          <div className="mt-3">
+            <Select
+              label="Disciplină"
+              value={form.discipline}
+              onChange={set('discipline')}
+              placeholder="Fără disciplină specificată"
+              options={INSTRUMENTS.map(i => ({ value: i, label: i }))}
+            />
+          </div>
         </div>
 
         {/* Programare */}
@@ -145,7 +157,14 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />
-            <Input label="Oră"  value={form.time} onChange={set('time')} shake={errors.time} type="time" />
+            <Select
+              label="Oră"
+              value={form.time}
+              onChange={set('time')}
+              shake={errors.time}
+              placeholder="Selectează ora"
+              options={DEFAULT_TIME_SLOTS.map(t => ({ value: t, label: t }))}
+            />
           </div>
         </div>
 
