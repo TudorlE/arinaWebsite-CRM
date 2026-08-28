@@ -459,25 +459,24 @@ export default function SchedulePage() {
             ) : (
               <table className="w-full border-collapse bg-white" style={{ minWidth: 560 }}>
                 <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left w-24">Ora</th>
+                  <tr className="bg-brand-50">
+                    <th className="border border-brand-100 px-4 py-4 text-sm font-bold uppercase tracking-wider text-brand-700 text-left w-24">Ora</th>
                     {cabinetColumns.map(col => {
                       const status = typeof col.id === 'number' ? dayStatusFor(col.id) : null;
                       const label = col.id === 'none' ? col.name : /cabinet/i.test(col.name) ? col.name : `Cabinet ${col.name}`;
                       return (
-                        <th key={col.id} className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left align-top">
+                        <th key={col.id} className="border border-brand-100 px-4 py-4 text-sm font-bold uppercase tracking-wider text-brand-700 text-left align-top">
                           <div className="flex flex-col gap-1.5">
                             <span>{label}</span>
-                            {status && (
+                            {status === 'ocupat' && (
                               <button
                                 type="button"
                                 disabled={!isAdmin || togglingStatusId === col.id}
                                 onClick={() => isAdmin && typeof col.id === 'number' && toggleDayStatus(col.id, status)}
                                 title={isAdmin ? 'Schimbă statusul' : undefined}
-                                className={`self-start text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full normal-case ${isAdmin ? 'cursor-pointer' : 'cursor-default'}
-                                  ${status === 'ocupat' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}
+                                className={`self-start text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full normal-case bg-red-100 text-red-700 ${isAdmin ? 'cursor-pointer' : 'cursor-default'}`}
                               >
-                                {status === 'ocupat' ? 'Ocupat' : 'Liber'}
+                                Ocupat
                               </button>
                             )}
                           </div>
@@ -486,16 +485,16 @@ export default function SchedulePage() {
                     })}
                   </tr>
                   {!isStudent && (
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Profesor</th>
+                    <tr className="bg-brand-50/60">
+                      <th className="border border-brand-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-brand-400 text-left">Profesor</th>
                       {cabinetColumns.map(col => (
-                        <th key={col.id} className="border border-gray-200 px-2 py-2 font-normal">
+                        <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal">
                           {typeof col.id === 'number' ? (
                             <select
                               value={assignmentFor(col.id)?.teacher_id ?? ''}
                               onChange={e => handleTeacherChange(col.id as number, e.target.value)}
                               disabled={savingAssignment === col.id}
-                              className="w-full text-xs font-semibold text-gray-700 border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
+                              className="w-full text-sm font-semibold text-gray-700 border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
                             >
                               <option value="">— fără profesor —</option>
                               {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -509,7 +508,7 @@ export default function SchedulePage() {
                 <tbody>
                   {timeSlots.map(time => (
                     <tr key={time}>
-                      <td className="border border-gray-200 px-4 py-3 text-sm font-mono font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                      <td className="border border-gray-200 px-4 py-5 text-base font-mono font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
                         {time}
                       </td>
                       {cabinetColumns.map(col => {
@@ -527,7 +526,7 @@ export default function SchedulePage() {
                             }}
                             onDragLeave={() => { if (dropCell === cellKey) setDropCell(null); }}
                             onDrop={e => { if (isStudent) return; e.preventDefault(); handleCabinetDrop(col.id, time); }}
-                            className={`group relative border border-gray-200 px-2 py-2 align-top transition-colors duration-150 min-w-[160px]
+                            className={`group relative border border-gray-200 px-2.5 py-2.5 align-top transition-colors duration-150 min-w-[180px] min-h-[64px]
                               ${isDropTarget ? 'bg-brand-50 ring-2 ring-brand-400 ring-inset' : 'hover:bg-gray-50'}`}
                           >
                             {cellLessons.map(l => {
@@ -549,16 +548,16 @@ export default function SchedulePage() {
                                   }}
                                   onDragEnd={isStudent ? undefined : () => { setDraggingId(null); setDropCell(null); }}
                                   onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
-                                  className={`relative text-xs px-2.5 py-2 rounded-lg border mb-1 last:mb-0 select-none ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
+                                  className={`relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
                                     transition-all duration-150 ${statusStyle}
                                     ${isDragging ? 'opacity-40 scale-95' : 'hover:shadow-md'}
                                     ${isMenu ? 'ring-2 ring-brand-400 shadow-lg' : ''}`}
                                 >
-                                  <div className="flex items-start gap-1">
-                                    <GripVertical className="w-3 h-3 mt-0.5 opacity-40 flex-shrink-0" />
+                                  <div className="flex items-start gap-1.5">
+                                    <GripVertical className="w-3.5 h-3.5 mt-0.5 opacity-40 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
                                       <p className="font-semibold truncate">{l.student_name}</p>
-                                      <p className="truncate text-[10px] mt-0.5">
+                                      <p className="truncate text-xs mt-0.5">
                                         <span className="font-semibold" style={{ color: 'inherit' }}>{l.discipline || '—'}</span>
                                         <span className="opacity-70"> · {l.teacher_name}</span>
                                       </p>
@@ -570,27 +569,6 @@ export default function SchedulePage() {
                                       onClick={e => e.stopPropagation()}
                                       className="absolute z-30 left-0 top-full mt-1 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white border border-gray-200 shadow-2xl animate-fade-in"
                                     >
-                                      <button
-                                        onClick={async () => {
-                                          const next = l.status === 'completed' ? 'scheduled' : 'completed';
-                                          mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
-                                          await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-                                          mutate();
-                                        }}
-                                        title="Finalizat"
-                                        className="flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                      >✅</button>
-                                      <button
-                                        onClick={async () => {
-                                          const next = l.status === 'cancelled' ? 'scheduled' : 'cancelled';
-                                          mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
-                                          await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-                                          mutate();
-                                        }}
-                                        title="Anulat"
-                                        className="flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                                      >❌</button>
-                                      <div className="w-px h-4 bg-gray-200" />
                                       <button
                                         onClick={() => { setEditLesson(l); setActiveMenu(null); }}
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors"
@@ -716,22 +694,34 @@ export default function SchedulePage() {
             <p className="text-sm text-slate-400 text-center py-4">Nu există cabinete. Adaugă unul mai sus.</p>
           ) : (
             <div className="space-y-2">
-              {cabinets.map(cab => (
-                <div key={cab.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                  <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cab.color }} />
-                  <p className="font-bold text-slate-800 dark:text-slate-100 flex-1">{cab.name}</p>
-                  <button onClick={() => openEditCabinet(cab)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => deleteCabinetRow(cab.id)} disabled={deletingCabinetId === cab.id} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+              {cabinets.map(cab => {
+                const status = dayStatusFor(cab.id);
+                return (
+                  <div key={cab.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                    <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cab.color }} />
+                    <p className="font-bold text-slate-800 dark:text-slate-100 flex-1">{cab.name}</p>
+                    <button
+                      onClick={() => toggleDayStatus(cab.id, status)}
+                      disabled={togglingStatusId === cab.id}
+                      title={`Statusul pentru ${DAY_LABELS[selectedDayIdx]}`}
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors disabled:opacity-50
+                        ${status === 'ocupat' ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                    >
+                      {status === 'ocupat' ? 'Ocupat' : 'Liber'}
+                    </button>
+                    <button onClick={() => openEditCabinet(cab)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-colors">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => deleteCabinetRow(cab.id)} disabled={deletingCabinetId === cab.id} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <p className="text-xs text-slate-400 flex items-center gap-1.5">
-            <Lock className="w-3 h-3" /> Statusul Ocupat/Liber se schimbă direct din antetul tabelului de program, pentru ziua selectată.
+            <Lock className="w-3 h-3" /> Statusul Ocupat/Liber de mai sus este pentru ziua selectată în program ({DAY_LABELS[selectedDayIdx]}).
           </p>
         </div>
       </Modal>

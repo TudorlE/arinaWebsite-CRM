@@ -155,8 +155,8 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
             <Calendar className="w-4 h-4" />
             Programare
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />
+          <div className={lesson ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
+            {!lesson && <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />}
             <Select
               label="Oră"
               value={form.time}
