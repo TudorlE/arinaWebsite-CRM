@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { ChevronLeft, ChevronRight, CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
+import { CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
 import LessonForm from '@/components/lessons/LessonForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -40,30 +40,8 @@ function fmtDate(d: Date) {
   return d.toISOString().split('T')[0];
 }
 
-function fmtDisplay(d: Date) {
-  const s = d.toLocaleDateString('ro-RO', { month: 'long', day: 'numeric' });
-  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
 function pad2(n: number) {
   return String(n).padStart(2, '0');
-}
-
-function getMonthDates(ref: Date): Date[] {
-  const year = ref.getFullYear();
-  const month = ref.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month + 1, 0);
-  const startDay = new Date(firstDay);
-  const dow = firstDay.getDay();
-  startDay.setDate(firstDay.getDate() - (dow === 0 ? 6 : dow - 1));
-  const endDay = new Date(lastDay);
-  const dowEnd = lastDay.getDay();
-  endDay.setDate(lastDay.getDate() + (dowEnd === 0 ? 0 : 7 - dowEnd));
-  const days: Date[] = [];
-  const cur = new Date(startDay);
-  while (cur <= endDay) { days.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
-  return days;
 }
 
 export default function SchedulePage() {
@@ -74,8 +52,7 @@ export default function SchedulePage() {
   const isStudent = role === 'student';
   const isAdmin = role === 'admin';
 
-  const [reference, setReference] = useState(new Date());
-  const [animDir, setAnimDir]     = useState<'left' | 'right' | null>(null);
+  const reference = new Date();
   const [showForm, setShowForm]   = useState(false);
   const [addDate, setAddDate]     = useState('');
   const [addTime, setAddTime]     = useState('09:00');
@@ -96,17 +73,11 @@ export default function SchedulePage() {
   const [togglingStatusId, setTogglingStatusId] = useState<number | null>(null);
   const [searchStudent, setSearchStudent] = useState('');
   const [statusFilterSched, setStatusFilterSched] = useState('');
-  const [view, setView] = useState<'week' | 'month'>('week');
   const { toasts, toast, remove } = useToast();
 
   const weekDates  = getWeekDates(reference);
-  const from       = fmtDate(weekDates[0]);
-  const to         = fmtDate(weekDates[6]);
-  const monthDates = getMonthDates(reference);
-  const monthFrom  = fmtDate(monthDates[0]);
-  const monthTo    = fmtDate(monthDates[monthDates.length - 1]);
-  const rangeFrom  = view === 'week' ? from : monthFrom;
-  const rangeTo    = view === 'week' ? to   : monthTo;
+  const rangeFrom  = fmtDate(weekDates[0]);
+  const rangeTo    = fmtDate(weekDates[6]);
 
   const { data: allData, mutate } = useSWR('/api/lessons', fetcher);
   const allLessons: Lesson[] = allData?.lessons ?? [];
@@ -215,25 +186,6 @@ export default function SchedulePage() {
     }
   };
 
-  const navigate = (dir: 'prev' | 'next') => {
-    setAnimDir(dir === 'prev' ? 'right' : 'left');
-    setTimeout(() => {
-      const d = new Date(reference);
-      if (view === 'week') {
-        d.setDate(d.getDate() + (dir === 'prev' ? -7 : 7));
-      } else {
-        d.setMonth(d.getMonth() + (dir === 'prev' ? -1 : 1));
-      }
-      setReference(d);
-      setAnimDir(null);
-    }, 180);
-  };
-
-  const goToday = () => {
-    setAnimDir('right');
-    setTimeout(() => { setReference(new Date()); setSelectedDayIdx(todayDayIdx()); setAnimDir(null); }, 180);
-  };
-
   const openAddLesson = (date: string, hourOrTime: number | string, cabinetId?: number) => {
     setAddDate(date);
     setAddTime(typeof hourOrTime === 'number' ? `${pad2(hourOrTime)}:00` : hourOrTime);
@@ -295,11 +247,6 @@ export default function SchedulePage() {
   };
 
   const todayStr    = fmtDate(new Date());
-  const weekLabel   = `${fmtDisplay(weekDates[0])} – ${fmtDisplay(weekDates[6])} ${weekDates[0].getFullYear()}`;
-  const rawMonth    = reference.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
-  const monthLabel  = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
-  const navLabel    = view === 'week' ? weekLabel : monthLabel;
-  const navSubLabel = view === 'week' ? 'Săptămâna' : 'Luna';
   const totalWeek   = lessons.length;
   const scheduled = lessons.filter(l => l.status === 'scheduled').length;
   const completed = lessons.filter(l => l.status === 'completed').length;
@@ -317,8 +264,8 @@ export default function SchedulePage() {
             <CalendarDays className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program Privat {view === 'week' ? '— pe zile' : 'lunar'}</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">{isStudent ? `Vizualizează lecțiile tale${view === 'week' ? ' din această săptămână' : ' din această lună'}` : `Gestionează lecțiile${view === 'week' ? ' din această săptămână' : ' din această lună'}`}</p>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program Privat — pe zile</h1>
+            <p className="text-brand-200 text-sm font-medium mt-0.5">{isStudent ? 'Vizualizează lecțiile tale din această săptămână' : 'Gestionează lecțiile din această săptămână'}</p>
           </div>
           <div className="ml-auto hidden sm:flex gap-3">
             <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
@@ -338,88 +285,8 @@ export default function SchedulePage() {
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
 
-        {/* ── Week navigation ──────────────────────────────── */}
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={() => navigate('prev')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
-            title="Săptămâna anterioară"
-          >
-            <ChevronLeft className="w-6 h-6 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200" />
-          </button>
-
-          <div
-            className="flex flex-col items-center min-w-72 select-none transition-all duration-200"
-            style={{
-              opacity: animDir ? 0 : 1,
-              transform: animDir === 'left' ? 'translateX(-20px) scale(0.97)' : animDir === 'right' ? 'translateX(20px) scale(0.97)' : 'translateX(0) scale(1)',
-            }}
-          >
-            <span className="text-xs font-semibold uppercase tracking-widest text-brand-500 dark:text-brand-400 mb-0.5">
-              {navSubLabel}
-            </span>
-            <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
-              {navLabel}
-            </span>
-          </div>
-
-          <button
-            onClick={() => navigate('next')}
-            className="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all duration-200 hover:scale-110 active:scale-95"
-            title="Săptămâna următoare"
-          >
-            <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200" />
-          </button>
-
-          <button
-            onClick={goToday}
-            className="ml-1 px-5 py-2 text-sm font-bold rounded-2xl bg-brand-600 text-white shadow-md hover:bg-brand-500 hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
-          >
-            Azi
-          </button>
-          <div className="flex ml-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
-            <button
-              onClick={() => setView('week')}
-              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'week' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-            >
-              Săptămânal
-            </button>
-            <button
-              onClick={() => setView('month')}
-              className={`px-4 py-2 text-sm font-semibold transition-colors duration-150 ${view === 'month' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-            >
-              Lunar
-            </button>
-          </div>
-        </div>
-
-
         {/* ── Calendar grid ────────────────────────────────── */}
-        {view === 'month' ? (
-          <MonthCalendar
-            monthDates={monthDates}
-            allLessons={allLessons}
-            searchStudent={isStudent ? '' : searchStudent}
-            statusFilter={isStudent ? '' : statusFilterSched}
-            todayStr={todayStr}
-            reference={reference}
-            isStudent={isStudent}
-            activeMenu={activeMenu}
-            setActiveMenu={setActiveMenu}
-            openAddLesson={openAddLesson}
-            setEditLesson={setEditLesson}
-            setDeleteTarget={setDeleteTarget}
-            animDir={animDir}
-          />
-        ) : (
-        <div
-          className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col"
-          style={{
-            opacity: animDir ? 0 : 1,
-            transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)',
-            transition: 'opacity 0.18s ease, transform 0.18s ease',
-          }}
-        >
+        <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col">
           {/* Day tabs */}
           <div className="flex flex-wrap items-center gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
             {DAY_LABELS.map((label, i) => {
@@ -601,7 +468,6 @@ export default function SchedulePage() {
             )}
           </div>
         </div>
-        )}
 
         {/* ── Legend ──────────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
@@ -727,109 +593,6 @@ export default function SchedulePage() {
       </Modal>
 
       <ToastContainer toasts={toasts} onRemove={remove} />
-    </div>
-  );
-}
-
-const MONTH_DAY_HEADERS = ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'];
-
-function MonthCalendar({
-  monthDates, allLessons, searchStudent, statusFilter, todayStr, reference,
-  isStudent, activeMenu, setActiveMenu, openAddLesson, setEditLesson, setDeleteTarget, animDir,
-}: {
-  monthDates: Date[]; allLessons: Lesson[]; searchStudent: string; statusFilter: string;
-  todayStr: string; reference: Date; isStudent: boolean;
-  activeMenu: number | null; setActiveMenu: (id: number | null) => void;
-  openAddLesson: (date: string, hour: number) => void;
-  setEditLesson: (l: Lesson) => void; setDeleteTarget: (l: Lesson) => void;
-  animDir: 'left' | 'right' | null;
-}) {
-  const currentMonth = reference.getMonth();
-  const lessonsForDay = (dateStr: string) =>
-    allLessons
-      .filter(l => l.date === dateStr)
-      .filter(l => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
-      .filter(l => !statusFilter || l.status === statusFilter);
-
-  return (
-    <div
-      className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
-      style={{
-        opacity: animDir ? 0 : 1,
-        transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)',
-        transition: 'opacity 0.18s ease, transform 0.18s ease',
-      }}
-    >
-      <div className="grid grid-cols-7 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10">
-        {MONTH_DAY_HEADERS.map(d => (
-          <div key={d} className="py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{d}</div>
-        ))}
-      </div>
-      {Array.from({ length: monthDates.length / 7 }, (_, weekIdx) => (
-        <div key={weekIdx} className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-          {monthDates.slice(weekIdx * 7, weekIdx * 7 + 7).map((d, di) => {
-            const dateStr = fmtDate(d);
-            const isToday = dateStr === todayStr;
-            const inMonth = d.getMonth() === currentMonth;
-            const dayLessons = lessonsForDay(dateStr);
-            return (
-              <div
-                key={di}
-                onClick={() => { if (!isStudent) { openAddLesson(dateStr, 9); setActiveMenu(null); } }}
-                className={`relative min-h-[110px] p-2 border-r border-slate-100 dark:border-slate-800 last:border-r-0 flex flex-col gap-1 transition-colors
-                  ${isToday ? 'bg-brand-50/60 dark:bg-brand-900/15' : ''}
-                  ${!inMonth ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}
-                  ${!isStudent ? 'cursor-pointer hover:bg-brand-50/40 dark:hover:bg-brand-900/10' : ''}`}
-              >
-                <span className={`self-start text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full
-                  ${isToday ? 'bg-brand-600 text-white shadow-md' : inMonth ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'}`}>
-                  {d.getDate()}
-                </span>
-                <div className="flex flex-col gap-0.5 overflow-hidden">
-                  {dayLessons.slice(0, 3).map(l => {
-                    const isMenu = activeMenu === l.id;
-                    return (
-                      <div key={l.id} className="relative">
-                        <button
-                          onClick={e => { if (isStudent) return; e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
-                          className={`w-full text-left text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate flex items-center gap-1
-                            ${l.status === 'scheduled' ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300' : ''}
-                            ${l.status === 'completed' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : ''}
-                            ${l.status === 'cancelled' ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 line-through' : ''}
-                            ${!isStudent ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}
-                            ${isMenu ? 'ring-1 ring-brand-400' : ''}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${l.status === 'completed' ? 'bg-emerald-500' : l.status === 'cancelled' ? 'bg-slate-400' : 'bg-brand-500'}`} />
-                          <span className="truncate">{l.time?.slice(0, 5)} {l.student_name}</span>
-                        </button>
-                        {!isStudent && isMenu && (
-                          <div
-                            onClick={e => e.stopPropagation()}
-                            className="absolute z-30 left-0 top-full mt-0.5 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl"
-                          >
-                            <button onClick={() => { setEditLesson(l); setActiveMenu(null); }}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40">
-                              <Pencil className="w-3 h-3" /> Editează
-                            </button>
-                            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-                            <button onClick={() => { setDeleteTarget(l); setActiveMenu(null); }}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40">
-                              <Trash2 className="w-3 h-3" /> Șterge
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {dayLessons.length > 3 && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 px-1">+{dayLessons.length - 3} mai multe</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
     </div>
   );
 }
