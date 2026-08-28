@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     attendance: { status: string; notes: string | null } | { status: string; notes: string | null }[] | null;
   };
 
-  const header = ['Elev', 'Disciplină', 'Profesor', 'Data lecției', 'Prezent', 'Absență motivată', 'Absență nemotivată', 'Întârziere', 'Comentarii'];
+  const header = ['Elev', 'Disciplină', 'Profesor', 'Data lecției', 'Prezent', 'Absent', 'Absență motivată', 'Absență nemotivată', 'Întârziere', 'Comentarii'];
   const lines = [header.map(csvEscape).join(',')];
 
   for (const l of (data ?? []) as unknown as Row[]) {
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       l.teachers?.name ?? '',
       `${l.date} ${l.time?.slice(0, 5) ?? ''}`,
       mark('present'),
+      mark('absent'),
       mark('excused_absence'),
       mark('unexcused_absence'),
       mark('late'),

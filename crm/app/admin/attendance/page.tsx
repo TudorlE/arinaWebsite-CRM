@@ -26,14 +26,15 @@ function daysInMonth(ref: Date): Date[] {
   return Array.from({ length: count }, (_, i) => new Date(year, month, i + 1));
 }
 
-type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered';
+type Mark = 'present' | 'absent' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered';
 
 const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string }[] = [
   { mark: 'present',           char: '✓', label: 'Prezent / Finalizată',   className: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
+  { mark: 'absent',            char: 'A', label: 'Absent',                 className: 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300' },
   { mark: 'excused_absence',   char: 'M', label: 'Absență motivată',       className: 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200' },
   { mark: 'unexcused_absence', char: 'N', label: 'Absență nemotivată',     className: 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200' },
-  { mark: 'cancelled',         char: 'X', label: 'Anulată',                className: 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' },
   { mark: 'recovered',         char: 'R', label: 'Recuperare',             className: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200' },
+  { mark: 'cancelled',         char: 'X', label: 'Anulată',                className: 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' },
 ];
 
 function symbolFor(l: Lesson): { char: string; className: string; title: string } {
@@ -41,6 +42,7 @@ function symbolFor(l: Lesson): { char: string; className: string; title: string 
   if (l.status === 'recovered') return { char: 'R', className: 'text-sky-700 bg-sky-50', title: 'Recuperare' };
   if (l.attendance_status === 'unexcused_absence') return { char: 'N', className: 'text-rose-700 bg-rose-50', title: 'Absență nemotivată' };
   if (l.attendance_status === 'excused_absence') return { char: 'M', className: 'text-amber-700 bg-amber-50', title: 'Absență motivată' };
+  if (l.attendance_status === 'absent') return { char: 'A', className: 'text-slate-700 bg-slate-100', title: 'Absent' };
   if (l.attendance_status === 'late') return { char: 'Î', className: 'text-blue-700 bg-blue-50', title: 'Întârziere' };
   if (l.status === 'completed' || l.attendance_status === 'present') return { char: '✓', className: 'text-emerald-700 bg-emerald-50', title: 'Prezent / Finalizată' };
   return { char: '•', className: 'text-slate-300', title: `Programată · ${l.time?.slice(0, 5)} · ${l.discipline ?? 'fără disciplină'} — click pentru a marca` };
@@ -360,7 +362,7 @@ export default function AttendanceRegisterPage() {
                                     <button onClick={() => { setDeleteTarget(l); setActiveCell(null); }} className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-5 gap-1 mb-1.5">
+                                <div className="grid grid-cols-3 gap-1 mb-1.5">
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
@@ -407,10 +409,11 @@ export default function AttendanceRegisterPage() {
         {/* ── Legend ── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center border border-emerald-200">✓</span>Prezent / Finalizată</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-300">A</span>Absent</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-amber-50 text-amber-700 font-bold flex items-center justify-center border border-amber-200">M</span>Absență motivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată</span>
-          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-red-50 text-red-700 font-bold flex items-center justify-center border border-red-200">X</span>Anulată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-sky-50 text-sky-700 font-bold flex items-center justify-center border border-sky-200">R</span>Recuperare</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-red-50 text-red-700 font-bold flex items-center justify-center border border-red-200">X</span>Anulată</span>
           {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe o celulă goală adaugă o lecție · click pe un marcaj îl schimbă</span>}
         </div>
       </main>
