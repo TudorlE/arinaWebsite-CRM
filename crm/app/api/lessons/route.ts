@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('lessons')
-    .select('*, students(name), teachers(name), cabinets(name, color)')
+    .select('*, students(name), teachers(name), cabinets(name, color), attendance(status)')
     .order('date', { ascending: false })
     .order('time', { ascending: true });
 
@@ -24,12 +24,14 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const lessons = (data ?? []).map(({ students, teachers, cabinets, ...l }: { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; [key: string]: unknown }) => ({
+  type Row = { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; attendance: { status: string } | { status: string }[] | null; [key: string]: unknown };
+  const lessons = (data ?? []).map(({ students, teachers, cabinets, attendance, ...l }: Row) => ({
     ...l,
     student_name: students?.name ?? null,
     teacher_name: teachers?.name ?? null,
     cabinet_name: cabinets?.name ?? null,
     cabinet_color: cabinets?.color ?? null,
+    attendance_status: (Array.isArray(attendance) ? attendance[0] : attendance)?.status ?? null,
   }));
 
   return NextResponse.json({ lessons });

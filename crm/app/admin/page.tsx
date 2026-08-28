@@ -175,12 +175,11 @@ function PaymentStatusCard({
 }
 
 const INSTRUMENT_COLORS: Record<string, string> = {
-  'Piano':          'bg-brand-500',
-  'Chitară':        'bg-amber-500',
-  'Tobe':           'bg-red-500',
-  'Canto':          'bg-pink-500',
-  'Teoria muzicii': 'bg-teal-500',
-  'Solfegiu':       'bg-cyan-500',
+  'Piano':                       'bg-brand-500',
+  'Chitară':                     'bg-amber-500',
+  'Tobe':                        'bg-red-500',
+  'Canto':                       'bg-pink-500',
+  'Solfegiu și teoria muzicii':  'bg-cyan-500',
 };
 
 function UpcomingLessonRow({ lesson, index }: {

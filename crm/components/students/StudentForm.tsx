@@ -115,7 +115,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
 
   const INSTRUMENT_COLORS: Record<string, string> = {
     'Piano': 'indigo', 'Chitară': 'purple', 'Tobe': 'yellow',
-    'Canto': 'blue', 'Teoria muzicii': 'green', 'Solfegiu': 'red',
+    'Canto': 'blue', 'Solfegiu și teoria muzicii': 'red',
   };
   const colorMap: Record<string, { sel: string; unsel: string }> = {
     indigo: { sel: 'bg-brand-600 text-white border-brand-600', unsel: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400' },

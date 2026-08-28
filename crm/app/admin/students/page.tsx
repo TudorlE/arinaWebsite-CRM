@@ -18,7 +18,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 const INSTRUMENT_COLOR: Record<string, string> = {
   'Piano': 'indigo', 'Chitară': 'purple', 'Tobe': 'yellow',
-  'Canto': 'blue', 'Teoria muzicii': 'green', 'Solfegiu': 'red',
+  'Canto': 'blue', 'Solfegiu și teoria muzicii': 'red',
 };
 
 const STATUS_COLOR: Record<string, string> = { active: 'green', paused: 'yellow', inactive: 'gray' };

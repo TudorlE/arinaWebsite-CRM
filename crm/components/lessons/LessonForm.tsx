@@ -22,6 +22,7 @@ interface Props {
   defaultTime?: string;
   defaultCabinetId?: number | null;
   defaultTeacherId?: number | null;
+  defaultDiscipline?: string;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -30,7 +31,7 @@ const blank = {
   time: DEFAULT_TIME_SLOTS[0], duration: '45', notes: '', cabinet_id: '',
 };
 
-export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, showToast }: Props) {
+export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline, showToast }: Props) {
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -59,10 +60,11 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
         time: defaultTime ?? DEFAULT_TIME_SLOTS[0],
         cabinet_id: defaultCabinetId ? String(defaultCabinetId) : '',
         teacher_id: defaultTeacherId ? String(defaultTeacherId) : '',
+        discipline: defaultDiscipline ?? '',
       });
     }
     setErrors({});
-  }, [lesson, open, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId]);
+  }, [lesson, open, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));

@@ -70,6 +70,7 @@ export interface Lesson {
   time: string; // HH:MM
   duration: number; // minutes
   status: 'scheduled' | 'completed' | 'cancelled' | 'recovered';
+  attendance_status?: AttendanceStatus | null;
   notes?: string;
   cabinet_id?: number | null;
   cabinet_name?: string | null;
@@ -225,15 +226,14 @@ export type Instrument =
   | 'Chitară'
   | 'Tobe'
   | 'Canto'
-  | 'Teoria muzicii'
-  | 'Solfegiu';
+  | 'Solfegiu și teoria muzicii';
 
 export type Level = 'beginner' | 'intermediate' | 'advanced';
 export type PaymentStatus = 'paid' | 'unpaid' | 'partial' | 'overdue';
 export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
 
 export const INSTRUMENTS: Instrument[] = [
-  'Piano', 'Chitară', 'Tobe', 'Canto', 'Teoria muzicii', 'Solfegiu',
+  'Piano', 'Chitară', 'Tobe', 'Canto', 'Solfegiu și teoria muzicii',
 ];
 
 export const LEVELS: Level[] = ['beginner', 'intermediate', 'advanced'];
