@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
-  Settings, LogOut, CalendarDays, ShieldCheck, UserCheck, Globe, ExternalLink,
-  CalendarRange, Repeat, Mic2, ClipboardList, BookOpen, Menu, X,
+  Settings, LogOut, CalendarDays, ShieldCheck, ExternalLink,
+  CalendarRange, Mic2, ClipboardList, BookOpen, Menu, X,
 } from 'lucide-react';
 
 type NavItem = {
@@ -18,7 +18,6 @@ const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, studentAllowed: true, teacherAllowed: true },
   { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true },
-  { href: '/admin/recurring-schedule', label: 'Orar Fix',           icon: Repeat,        adminOnly: true },
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true },
   { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
@@ -26,8 +25,6 @@ const nav: NavItem[] = [
   { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true },
   { href: '/admin/students',     label: 'Elevi General', icon: Users,                              teacherAllowed: true },
   { href: '/admin/students-attendance', label: 'Elevi Frecvență', icon: ClipboardList,             teacherAllowed: true },
-  { href: '/admin/registrations',label: 'Cereri Site', icon: Globe,          adminOnly: true },
-  { href: '/admin/approvals',    label: 'Aprobări',    icon: UserCheck,      adminOnly: true },
   { href: '/admin/roles',        label: 'Roluri',      icon: ShieldCheck,    adminOnly: true },
   { href: '/admin/settings',     label: 'Setări',      icon: Settings,                            teacherAllowed: true },
   { href: '/admin/ghid',         label: 'Ghid',        icon: BookOpen,                            teacherAllowed: true },
@@ -100,7 +97,7 @@ export default function Sidebar() {
         className={`fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-200 ease-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{
-          width: 256, minWidth: 256, height: '100vh', top: 0,
+          width: 280, minWidth: 280, height: '100vh', top: 0,
           display: 'flex', flexDirection: 'column',
           background: 'var(--ink)', overflowY: 'auto',
         }}
@@ -143,7 +140,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '6px 12px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <nav style={{ flex: 1, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         {nav.filter(n => {
           if (role === 'student') return n.studentAllowed === true;
           if (role === 'teacher') return n.teacherAllowed === true;
@@ -155,14 +152,14 @@ export default function Sidebar() {
           const badgeCount = href === '/admin/users' ? pendingCount : newRegistrations;
           return (
             <Link key={href} href={href} style={{
-              display: 'flex', alignItems: 'center', gap: 11,
-              padding: '10px 12px', borderRadius: 12,
-              fontSize: 13.5, fontWeight: active ? 600 : 500, textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 13,
+              padding: '13px 15px', borderRadius: 14,
+              fontSize: 15, fontWeight: active ? 600 : 500, textDecoration: 'none',
               color: active ? '#fff' : 'rgba(255,255,255,0.52)',
               background: active ? 'rgba(255,255,255,0.09)' : 'transparent',
               transition: 'all 0.18s',
             }}>
-              <Icon style={{ width: 16, height: 16, flexShrink: 0, color: active ? 'var(--gold)' : 'rgba(255,255,255,0.32)' }} />
+              <Icon style={{ width: 19, height: 19, flexShrink: 0, color: active ? 'var(--gold)' : 'rgba(255,255,255,0.32)' }} />
               {label}
               {showBadge ? (
                 <span style={{
