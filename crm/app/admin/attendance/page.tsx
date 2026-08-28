@@ -191,7 +191,10 @@ export default function AttendanceRegisterPage() {
   };
 
   const openCell = (student: Student, dateStr: string, cellLessons: Lesson[], rect: DOMRect) => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      toast(role === null ? 'Se încarcă permisiunile… mai încearcă o dată în o clipă' : 'Nu ai permisiunea de a edita registrul', 'error');
+      return;
+    }
     if (cellLessons.length === 0) {
       setAddStudentId(student.id);
       setAddDate(dateStr);
