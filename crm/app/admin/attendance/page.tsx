@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, Download, MessageSquare, Check } from 'lucide-react';
 import Select from '@/components/ui/Select';
@@ -58,9 +59,27 @@ export default function AttendanceRegisterPage() {
   const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNoteId, setSavingNoteId] = useState<number | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close the popover on any click/touch outside it — the popover is portaled
+  // to document.body, so React's synthetic-event bubbling through the JSX
+  // tree can't be relied on here; a real outside-click listener is needed.
+  useEffect(() => {
+    if (activeCell === null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (popoverRef.current?.contains(target)) return;
+      if (target.closest('[data-cell-trigger]')) return;
+      setActiveCell(null);
+      setPopoverPos(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [activeCell]);
 
   const [showForm, setShowForm] = useState(false);
   const [addStudentId, setAddStudentId] = useState<number | undefined>(undefined);
@@ -155,7 +174,7 @@ export default function AttendanceRegisterPage() {
     }
   };
 
-  const openCell = (student: Student, dateStr: string, cellLessons: Lesson[]) => {
+  const openCell = (student: Student, dateStr: string, cellLessons: Lesson[], rect: DOMRect) => {
     if (!canEdit) return;
     if (cellLessons.length === 0) {
       setAddStudentId(student.id);
@@ -164,13 +183,21 @@ export default function AttendanceRegisterPage() {
       return;
     }
     const key = `${student.id}|${dateStr}`;
-    setActiveCell(prev => (prev === key ? null : key));
+    if (activeCell === key) {
+      setActiveCell(null);
+      setPopoverPos(null);
+      return;
+    }
+    const popoverWidth = 256;
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - popoverWidth - 8);
+    setPopoverPos({ top: rect.bottom + 4, left });
+    setActiveCell(key);
   };
 
   const exportUrl = `/api/attendance/export?date_from=${from}&date_to=${to}${effectiveTeacherId ? `&teacher_id=${effectiveTeacherId}` : ''}`;
 
   return (
-    <div className="flex flex-col flex-1" onClick={() => activeCell !== null && setActiveCell(null)}>
+    <div className="flex flex-col flex-1">
       {/* ── Banner — warm/amber palette to stand apart from Program Privat/General ── */}
       <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
@@ -263,8 +290,9 @@ export default function AttendanceRegisterPage() {
                     return (
                       <td key={dateStr} className={`relative border border-slate-200 dark:border-slate-800 p-0 text-center ${isWeekend ? 'bg-slate-50/70 dark:bg-slate-800/30' : ''}`}>
                         <button
-                          onClick={e => { e.stopPropagation(); openCell(s, dateStr, cellLessons); }}
+                          onClick={e => { e.stopPropagation(); openCell(s, dateStr, cellLessons, e.currentTarget.getBoundingClientRect()); }}
                           disabled={!canEdit && cellLessons.length === 0}
+                          data-cell-trigger
                           title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : sym?.title}
                           className={`relative w-full h-12 flex items-center justify-center text-lg font-bold transition-colors
                             ${sym ? sym.className : ''} ${canEdit ? 'hover:brightness-95 cursor-pointer' : cellLessons.length ? 'cursor-default' : 'cursor-default'}
@@ -276,8 +304,13 @@ export default function AttendanceRegisterPage() {
                           )}
                         </button>
 
-                        {isMenu && cellLessons.length > 0 && (
-                          <div onClick={e => e.stopPropagation()} className="absolute z-30 left-1/2 -translate-x-1/2 top-full mt-1 w-64 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in">
+                        {isMenu && cellLessons.length > 0 && popoverPos && createPortal(
+                          <div
+                            ref={popoverRef}
+                            onClick={e => e.stopPropagation()}
+                            style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left }}
+                            className="z-50 w-64 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in"
+                          >
                             {cellLessons.map(l => (
                               <div key={l.id} className="mb-2.5 last:mb-0">
                                 <div className="flex items-center justify-between mb-1.5 px-0.5">
@@ -321,7 +354,8 @@ export default function AttendanceRegisterPage() {
                                 </div>
                               </div>
                             ))}
-                          </div>
+                          </div>,
+                          document.body,
                         )}
                       </td>
                     );
