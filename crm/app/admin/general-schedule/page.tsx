@@ -9,10 +9,11 @@ import Button from '@/components/ui/Button';
 import Select from '@/components/ui/Select';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, INSTRUMENTS } from '@/lib/types';
+import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 – 22:00
+const SLOTS = DEFAULT_TIME_SLOTS; // 45min apart, 13:00–20:00
 const SHORT_DAYS = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
 
 function getWeekDates(ref: Date): Date[] {
@@ -33,7 +34,6 @@ function getMonthDates(ref: Date): Date[] {
   return days;
 }
 function fmtDate(d: Date) { return d.toISOString().split('T')[0]; }
-function pad2(n: number) { return String(n).padStart(2, '0'); }
 
 const STATUS_COLOR: Record<string, string> = {
   scheduled: 'bg-brand-500/90 border-brand-400 text-white',
@@ -107,6 +107,9 @@ export default function GeneralSchedulePage() {
   const rangeFrom = view === 'week' ? fmtDate(weekDates[0]) : view === 'month' ? fmtDate(monthDates[0]) : dayStr;
   const rangeTo   = view === 'week' ? fmtDate(weekDates[6]) : view === 'month' ? fmtDate(monthDates[monthDates.length - 1]) : dayStr;
   const visibleLessons = lessons.filter(l => l.date >= rangeFrom && l.date <= rangeTo);
+  const extraGridSlots = Array.from(new Set(visibleLessons.map(l => (l.time ?? '').slice(0, 5))))
+    .filter(t => t && !SLOTS.includes(t));
+  const rowSlots = [...SLOTS, ...extraGridSlots].sort();
 
   const navigate = (dir: 'prev' | 'next') => {
     const d = new Date(reference);
@@ -116,17 +119,17 @@ export default function GeneralSchedulePage() {
     setReference(d);
   };
 
-  const openAddLesson = (date: string, hour: number) => {
-    setAddDate(date); setAddTime(`${pad2(hour)}:00`); setShowForm(true);
+  const openAddLesson = (date: string, time: string) => {
+    setAddDate(date); setAddTime(time); setShowForm(true);
   };
 
-  const handleDrop = async (date: string, hour: number) => {
+  const handleDrop = async (date: string, time: string) => {
     const id = draggingId;
     setDraggingId(null); setDropCell(null);
     if (!id) return;
     const lesson = allLessons.find(l => l.id === id);
     if (!lesson) return;
-    const newTime = `${pad2(hour)}:00`;
+    const newTime = time;
     if (lesson.date === date && lesson.time?.slice(0, 5) === newTime) return;
     mutate({ lessons: allLessons.map(l => l.id === id ? { ...l, date, time: newTime } : l) }, false);
     const res = await fetch(`/api/lessons/${id}`, {
@@ -237,7 +240,7 @@ export default function GeneralSchedulePage() {
             ))}
           </div>
           {canEdit && (
-            <Button size="sm" onClick={() => openAddLesson(view === 'day' ? dayStr : todayStr, 9)}>
+            <Button size="sm" onClick={() => openAddLesson(view === 'day' ? dayStr : todayStr, SLOTS[0])}>
               <Plus className="w-4 h-4" /> Lecție nouă
             </Button>
           )}
@@ -277,7 +280,7 @@ export default function GeneralSchedulePage() {
                   const inMonth = d.getMonth() === reference.getMonth();
                   const dayLessons = lessons.filter(l => l.date === dateStr);
                   return (
-                    <div key={di} onClick={() => canEdit && openAddLesson(dateStr, 9)}
+                    <div key={di} onClick={() => canEdit && openAddLesson(dateStr, SLOTS[0])}
                       className={`relative min-h-[100px] p-2 border-r border-slate-100 dark:border-slate-800 last:border-r-0 flex flex-col gap-1
                         ${isToday ? 'bg-brand-50/60 dark:bg-brand-900/15' : ''} ${!inMonth ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}
                         ${canEdit ? 'cursor-pointer hover:bg-brand-50/40 dark:hover:bg-brand-900/10' : ''}`}>
@@ -307,26 +310,26 @@ export default function GeneralSchedulePage() {
                   );
                 })}
               </div>
-              {HOURS.map(hour => (
-                <div key={hour} className="grid border-b border-slate-100 dark:border-slate-800" style={{ gridTemplateColumns: `72px repeat(${dayColumns.length}, 1fr)`, minHeight: '76px' }}>
-                  <div className="py-3 px-3 text-xs font-mono text-slate-400 text-right border-r border-slate-100 dark:border-slate-800 select-none">{pad2(hour)}:00</div>
+              {rowSlots.map(slot => (
+                <div key={slot} className="grid border-b border-slate-100 dark:border-slate-800" style={{ gridTemplateColumns: `72px repeat(${dayColumns.length}, 1fr)`, minHeight: '76px' }}>
+                  <div className="py-3 px-3 text-xs font-mono text-slate-400 text-right border-r border-slate-100 dark:border-slate-800 select-none">{slot}</div>
                   {dayColumns.map((d, di) => {
                     const dateStr = fmtDate(d);
-                    const cellLessons = lessons.filter(l => l.date === dateStr && parseInt(l.time?.split(':')[0] ?? '9') === hour);
+                    const cellLessons = lessons.filter(l => l.date === dateStr && (l.time ?? '').slice(0, 5) === slot);
                     const isToday = dateStr === todayStr;
-                    const cellKey = `${dateStr}|${hour}`;
+                    const cellKey = `${dateStr}|${slot}`;
                     const isDropTarget = dropCell === cellKey && draggingId !== null;
                     return (
                       <div key={di}
                         onDragOver={e => { if (!canEdit || draggingId === null) return; e.preventDefault(); if (dropCell !== cellKey) setDropCell(cellKey); }}
                         onDragLeave={() => { if (dropCell === cellKey) setDropCell(null); }}
-                        onDrop={e => { if (!canEdit) return; e.preventDefault(); handleDrop(dateStr, hour); }}
+                        onDrop={e => { if (!canEdit) return; e.preventDefault(); handleDrop(dateStr, slot); }}
                         className={`group relative border-l border-slate-100 dark:border-slate-800 p-1.5 flex flex-col gap-1 transition-all
                           ${isToday ? 'bg-brand-50/40 dark:bg-brand-900/10' : ''}
                           ${isDropTarget ? 'bg-brand-100 dark:bg-brand-900/40 ring-2 ring-brand-400 ring-inset' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}>
                         {cellLessons.map(renderLessonChip)}
                         {canEdit && (
-                          <button onClick={() => openAddLesson(dateStr, hour)}
+                          <button onClick={() => openAddLesson(dateStr, slot)}
                             className="absolute inset-x-1.5 bottom-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg pointer-events-none group-hover:pointer-events-auto z-40">
                             <Plus className="w-3.5 h-3.5" /> Adaugă
                           </button>
