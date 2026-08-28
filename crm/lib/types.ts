@@ -123,10 +123,7 @@ export interface Attendance {
 
 export interface Audition {
   id: number;
-  student_id: number;
-  student_name?: string;
-  teacher_id?: number | null;
-  teacher_name?: string | null;
+  candidate_name?: string | null;
   discipline?: string | null;
   date: string;
   time: string;
@@ -134,9 +131,6 @@ export interface Audition {
   notes?: string | null;
   result?: string | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
-  cabinet_id?: number | null;
-  cabinet_name?: string | null;
-  cabinet_color?: string | null;
   created_at: string;
 }
 
