@@ -8,7 +8,7 @@ import Select from '@/components/ui/Select';
 import { Lesson, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import useSWR from 'swr';
-import { GraduationCap, Calendar, FileText, DoorOpen } from 'lucide-react';
+import { GraduationCap, Calendar, FileText, DoorOpen, Lock } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -23,6 +23,8 @@ interface Props {
   defaultCabinetId?: number | null;
   defaultTeacherId?: number | null;
   defaultDiscipline?: string;
+  /** When true, the Profesor field is shown read-only (e.g. only admins may reassign the teacher here). */
+  teacherLocked?: boolean;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -31,7 +33,7 @@ const blank = {
   time: DEFAULT_TIME_SLOTS[0], duration: '45', notes: '', cabinet_id: '',
 };
 
-export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline, showToast }: Props) {
+export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline, teacherLocked, showToast }: Props) {
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -131,14 +133,22 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
               placeholder="Selectează elev"
               options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
             />
-            <Select
-              label="Profesor"
-              value={form.teacher_id}
-              onChange={set('teacher_id')}
-              shake={errors.teacher_id}
-              placeholder="Selectează profesor"
-              options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
-            />
+            <div>
+              <Select
+                label="Profesor"
+                value={form.teacher_id}
+                onChange={set('teacher_id')}
+                shake={errors.teacher_id}
+                disabled={teacherLocked}
+                placeholder="Selectează profesor"
+                options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
+              />
+              {teacherLocked && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+                  <Lock className="w-3 h-3" /> Doar administratorul poate schimba profesorul
+                </p>
+              )}
+            </div>
           </div>
           <div className="mt-3">
             <Select

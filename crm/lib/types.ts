@@ -71,6 +71,7 @@ export interface Lesson {
   duration: number; // minutes
   status: 'scheduled' | 'completed' | 'cancelled' | 'recovered';
   attendance_status?: AttendanceStatus | null;
+  attendance_notes?: string | null;
   notes?: string;
   cabinet_id?: number | null;
   cabinet_name?: string | null;

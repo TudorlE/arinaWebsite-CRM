@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
-import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, Download } from 'lucide-react';
+import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, Download, MessageSquare, Check } from 'lucide-react';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -59,6 +59,8 @@ export default function AttendanceRegisterPage() {
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
+  const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
+  const [savingNoteId, setSavingNoteId] = useState<number | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [addStudentId, setAddStudentId] = useState<number | undefined>(undefined);
@@ -108,11 +110,11 @@ export default function AttendanceRegisterPage() {
       } else if (mark === 'present') {
         await Promise.all([
           fetch(`/api/lessons/${lesson.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }) }),
-          fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: 'present' }) }),
+          fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: 'present', notes: lesson.attendance_notes ?? null }) }),
         ]);
       } else {
         await fetch('/api/attendance', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: mark }),
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: mark, notes: lesson.attendance_notes ?? null }),
         });
       }
       mutateLessons();
@@ -122,6 +124,21 @@ export default function AttendanceRegisterPage() {
     } finally {
       setSavingCell(null);
       setActiveCell(null);
+    }
+  };
+
+  const saveNote = async (lesson: Lesson) => {
+    const text = (noteDrafts[lesson.id] ?? lesson.attendance_notes ?? '').trim();
+    setSavingNoteId(lesson.id);
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lesson_id: lesson.id, status: lesson.attendance_status ?? 'present', notes: text || null }),
+      });
+      if (res.ok) { toast('Comentariu salvat', 'success'); mutateLessons(); }
+      else { const d = await res.json().catch(() => ({})); toast(d.error ?? 'Eroare la salvare', 'error'); }
+    } finally {
+      setSavingNoteId(null);
     }
   };
 
@@ -248,18 +265,21 @@ export default function AttendanceRegisterPage() {
                         <button
                           onClick={e => { e.stopPropagation(); openCell(s, dateStr, cellLessons); }}
                           disabled={!canEdit && cellLessons.length === 0}
-                          title={sym?.title}
-                          className={`w-full h-12 flex items-center justify-center text-lg font-bold transition-colors
+                          title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : sym?.title}
+                          className={`relative w-full h-12 flex items-center justify-center text-lg font-bold transition-colors
                             ${sym ? sym.className : ''} ${canEdit ? 'hover:brightness-95 cursor-pointer' : cellLessons.length ? 'cursor-default' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
                           {savingCell === key ? '…' : (sym?.char ?? '')}
+                          {primary?.attendance_notes && (
+                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          )}
                         </button>
 
                         {isMenu && cellLessons.length > 0 && (
-                          <div onClick={e => e.stopPropagation()} className="absolute z-30 left-1/2 -translate-x-1/2 top-full mt-1 w-56 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in">
+                          <div onClick={e => e.stopPropagation()} className="absolute z-30 left-1/2 -translate-x-1/2 top-full mt-1 w-64 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in">
                             {cellLessons.map(l => (
-                              <div key={l.id} className="mb-2 last:mb-0">
+                              <div key={l.id} className="mb-2.5 last:mb-0">
                                 <div className="flex items-center justify-between mb-1.5 px-0.5">
                                   <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                                     {l.time?.slice(0, 5)} · {l.discipline ?? '—'} · {l.teacher_name}
@@ -269,7 +289,7 @@ export default function AttendanceRegisterPage() {
                                     <button onClick={() => { setDeleteTarget(l); setActiveCell(null); }} className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-5 gap-1">
+                                <div className="grid grid-cols-5 gap-1 mb-1.5">
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
@@ -280,6 +300,24 @@ export default function AttendanceRegisterPage() {
                                       {opt.char}
                                     </button>
                                   ))}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MessageSquare className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                                  <input
+                                    value={noteDrafts[l.id] ?? l.attendance_notes ?? ''}
+                                    onChange={e => setNoteDrafts(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                    onKeyDown={e => { if (e.key === 'Enter') saveNote(l); }}
+                                    placeholder="Comentariu…"
+                                    className="flex-1 min-w-0 px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                  />
+                                  <button
+                                    onClick={() => saveNote(l)}
+                                    disabled={savingNoteId === l.id}
+                                    title="Salvează comentariu"
+                                    className="p-1 rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 disabled:opacity-50 flex-shrink-0"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -313,6 +351,7 @@ export default function AttendanceRegisterPage() {
         defaultDate={addDate}
         defaultTeacherId={effectiveTeacherId ?? undefined}
         defaultDiscipline={fDiscipline || undefined}
+        teacherLocked={role !== 'admin'}
         showToast={toast}
       />
       <LessonForm
@@ -320,6 +359,7 @@ export default function AttendanceRegisterPage() {
         onClose={() => setEditLesson(null)}
         onSaved={() => mutateLessons()}
         lesson={editLesson}
+        teacherLocked={role !== 'admin'}
         showToast={toast}
       />
 
