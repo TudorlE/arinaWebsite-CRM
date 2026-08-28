@@ -11,9 +11,16 @@ import { Lesson } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 07:00 – 22:00
+// Standard cabinet-table time slots (45min lessons). Any additional times
+// already used by existing lessons on the selected day are appended so
+// nothing gets hidden.
+const DEFAULT_SLOTS = ['10:15', '11:00', '11:45', '12:30', '13:15', '14:00', '14:45', '15:30'];
+const DAY_LABELS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
-const SHORT_DAYS = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+function todayDayIdx(): number {
+  const d = new Date().getDay(); // Sun=0..Sat=6
+  return d === 0 ? 6 : d - 1; // Mon=0..Sun=6, matches getWeekDates()
+}
 
 function getWeekDates(ref: Date): Date[] {
   const day = ref.getDay();
@@ -56,12 +63,6 @@ function getMonthDates(ref: Date): Date[] {
   return days;
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  scheduled: 'bg-brand-500/90 border-brand-400 text-white',
-  completed:  'bg-emerald-500/90 border-emerald-400 text-white',
-  cancelled:  'bg-slate-400/60 border-slate-300 text-white line-through',
-};
-
 export default function SchedulePage() {
   const [role, setRole] = useState<string | null>(null);
   useEffect(() => {
@@ -74,13 +75,14 @@ export default function SchedulePage() {
   const [showForm, setShowForm]   = useState(false);
   const [addDate, setAddDate]     = useState('');
   const [addTime, setAddTime]     = useState('09:00');
+  const [addCabinetId, setAddCabinetId] = useState<number | undefined>(undefined);
+  const [selectedDayIdx, setSelectedDayIdx] = useState(todayDayIdx());
   const [editLesson, setEditLesson]     = useState<Lesson | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
   const [deleting, setDeleting]         = useState(false);
   const [activeMenu, setActiveMenu]     = useState<number | null>(null);
   const [draggingId, setDraggingId]     = useState<number | null>(null);
   const [dropCell, setDropCell]         = useState<string | null>(null); // "date|hour"
-  const [burstId, setBurstId]           = useState<number | null>(null); // cancel burst anim
   const [searchStudent, setSearchStudent] = useState('');
   const [statusFilterSched, setStatusFilterSched] = useState('');
   const [view, setView] = useState<'week' | 'month'>('week');
@@ -97,20 +99,35 @@ export default function SchedulePage() {
 
   const { data: allData, mutate } = useSWR('/api/lessons', fetcher);
   const allLessons: Lesson[] = allData?.lessons ?? [];
+  const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
+  const cabinets: { id: number; name: string; color?: string }[] = cabinetsData?.cabinets ?? [];
   const lessons = allLessons
     .filter((l: Lesson) => l.date >= rangeFrom && l.date <= rangeTo)
     .filter((l: Lesson) => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
     .filter((l: Lesson) => !statusFilterSched || l.status === statusFilterSched);
 
-  const grid: Record<number, Record<number, Lesson[]>> = {};
-  for (const l of lessons) {
-    const d = new Date(l.date + 'T00:00:00');
-    const dayIdx = d.getDay();
-    const hour = parseInt(l.time?.split(':')[0] ?? '9');
-    if (!grid[dayIdx]) grid[dayIdx] = {};
-    if (!grid[dayIdx][hour]) grid[dayIdx][hour] = [];
-    grid[dayIdx][hour].push(l);
+  // Cabinet table: one day at a time, rows = time slots, columns = cabinets.
+  const selectedDate = fmtDate(weekDates[selectedDayIdx]);
+  const dayLessons = allLessons
+    .filter(l => l.date === selectedDate)
+    .filter(l => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
+    .filter(l => !statusFilterSched || l.status === statusFilterSched);
+
+  const byCabinetTime: Record<string, Lesson[]> = {};
+  for (const l of dayLessons) {
+    const cid = l.cabinet_id ?? 'none';
+    const t = (l.time ?? '').slice(0, 5);
+    const key = `${cid}|${t}`;
+    (byCabinetTime[key] ??= []).push(l);
   }
+  const extraSlots = Array.from(new Set(dayLessons.map(l => (l.time ?? '').slice(0, 5))))
+    .filter(t => t && !DEFAULT_SLOTS.includes(t));
+  const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
+  const hasUnassigned = dayLessons.some(l => l.cabinet_id == null);
+  const cabinetColumns: { id: number | 'none'; name: string; color?: string }[] = [
+    ...cabinets,
+    ...(hasUnassigned ? [{ id: 'none' as const, name: 'Fără cabinet' }] : []),
+  ];
 
   const navigate = (dir: 'prev' | 'next') => {
     setAnimDir(dir === 'prev' ? 'right' : 'left');
@@ -128,36 +145,46 @@ export default function SchedulePage() {
 
   const goToday = () => {
     setAnimDir('right');
-    setTimeout(() => { setReference(new Date()); setAnimDir(null); }, 180);
+    setTimeout(() => { setReference(new Date()); setSelectedDayIdx(todayDayIdx()); setAnimDir(null); }, 180);
   };
 
-  const openAddLesson = (date: string, hour: number) => {
+  const openAddLesson = (date: string, hourOrTime: number | string, cabinetId?: number) => {
     setAddDate(date);
-    setAddTime(`${pad2(hour)}:00`);
+    setAddTime(typeof hourOrTime === 'number' ? `${pad2(hourOrTime)}:00` : hourOrTime);
+    setAddCabinetId(cabinetId);
     setShowForm(true);
   };
 
-  // ── Drag & drop ───────────────────────────────────────────
-  const handleDrop = async (date: string, hour: number) => {
+  // ── Drag & drop — cabinet table (day view) ───────────────────
+  const handleCabinetDrop = async (cabinetId: number | 'none', time: string) => {
     const id = draggingId;
     setDraggingId(null);
     setDropCell(null);
     if (!id) return;
     const lesson = allLessons.find(l => l.id === id);
     if (!lesson) return;
-    const newTime = `${pad2(hour)}:00`;
-    if (lesson.date === date && lesson.time?.slice(0, 5) === newTime) return;
+    const newCabinetId = cabinetId === 'none' ? null : cabinetId;
+    if ((lesson.cabinet_id ?? null) === newCabinetId && lesson.time?.slice(0, 5) === time) return;
+
+    const conflict = allLessons.find(l =>
+      l.id !== id && l.date === lesson.date && (l.cabinet_id ?? null) === newCabinetId &&
+      l.time?.slice(0, 5) === time && l.status !== 'cancelled',
+    );
+    if (conflict) {
+      toast(`Conflict: cabinetul e deja ocupat la ${time} de ${conflict.student_name}`, 'error');
+      return;
+    }
 
     // Optimistic update
     mutate(
-      { lessons: allLessons.map(l => l.id === id ? { ...l, date, time: newTime } : l) },
+      { lessons: allLessons.map(l => l.id === id ? { ...l, cabinet_id: newCabinetId, time } : l) },
       false,
     );
 
     const res = await fetch(`/api/lessons/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, time: newTime }),
+      body: JSON.stringify({ cabinet_id: newCabinetId, time }),
     });
     if (!res.ok) {
       toast('Eroare la mutare', 'error');
@@ -204,7 +231,7 @@ export default function SchedulePage() {
             <CalendarDays className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program {view === 'week' ? 'săptămânal' : 'lunar'}</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program Privat {view === 'week' ? '— pe zile' : 'lunar'}</h1>
             <p className="text-brand-200 text-sm font-medium mt-0.5">{isStudent ? `Vizualizează lecțiile tale${view === 'week' ? ' din această săptămână' : ' din această lună'}` : `Gestionează lecțiile${view === 'week' ? ' din această săptămână' : ' din această lună'}`}</p>
           </div>
           <div className="ml-auto hidden sm:flex gap-3">
@@ -347,183 +374,164 @@ export default function SchedulePage() {
           />
         ) : (
         <div
-          className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
+          className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col"
           style={{
             opacity: animDir ? 0 : 1,
             transform: animDir === 'left' ? 'translateX(-12px)' : animDir === 'right' ? 'translateX(12px)' : 'translateX(0)',
             transition: 'opacity 0.18s ease, transform 0.18s ease',
           }}
         >
-          <div className="min-w-[820px]">
-            {/* Day headers */}
-            <div className="grid grid-cols-8 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 sticky top-0 z-10">
-              <div className="py-4" />
-              {weekDates.map((d, i) => {
-                const isToday = fmtDate(d) === todayStr;
-                return (
-                  <div key={i} className={`py-4 text-center border-l border-slate-200 dark:border-slate-700 ${isToday ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${isToday ? 'text-brand-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                      {SHORT_DAYS[d.getDay()]}
-                    </p>
-                    <div className={`mt-1.5 mx-auto w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-brand-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-200'}`}>
-                      {d.getDate()}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Day tabs */}
+          <div className="flex flex-wrap gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+            {DAY_LABELS.map((label, i) => {
+              const d = weekDates[i];
+              const isToday = fmtDate(d) === todayStr;
+              const isSelected = i === selectedDayIdx;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setSelectedDayIdx(i)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors duration-150
+                    ${isSelected ? 'bg-brand-600 text-white shadow-sm' : isToday ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                >
+                  {label}
+                  <span className={`text-xs font-normal ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>{d.getDate()}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Hour rows */}
-            {HOURS.map(hour => (
-              <div key={hour} className="grid grid-cols-8 border-b border-slate-100 dark:border-slate-800" style={{ minHeight: '80px' }}>
-                <div className="py-3 px-3 text-xs font-mono text-slate-400 text-right pt-3 border-r border-slate-100 dark:border-slate-800 select-none">
-                  {pad2(hour)}:00
-                </div>
-                {weekDates.map((d, di) => {
-                  const dayIdx = d.getDay();
-                  const cells: Lesson[] = grid[dayIdx]?.[hour] ?? [];
-                  const isToday = fmtDate(d) === todayStr;
-                  const dateStr = fmtDate(d);
-                  const cellKey = `${dateStr}|${hour}`;
-                  const isDropTarget = dropCell === cellKey && draggingId !== null;
-                  return (
-                    <div
-                      key={di}
-                      onDragOver={e => {
-                        if (isStudent || draggingId === null) return;
-                        e.preventDefault();
-                        if (dropCell !== cellKey) setDropCell(cellKey);
-                      }}
-                      onDragLeave={() => { if (dropCell === cellKey) setDropCell(null); }}
-                      onDrop={e => { if (isStudent) return; e.preventDefault(); handleDrop(dateStr, hour); }}
-                      className={`group relative border-l border-slate-100 dark:border-slate-800 p-1.5 flex flex-col gap-1 transition-all duration-150 hover:z-40
-                        ${isToday ? 'bg-brand-50/40 dark:bg-brand-900/10' : ''}
-                        ${isDropTarget
-                          ? 'bg-brand-100 dark:bg-brand-900/40 ring-2 ring-brand-400 ring-inset scale-[0.99]'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
-                    >
-                      {cells.map(l => {
-                        const isDragging = draggingId === l.id;
-                        const isMenu     = activeMenu === l.id;
+          {/* Cabinet table — Ora | Cabinet 1 | Cabinet 2 | Cabinet 3 */}
+          <div className="flex-1 overflow-auto p-4">
+            {cabinetColumns.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                <p className="text-sm font-semibold text-slate-500">Nu există cabinete configurate</p>
+                <a href="/admin/cabinets" className="text-sm text-brand-600 hover:underline">Configurează cabinetele</a>
+              </div>
+            ) : (
+              <table className="w-full border-collapse bg-white" style={{ minWidth: 560 }}>
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left w-24">Ora</th>
+                    {cabinetColumns.map(col => (
+                      <th key={col.id} className="border border-gray-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-gray-500 text-left">
+                        {col.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeSlots.map(time => (
+                    <tr key={time}>
+                      <td className="border border-gray-200 px-4 py-3 text-sm font-mono font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        {time}
+                      </td>
+                      {cabinetColumns.map(col => {
+                        const key = `${col.id}|${time}`;
+                        const cellLessons = byCabinetTime[key] ?? [];
+                        const cellKey = `${selectedDate}|${col.id}|${time}`;
+                        const isDropTarget = dropCell === cellKey && draggingId !== null;
                         return (
-                          <div
-                            key={l.id}
-                            draggable={!isStudent}
-                            onDragStart={isStudent ? undefined : e => {
-                              setDraggingId(l.id);
-                              setActiveMenu(null);
-                              e.dataTransfer.effectAllowed = 'move';
-                              try { e.dataTransfer.setData('text/plain', String(l.id)); } catch {}
+                          <td
+                            key={col.id}
+                            onDragOver={e => {
+                              if (isStudent || draggingId === null) return;
+                              e.preventDefault();
+                              if (dropCell !== cellKey) setDropCell(cellKey);
                             }}
-                            onDragEnd={isStudent ? undefined : () => { setDraggingId(null); setDropCell(null); }}
-                            onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
-                            className={`peer/lesson relative text-xs px-2 py-1.5 rounded-lg border select-none ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
-                              transition-all duration-200 will-change-transform
-                              ${STATUS_COLOR[l.status] ?? STATUS_COLOR.scheduled}
-                              ${isDragging ? 'opacity-40 scale-95 rotate-1' : 'hover:scale-[1.03] hover:shadow-lg hover:-translate-y-0.5'}
-                              ${isMenu ? 'ring-2 ring-white/80 shadow-xl scale-[1.02]' : ''}`}
+                            onDragLeave={() => { if (dropCell === cellKey) setDropCell(null); }}
+                            onDrop={e => { if (isStudent) return; e.preventDefault(); handleCabinetDrop(col.id, time); }}
+                            className={`group relative border border-gray-200 px-2 py-2 align-top transition-colors duration-150 min-w-[160px]
+                              ${isDropTarget ? 'bg-brand-50 ring-2 ring-brand-400 ring-inset' : 'hover:bg-gray-50'}`}
                           >
-                            <div className="flex items-start gap-1">
-                              <GripVertical className="w-3 h-3 mt-0.5 opacity-50 flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <p className="font-semibold truncate">{l.student_name}</p>
-                                <p className="opacity-75 truncate text-[10px] mt-0.5">{l.time?.slice(0, 5)} · {l.duration}min</p>
-                              </div>
-                              {/* Status buttons - hidden for students */}
-                              {!isStudent && <div className="flex-shrink-0 flex items-center gap-1 ml-1">
-                                {/* Completed */}
-                                <button
-                                  onClick={async e => {
-                                    e.stopPropagation();
-                                    const next = l.status === 'completed' ? 'scheduled' : 'completed';
-                                    mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
-                                    await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-                                    mutate();
+                            {cellLessons.map(l => {
+                              const isDragging = draggingId === l.id;
+                              const isMenu     = activeMenu === l.id;
+                              const statusStyle =
+                                l.status === 'completed' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' :
+                                l.status === 'cancelled' ? 'bg-gray-100 border-gray-300 text-gray-400 line-through' :
+                                'bg-brand-50 border-brand-300 text-brand-800';
+                              return (
+                                <div
+                                  key={l.id}
+                                  draggable={!isStudent}
+                                  onDragStart={isStudent ? undefined : e => {
+                                    setDraggingId(l.id);
+                                    setActiveMenu(null);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    try { e.dataTransfer.setData('text/plain', String(l.id)); } catch {}
                                   }}
-                                  title="Finalizat"
-                                  className={`group/cb relative w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ease-out
-                                    ${l.status === 'completed'
-                                      ? 'bg-emerald-400 shadow-[0_0_10px_2px_#4ade80] scale-110 ring-2 ring-white/60'
-                                      : 'bg-white/15 hover:bg-emerald-400/70 hover:scale-125 hover:shadow-[0_0_12px_3px_#4ade80] active:scale-95'}`}
+                                  onDragEnd={isStudent ? undefined : () => { setDraggingId(null); setDropCell(null); }}
+                                  onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
+                                  className={`relative text-xs px-2.5 py-2 rounded-lg border mb-1 last:mb-0 select-none ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
+                                    transition-all duration-150 ${statusStyle}
+                                    ${isDragging ? 'opacity-40 scale-95' : 'hover:shadow-md'}
+                                    ${isMenu ? 'ring-2 ring-brand-400 shadow-lg' : ''}`}
                                 >
-                                  <span className="text-sm leading-none">✅</span>
-                                  {l.status !== 'completed' && (
-                                    <span className="absolute inset-0 rounded-full bg-emerald-400/20 scale-0 group-hover/cb:scale-150 opacity-0 group-hover/cb:opacity-0 transition-all duration-500 pointer-events-none" />
-                                  )}
-                                </button>
-                                {/* Cancelled */}
-                                <button
-                                  onClick={async e => {
-                                    e.stopPropagation();
-                                    const next = l.status === 'cancelled' ? 'scheduled' : 'cancelled';
-                                    if (next === 'cancelled') {
-                                      setBurstId(l.id);
-                                      setTimeout(() => setBurstId(null), 600);
-                                    }
-                                    mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
-                                    await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-                                    mutate();
-                                  }}
-                                  title="Nu s-a făcut"
-                                  className={`group/cx relative w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ease-out overflow-visible
-                                    ${l.status === 'cancelled'
-                                      ? 'bg-red-400 shadow-[0_0_10px_2px_#f87171] scale-110 ring-2 ring-white/60'
-                                      : 'bg-white/15 hover:bg-red-400/70 hover:scale-125 hover:shadow-[0_0_12px_3px_#f87171] active:scale-95'}`}
-                                >
-                                  <span className={`text-sm leading-none select-none ${burstId === l.id ? 'animate-cancel-burst' : ''}`}>❌</span>
-                                  {/* expanding ring on cancel */}
-                                  {burstId === l.id && (
-                                    <span className="absolute inset-0 rounded-full bg-red-400/60 animate-cancel-ring pointer-events-none" />
-                                  )}
-                                  {/* hover ripple */}
-                                  {l.status !== 'cancelled' && (
-                                    <span className="absolute inset-0 rounded-full bg-red-400/20 scale-0 group-hover/cx:scale-150 opacity-0 group-hover/cx:opacity-0 transition-all duration-500 pointer-events-none" />
-                                  )}
-                                </button>
-                              </div>}
-                            </div>
+                                  <div className="flex items-start gap-1">
+                                    <GripVertical className="w-3 h-3 mt-0.5 opacity-40 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-semibold truncate">{l.student_name}</p>
+                                      <p className="opacity-70 truncate text-[10px] mt-0.5">{l.discipline || l.teacher_name}</p>
+                                    </div>
+                                  </div>
 
-                            {/* Click action menu - hidden for students */}
-                            {!isStudent && isMenu && (
-                              <div
-                                onClick={e => e.stopPropagation()}
-                                className="absolute z-30 left-1/2 -translate-x-1/2 bottom-full mb-1 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl animate-fade-in"
+                                  {!isStudent && isMenu && (
+                                    <div
+                                      onClick={e => e.stopPropagation()}
+                                      className="absolute z-30 left-0 top-full mt-1 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white border border-gray-200 shadow-2xl animate-fade-in"
+                                    >
+                                      <button
+                                        onClick={async () => {
+                                          const next = l.status === 'completed' ? 'scheduled' : 'completed';
+                                          mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
+                                          await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+                                          mutate();
+                                        }}
+                                        title="Finalizat"
+                                        className="flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                      >✅</button>
+                                      <button
+                                        onClick={async () => {
+                                          const next = l.status === 'cancelled' ? 'scheduled' : 'cancelled';
+                                          mutate({ lessons: allLessons.map(x => x.id === l.id ? { ...x, status: next } : x) }, false);
+                                          await fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+                                          mutate();
+                                        }}
+                                        title="Anulat"
+                                        className="flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                                      >❌</button>
+                                      <div className="w-px h-4 bg-gray-200" />
+                                      <button
+                                        onClick={() => { setEditLesson(l); setActiveMenu(null); }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors"
+                                      ><Pencil className="w-3 h-3" /> Editează</button>
+                                      <button
+                                        onClick={() => { setDeleteTarget(l); setActiveMenu(null); }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                                      ><Trash2 className="w-3 h-3" /> Șterge</button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {!isStudent && cellLessons.length === 0 && (
+                              <button
+                                onClick={() => openAddLesson(selectedDate, time, typeof col.id === 'number' ? col.id : undefined)}
+                                className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1 py-2 rounded-lg border border-dashed border-brand-300 text-brand-500 text-[11px] font-semibold hover:bg-brand-50"
                               >
-                                <button
-                                  onClick={() => { setEditLesson(l); setActiveMenu(null); }}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/40 transition-colors"
-                                >
-                                  <Pencil className="w-3 h-3" /> Editează
-                                </button>
-                                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700" />
-                                <button
-                                  onClick={() => { setDeleteTarget(l); setActiveMenu(null); }}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors"
-                                >
-                                  <Trash2 className="w-3 h-3" /> Șterge
-                                </button>
-                              </div>
+                                <Plus className="w-3.5 h-3.5" /> Adaugă
+                              </button>
                             )}
-                          </div>
+                          </td>
                         );
                       })}
-
-                      {/* Hover add button - hidden for students */}
-                      {!isStudent && <button
-                        onClick={() => openAddLesson(dateStr, hour)}
-                        className={`absolute inset-x-1.5 bottom-1.5 opacity-0 group-hover:opacity-100 hover:opacity-100 scale-90 group-hover:scale-100 hover:scale-100 transition-all duration-300 ease-out flex items-center justify-center gap-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 hover:shadow-2xl text-white text-xs font-bold shadow-lg pointer-events-none group-hover:pointer-events-auto hover:pointer-events-auto z-50 ring-2 ring-white/40
-                          ${cells.length >= 1
-                            ? 'group-hover:translate-y-full hover:translate-y-full'
-                            : ''}`}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Adaugă
-                      </button>}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
         )}
@@ -533,7 +541,7 @@ export default function SchedulePage() {
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-brand-500" />Programat</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" />Finalizat</span>
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-slate-400" />Anulat</span>
-          {!isStudent && <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">Trage lecția în alt patrat · Click pentru editare</span>}
+          {!isStudent && <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">Trage lecția în alt cabinet/oră · Click pentru editare</span>}
         </div>
       </main>
 
@@ -543,6 +551,7 @@ export default function SchedulePage() {
         onSaved={() => mutate()}
         defaultDate={addDate}
         defaultTime={addTime}
+        defaultCabinetId={addCabinetId}
         showToast={toast}
       />
 

@@ -16,7 +16,7 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/admin/schedule',     label: 'Program',     icon: CalendarDays,   studentAllowed: true, teacherAllowed: true },
+  { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, studentAllowed: true, teacherAllowed: true },
   { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true },
   { href: '/admin/recurring-schedule', label: 'Orar Fix',           icon: Repeat,        adminOnly: true },
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true },
