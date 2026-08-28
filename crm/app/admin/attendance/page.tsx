@@ -91,16 +91,21 @@ export default function AttendanceRegisterPage() {
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
   const { data: lessonsData, mutate: mutateLessons } = useSWR('/api/lessons', fetcher);
+  const { data: disciplineTeachersData, mutate: mutateDisciplineTeachers } = useSWR('/api/discipline-teachers', fetcher);
   const allStudents: Student[] = studentsData?.students ?? [];
   const teachers: Teacher[] = teachersData?.teachers ?? [];
   const allLessons: Lesson[] = lessonsData?.lessons ?? [];
+  const disciplineTeachers: { discipline: string; teacher_id: number | null; teacher_name: string | null }[] = disciplineTeachersData?.assignments ?? [];
 
   const days = daysInMonth(monthRef);
   const from = fmtDate(days[0]);
   const to = fmtDate(days[days.length - 1]);
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
+  const disciplineTeacherId = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline)?.teacher_id ?? null : null;
   const effectiveTeacherId = role === 'teacher' ? myTeacherId : (fTeacher ? Number(fTeacher) : null);
+  // For the "add lesson" default only — doesn't filter which students/lessons show.
+  const defaultTeacherForAdd = effectiveTeacherId ?? disciplineTeacherId;
   const students = allStudents
     .filter(s => !effectiveTeacherId || s.teacher_id === effectiveTeacherId)
     .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline));
@@ -159,6 +164,15 @@ export default function AttendanceRegisterPage() {
     } finally {
       setSavingNoteId(null);
     }
+  };
+
+  const setDisciplineTeacher = async (discipline: string, teacherId: string) => {
+    const res = await fetch('/api/discipline-teachers', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discipline, teacher_id: teacherId || null }),
+    });
+    if (res.ok) { toast('Profesor actualizat', 'success'); mutateDisciplineTeachers(); }
+    else { const d = await res.json().catch(() => ({})); toast(d.error ?? 'Eroare la salvare', 'error'); }
   };
 
   const handleDelete = async () => {
@@ -248,6 +262,30 @@ export default function AttendanceRegisterPage() {
               {i}
             </button>
           ))}
+        </div>
+
+        {/* ── Profesor per serviciu ── */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {INSTRUMENTS.map(i => {
+            const assignment = disciplineTeachers.find(a => a.discipline === i);
+            return (
+              <div key={i} className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                <span className="font-semibold text-slate-400">{i}</span>
+                {role === 'admin' ? (
+                  <select
+                    value={assignment?.teacher_id ?? ''}
+                    onChange={e => setDisciplineTeacher(i, e.target.value)}
+                    className="text-xs font-semibold text-slate-700 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md py-0.5"
+                  >
+                    <option value="">— fără profesor —</option>
+                    {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                ) : (
+                  <span className="font-medium text-slate-600 dark:text-slate-300">{assignment?.teacher_name ?? '—'}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Excel-style register grid ── */}
@@ -383,7 +421,7 @@ export default function AttendanceRegisterPage() {
         onSaved={() => mutateLessons()}
         defaultStudentId={addStudentId}
         defaultDate={addDate}
-        defaultTeacherId={effectiveTeacherId ?? undefined}
+        defaultTeacherId={defaultTeacherForAdd ?? undefined}
         defaultDiscipline={fDiscipline || undefined}
         teacherLocked={role !== 'admin'}
         showToast={toast}
