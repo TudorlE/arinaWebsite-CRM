@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import Modal from '@/components/ui/Modal';
 import { Teacher } from '@/lib/types';
 import { formatBirthDate } from '@/lib/dateUtils';
-import { Phone, Mail, Wallet, Users } from 'lucide-react';
+import { Phone, Mail, Wallet, Users, Calendar } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -15,11 +15,14 @@ interface Props {
 }
 
 const STAT_TILES: { key: string; label: string; color: string }[] = [
-  { key: 'total',     label: 'Total lecții', color: 'text-slate-700 dark:text-slate-200' },
-  { key: 'scheduled', label: 'Programate',   color: 'text-brand-600 dark:text-brand-400' },
-  { key: 'completed', label: 'Finalizate',   color: 'text-emerald-600 dark:text-emerald-400' },
-  { key: 'cancelled', label: 'Anulate',       color: 'text-slate-500 dark:text-slate-400' },
-  { key: 'recovered', label: 'Recuperate',   color: 'text-accent-600 dark:text-accent-400' },
+  { key: 'total',             label: 'Total lecții',       color: 'text-slate-700 dark:text-slate-200' },
+  { key: 'scheduled',         label: 'Programate',         color: 'text-brand-600 dark:text-brand-400' },
+  { key: 'completed',         label: 'Finalizate',         color: 'text-emerald-600 dark:text-emerald-400' },
+  { key: 'cancelled',         label: 'Anulate',             color: 'text-slate-500 dark:text-slate-400' },
+  { key: 'recovered',         label: 'Recuperate',         color: 'text-accent-600 dark:text-accent-400' },
+  { key: 'present',           label: 'Prezențe',           color: 'text-emerald-600 dark:text-emerald-400' },
+  { key: 'excused_absence',   label: 'Absențe motivate',   color: 'text-amber-600 dark:text-amber-400' },
+  { key: 'unexcused_absence', label: 'Absențe nemotivate', color: 'text-red-600 dark:text-red-400' },
 ];
 
 export default function TeacherDetailsModal({ open, onClose, teacher }: Props) {
@@ -48,6 +51,7 @@ export default function TeacherDetailsModal({ open, onClose, teacher }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Phone className="w-4 h-4 flex-shrink-0" />{teacher.phone}</div>
           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Mail className="w-4 h-4 flex-shrink-0" /><span className="truncate">{teacher.email}</span></div>
+          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400"><Calendar className="w-4 h-4 flex-shrink-0" />Înscris: {new Date(teacher.created_at).toLocaleDateString('ro-RO')}</div>
           {teacher.bio && <p className="text-slate-500 dark:text-slate-400 sm:col-span-2 italic">{teacher.bio}</p>}
         </div>
 
@@ -61,7 +65,7 @@ export default function TeacherDetailsModal({ open, onClose, teacher }: Props) {
           {isLoading ? (
             <p className="text-sm text-slate-400 text-center py-6">Se încarcă…</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {STAT_TILES.map(t => (
                 <div key={t.key} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-3 text-center">
                   <p className={`text-2xl font-extrabold ${t.color}`}>{stats?.[t.key] ?? 0}</p>
