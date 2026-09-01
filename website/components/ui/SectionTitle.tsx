@@ -18,12 +18,7 @@ export default function SectionTitle({ tag, title, subtitle, center = true, ligh
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       className={center ? 'text-center' : ''}
     >
-      {tag && (
-        <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4"
-          style={{ background: 'rgba(255, 213, 74, 0.18)', color: '#B8860B' }}>
-          {tag}
-        </span>
-      )}
+      {tag && <span className="eyebrow" style={{ marginBottom: 16, justifyContent: center ? 'center' : 'flex-start' }}>{tag}</span>}
       <h2 className={`text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4 ${light ? 'text-white' : 'text-gray-900'}`}>
         {title}
       </h2>

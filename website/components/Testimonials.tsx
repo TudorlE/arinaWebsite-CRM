@@ -17,14 +17,12 @@ export default function Testimonials() {
   const go = (i: number) => { setDir(i > idx ? 1 : -1); setIdx(i); };
 
   return (
-    <section style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #07040f 0%, #0a0516 50%, #07040f 100%)', overflow: 'hidden' }}>
+    <section style={{ padding: '120px 24px', background: 'var(--ink-raised)', overflow: 'hidden' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}
+        <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
           style={{ textAlign: 'center', marginBottom: 64 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(255,213,74,0.1)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>
-            Testimoniale
-          </span>
-          <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, color: '#fff', margin: '0 0 16px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>
+          <span className="eyebrow" style={{ justifyContent: 'center', marginBottom: 20 }}>Testimoniale</span>
+          <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, color: '#fff', margin: '16px 0 16px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>
             Ce spun elevii noștri
           </h2>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, margin: 0 }}>
@@ -36,21 +34,17 @@ export default function Testimonials() {
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div key={idx} custom={dir}
-              initial={{ opacity: 0, x: dir * 70 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -70 }}
-              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, x: dir * 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -50 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                borderRadius: 28, padding: '48px 44px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
-                textAlign: 'center', backdropFilter: 'blur(10px)',
+                background: 'var(--ink)', padding: '48px 44px',
+                border: '1px solid var(--line)',
+                textAlign: 'center',
               }}>
-              {/* Quote mark */}
-              <div style={{ fontSize: 80, lineHeight: 0.8, color: 'rgba(255,213,74,0.15)', fontFamily: 'Georgia, serif', marginBottom: 20, userSelect: 'none' }}>"</div>
               {/* Stars */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 24 }}>
                 {[1,2,3,4,5].map(s => (
-                  <span key={s} style={{ color: '#FFD54A', fontSize: 18, textShadow: '0 0 12px rgba(255,213,74,0.6)' }}>★</span>
+                  <span key={s} style={{ color: 'var(--orange)', fontSize: 16 }}>★</span>
                 ))}
               </div>
               <p style={{ fontSize: 19, color: 'rgba(255,255,255,0.78)', lineHeight: 1.78, fontStyle: 'italic', maxWidth: 580, margin: '0 auto 40px' }}>
@@ -58,10 +52,10 @@ export default function Testimonials() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
                 <img src={data[idx].avatar} alt={data[idx].name}
-                  style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,213,74,0.4)', boxShadow: '0 0 24px rgba(255,213,74,0.2)' }} />
+                  style={{ width: 60, height: 60, objectFit: 'cover', border: '1px solid var(--line-strong)' }} />
                 <div>
-                  <p style={{ fontWeight: 900, fontSize: 17, color: '#fff', margin: '0 0 4px' }}>{data[idx].name}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#FFD54A', margin: 0, opacity: 0.85 }}>{data[idx].role}</p>
+                  <p style={{ fontWeight: 900, fontSize: 16, color: '#fff', margin: '0 0 4px' }}>{data[idx].name}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--orange)', margin: 0 }}>{data[idx].role}</p>
                 </div>
               </div>
             </motion.div>
@@ -71,21 +65,21 @@ export default function Testimonials() {
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 36 }}>
           <button onClick={() => go((idx - 1 + data.length) % data.length)}
-            style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,213,74,0.12)'; el.style.borderColor = 'rgba(255,213,74,0.3)'; el.style.color = '#FFD54A'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.06)'; el.style.borderColor = 'rgba(255,255,255,0.1)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
+            style={{ width: 42, height: 42, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--orange)'; el.style.color = 'var(--orange)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--line)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
             ‹
           </button>
           <div style={{ display: 'flex', gap: 8 }}>
             {data.map((_, i) => (
               <button key={i} onClick={() => go(i)}
-                style={{ height: 8, borderRadius: 99, border: 'none', cursor: 'pointer', transition: 'all 0.3s', background: i === idx ? '#FFD54A' : 'rgba(255,255,255,0.15)', width: i === idx ? 28 : 8, boxShadow: i === idx ? '0 0 12px rgba(255,213,74,0.5)' : 'none' }} />
+                style={{ height: 2, border: 'none', cursor: 'pointer', transition: 'all 0.3s', background: i === idx ? 'var(--orange)' : 'rgba(255,255,255,0.18)', width: i === idx ? 28 : 14 }} />
             ))}
           </div>
           <button onClick={() => go((idx + 1) % data.length)}
-            style={{ width: 46, height: 46, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,213,74,0.12)'; el.style.borderColor = 'rgba(255,213,74,0.3)'; el.style.color = '#FFD54A'; }}
-            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.06)'; el.style.borderColor = 'rgba(255,255,255,0.1)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
+            style={{ width: 42, height: 42, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.22s', color: 'rgba(255,255,255,0.6)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--orange)'; el.style.color = 'var(--orange)'; }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--line)'; el.style.color = 'rgba(255,255,255,0.6)'; }}>
             ›
           </button>
         </div>

@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 const COURSES = ['Pian', 'Tobe', 'Canto', 'Solfegiu', 'Chitară'];
 
 const inp = (err?: boolean): React.CSSProperties => ({
-  width: '100%', padding: '14px 16px', borderRadius: 14, border: `2px solid ${err ? '#FCA5A5' : '#E5E7EB'}`,
+  width: '100%', padding: '14px 16px', border: `1px solid ${err ? '#DC2626' : '#E5E7EB'}`,
   fontSize: 14, fontWeight: 500, outline: 'none', transition: 'border-color 0.2s', fontFamily: 'inherit',
-  background: err ? '#FFF5F5' : '#FAFAFA', color: '#1a1a1a',
+  background: err ? '#FFF5F5' : '#FAFAFA', color: '#1a1a1a', borderRadius: 2,
 });
 
 export default function CTA() {
@@ -51,72 +51,71 @@ export default function CTA() {
   };
 
   return (
-    <section id="inscriere" style={{ padding: '112px 24px', background: 'linear-gradient(135deg, #1a1208 0%, #2d2000 50%, #1a1208 100%)' }}>
+    <section id="inscriere" style={{ padding: '112px 24px', background: 'var(--ink)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }} className="cta-grid">
         {/* Left */}
-        <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 24, background: 'rgba(255,213,74,0.18)', color: '#FFD54A' }}>Înscrie-te</span>
-          <h2 style={{ fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 900, color: '#fff', lineHeight: 1.05, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
+        <motion.div initial={{ opacity: 0, x: -36 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
+          <span className="eyebrow" style={{ marginBottom: 24 }}>Înscrie-te</span>
+          <h2 style={{ fontSize: 'clamp(40px, 5vw, 62px)', fontWeight: 900, color: '#fff', lineHeight: 1.05, letterSpacing: '-0.03em', margin: '20px 0 24px' }}>
             Fă primul pas
-            <span style={{ display: 'block', color: '#FFD54A' }}>către lumea muzicii.</span>
+            <span style={{ display: 'block', color: 'var(--orange)' }}>către lumea muzicii.</span>
           </h2>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, margin: '0 0 40px' }}>
             Completează formularul și te vom contacta în cel mai scurt timp pentru prima lecție de probă — gratuită.
           </p>
           {['Prima lecție gratuită', 'Fără contract pe termen lung', 'Program flexibil', 'Profesori certificați'].map((b, i) => (
-            <motion.div key={i} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 + i * 0.1 }}
-              style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-              <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,213,74,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#FFD54A', flexShrink: 0 }}>✓</span>
+            <motion.div key={i} initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.08 + i * 0.08 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
+              <span style={{ color: 'var(--orange)', fontSize: 14, flexShrink: 0 }}>—</span>
               <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 500, fontSize: 15 }}>{b}</span>
             </motion.div>
           ))}
         </motion.div>
 
         {/* Form */}
-        <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          <div style={{ background: '#fff', borderRadius: 28, padding: '40px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.3)' }}>
+        <motion.div initial={{ opacity: 0, x: 36 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
+          <div style={{ background: 'var(--paper)', padding: '40px 36px' }}>
             {done ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 56, marginBottom: 20 }}>🎵</div>
-                <h3 style={{ fontSize: 24, fontWeight: 900, color: '#1a1a1a', margin: '0 0 12px' }}>Felicitări!</h3>
+                <div style={{ fontSize: 48, marginBottom: 20 }}>🎵</div>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: '#1a1a1a', margin: '0 0 12px' }}>Felicitări!</h3>
                 <p style={{ color: '#6b7280', lineHeight: 1.7, margin: '0 0 28px' }}>Am primit cererea ta și te vom contacta în 24 de ore pentru a stabili prima lecție.</p>
                 <button onClick={() => { setDone(false); setForm({ name: '', phone: '', email: '', age: '', course: '', message: '' }); }}
-                  style={{ padding: '12px 28px', borderRadius: 14, fontWeight: 700, background: 'linear-gradient(135deg,#FFD54A,#F6C64A)', color: '#1a1a1a', border: 'none', cursor: 'pointer', fontSize: 14 }}>
+                  className="btn-outline solid" style={{ color: '#fff' }}>
                   Trimite altă cerere
                 </button>
               </div>
             ) : (
               <form onSubmit={submit}>
-                <h3 style={{ fontSize: 22, fontWeight: 900, color: '#1a1a1a', margin: '0 0 28px' }}>Înregistrare</h3>
+                <h3 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a1a', margin: '0 0 28px', letterSpacing: '-0.01em' }}>Înregistrare</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <input placeholder="Numele tău *" value={form.name} onChange={set('name')} style={inp(errors.name)}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#FFD54A'; }}
-                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.name ? '#FCA5A5' : '#E5E7EB'; }} />
+                    onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--orange)'; }}
+                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.name ? '#DC2626' : '#E5E7EB'; }} />
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <input placeholder="Telefon *" value={form.phone} onChange={set('phone')} style={inp(errors.phone)}
-                      onFocus={e => { (e.target as HTMLElement).style.borderColor = '#FFD54A'; }}
-                      onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.phone ? '#FCA5A5' : '#E5E7EB'; }} />
+                      onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--orange)'; }}
+                      onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.phone ? '#DC2626' : '#E5E7EB'; }} />
                     <input placeholder="Vârsta" value={form.age} onChange={set('age')} style={inp()}
-                      onFocus={e => { (e.target as HTMLElement).style.borderColor = '#FFD54A'; }}
+                      onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--orange)'; }}
                       onBlur={e => { (e.target as HTMLElement).style.borderColor = '#E5E7EB'; }} />
                   </div>
                   <input placeholder="Email *" type="email" value={form.email} onChange={set('email')} style={inp(errors.email)}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#FFD54A'; }}
-                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.email ? '#FCA5A5' : '#E5E7EB'; }} />
+                    onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--orange)'; }}
+                    onBlur={e => { (e.target as HTMLElement).style.borderColor = errors.email ? '#DC2626' : '#E5E7EB'; }} />
                   <select value={form.course} onChange={set('course')} style={{ ...inp(errors.course), color: form.course ? '#1a1a1a' : '#9ca3af' }}>
                     <option value="">Cursul dorit *</option>
                     {COURSES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <textarea placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={3}
                     style={{ ...inp(), resize: 'none' }}
-                    onFocus={e => { (e.target as HTMLElement).style.borderColor = '#FFD54A'; }}
+                    onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--orange)'; }}
                     onBlur={e => { (e.target as HTMLElement).style.borderColor = '#E5E7EB'; }} />
-                  <button type="submit" disabled={loading}
-                    style={{ width: '100%', padding: '16px', borderRadius: 16, fontSize: 16, fontWeight: 700, background: 'linear-gradient(135deg,#FFD54A,#F6C64A)', color: '#1a1a1a', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'all 0.2s' }}>
-                    {loading ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}><span className="spin" style={{ display: 'inline-block', width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(0,0,0,0.2)', borderTopColor: '#1a1a1a' }} />Se trimite…</span> : 'Înscrie-te acum →'}
+                  <button type="submit" disabled={loading} className="btn-outline solid" style={{ width: '100%', padding: '16px', fontSize: 13, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                    {loading ? <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}><span className="spin" style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />Se trimite…</span> : 'Înscrie-te acum'}
                   </button>
                   {apiError && (
-                    <div style={{ padding: '12px 16px', borderRadius: 12, background: '#FFF5F5', border: '1px solid #FCA5A5', color: '#DC2626', fontSize: 13, fontWeight: 500 }}>
+                    <div style={{ padding: '12px 16px', border: '1px solid #DC2626', background: '#FFF5F5', color: '#DC2626', fontSize: 13, fontWeight: 500 }}>
                       ⚠️ {apiError}
                     </div>
                   )}

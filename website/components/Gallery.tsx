@@ -27,34 +27,30 @@ export default function Gallery() {
   const renderCol = (col: typeof imgs, offset: number) => col.map((img, ci) => {
     const idx = ci * 3 + offset;
     return (
-      <motion.div key={ci} initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: ci * 0.1, duration: 0.6 }}
-        onClick={() => setLb(idx)} style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, cursor: 'pointer', marginBottom: 20, height: img.h, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.3s' }}
-        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,213,74,0.2)'; el.style.transform = 'scale(1.02)'; }}
-        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)'; el.style.transform = 'scale(1)'; }}>
-        <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s' }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'scale(1.06)'; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.transform = 'scale(1)'; }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)', opacity: 0, transition: 'opacity 0.3s' }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1'; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0'; }}>
-          <span style={{ position: 'absolute', bottom: 12, left: 16, color: '#fff', fontWeight: 700, fontSize: 13 }}>{img.alt}</span>
+      <motion.div key={ci} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: ci * 0.08, duration: 0.5 }}
+        onClick={() => setLb(idx)}
+        className="img-hover-zoom"
+        style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer', marginBottom: 16, height: img.h, border: '1px solid var(--line)' }}>
+        <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
+        <div className="gallery-caption" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,11,0.75), transparent 60%)', opacity: 0, transition: 'opacity 0.3s' }}>
+          <span style={{ position: 'absolute', bottom: 12, left: 16, color: '#fff', fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{img.alt}</span>
         </div>
       </motion.div>
     );
   });
 
   return (
-    <section id="galerie" style={{ padding: '120px 24px', background: 'linear-gradient(180deg, #0a0618 0%, #07040f 100%)' }}>
+    <section id="galerie" style={{ padding: '120px 24px', background: 'var(--ink)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} style={{ textAlign: 'center', marginBottom: 68 }}>
-          <span style={{ display: 'inline-block', padding: '7px 18px', borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20, background: 'rgba(255,213,74,0.1)', color: '#FFD54A', border: '1px solid rgba(255,213,74,0.2)' }}>Galerie</span>
-          <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '0 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>Momente muzicale</h2>
+        <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} style={{ textAlign: 'center', marginBottom: 68 }}>
+          <span className="eyebrow" style={{ justifyContent: 'center', marginBottom: 20 }}>Galerie</span>
+          <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '16px 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>Momente muzicale</h2>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.42)', maxWidth: 500, margin: '0 auto', lineHeight: 1.7 }}>Fiecare imagine surprinde o poveste. Acesta este universul Arry Production.</p>
         </motion.div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }} className="gallery-grid">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="gallery-grid">
           <div>{renderCol(col1, 0)}</div>
-          <div style={{ marginTop: 40 }}>{renderCol(col2, 1)}</div>
+          <div style={{ marginTop: 32 }}>{renderCol(col2, 1)}</div>
           <div>{renderCol(col3, 2)}</div>
         </div>
       </div>
@@ -62,20 +58,24 @@ export default function Gallery() {
       {/* Lightbox */}
       <AnimatePresence>
         {lb !== null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(5,5,6,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
             onClick={() => setLb(null)}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+            <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} transition={{ duration: 0.25 }}
               style={{ position: 'relative', maxWidth: 900, width: '100%' }} onClick={e => e.stopPropagation()}>
-              <img src={imgs[lb].src.replace('w=600', 'w=1200')} alt={imgs[lb].alt} style={{ width: '100%', borderRadius: 20, maxHeight: '80vh', objectFit: 'contain', display: 'block' }} />
-              <button onClick={() => setLb(null)} style={{ position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-              <button onClick={prev} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 20 }}>‹</button>
-              <button onClick={next} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 20 }}>›</button>
+              <img src={imgs[lb].src.replace('w=600', 'w=1200')} alt={imgs[lb].alt} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', display: 'block', border: '1px solid var(--line)' }} />
+              <button onClick={() => setLb(null)} style={{ position: 'absolute', top: 12, right: 12, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={prev} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 18 }}>‹</button>
+              <button onClick={next} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 18 }}>›</button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-      <style>{`@media (max-width: 768px) { .gallery-grid { grid-template-columns: repeat(2, 1fr) !important; } } @media (max-width: 480px) { .gallery-grid { grid-template-columns: 1fr !important; } }`}</style>
+      <style>{`
+        .img-hover-zoom:hover img { transform: scale(1.06); }
+        .img-hover-zoom:hover .gallery-caption { opacity: 1; }
+        @media (max-width: 768px) { .gallery-grid { grid-template-columns: repeat(2, 1fr) !important; } } @media (max-width: 480px) { .gallery-grid { grid-template-columns: 1fr !important; } }
+      `}</style>
     </section>
   );
 }
