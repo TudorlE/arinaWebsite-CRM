@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm install && npm install --prefix website",
-  "buildCommand": "npm run build --prefix website",
-  "outputDirectory": "website/.next"
+  "installCommand": "npm install && npm install --prefix crm",
+  "buildCommand": "npm run build --prefix crm",
+  "outputDirectory": "crm/.next"
 }
