@@ -39,7 +39,7 @@ function SoundBarsLogo() {
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const crmUrl = process.env.NEXT_PUBLIC_CRM_URL;
+  const crmUrl = process.env.NEXT_PUBLIC_CRM_URL ?? '/admin';
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
