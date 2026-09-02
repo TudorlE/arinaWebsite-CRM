@@ -34,6 +34,7 @@ html { scroll-behavior: smooth; }
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ink:        var(--ink);
   --color-gold:       var(--gold);
   --color-gold-dark:  var(--gold-dark);
   --color-gold-light: var(--gold-light);
@@ -69,28 +70,28 @@ html { scroll-behavior: smooth; }
   --color-accent-950: #300C25;
 }
 
-/* ── Public site base ─────────────────────────────────────────── */
-body {
-  margin: 0;
-  padding: 0;
+body { margin: 0; padding: 0; overflow-x: hidden; }
+img { display: block; max-width: 100%; }
+
+/* ── Public site base (scoped so the CRM is untouched) ────────── */
+.site-root {
+  min-height: 100vh;
   background: var(--ink);
   color: var(--paper);
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
-h1, h2, h3 { font-family: var(--font-playfair), 'Georgia', serif; }
+.site-root :is(h1, h2, h3) { font-family: var(--font-playfair), 'Georgia', serif; }
 
-::selection { background: var(--orange); color: #0a0a0b; }
+.site-root ::selection { background: var(--orange); color: #0a0a0b; }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--ink); }
-::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 3px; }
+.site-root ::-webkit-scrollbar { width: 5px; }
+.site-root ::-webkit-scrollbar-track { background: var(--ink); }
+.site-root ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 3px; }
 
-img { display: block; max-width: 100%; }
-button { cursor: pointer; border: none; background: none; font-family: inherit; }
-a { text-decoration: none; color: inherit; }
+.site-root button { cursor: pointer; border: none; background: none; font-family: inherit; }
+.site-root a { text-decoration: none; color: inherit; }
 
 /* Uppercase editorial label */
 .eyebrow {
