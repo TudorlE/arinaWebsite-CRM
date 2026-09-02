@@ -17,3 +17,6 @@ yarn-error.log*
 *.db-shm
 *.db-wal
 Video/
+next-env.d.ts
+*.tsbuildinfo
+/out/
