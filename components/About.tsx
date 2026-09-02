@@ -1,68 +1,109 @@
 'use client';
-import { motion } from 'framer-motion';
+import { Reveal, RevealLines, Stagger, StaggerItem, Parallax } from '@/components/motionx';
 
-const vals = [
-  { icon: '❤️', title: 'Pasiune autentică', desc: 'Fiecare profesor iubește muzica și transmite această dragoste elevilor.' },
-  { icon: '⭐', title: 'Excelență artistică', desc: 'Metodă pedagogică modernă adaptată fiecărui elev, indiferent de nivel.' },
-  { icon: '👥', title: 'Comunitate vibrantă', desc: 'O familie muzicală unită prin concerte, recitaluri și colaborări.' },
-  { icon: '🏆', title: 'Rezultate dovedite', desc: 'Sute de elevi au descoperit muzica cu noi, mulți ajungând la performanță.' },
-];
+const SandCard = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+  <div style={{
+    background: 'linear-gradient(160deg, var(--sand) 0%, var(--sand-deep) 100%)',
+    color: 'var(--sand-ink)', padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+    ...style,
+  }}>
+    {children}
+  </div>
+);
+
+const kicker: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.55 };
+const cardTitle: React.CSSProperties = { fontFamily: 'var(--font-playfair), serif', fontWeight: 700, lineHeight: 1.28, margin: '14px 0 0' };
 
 export default function About() {
   return (
-    <section id="despre" style={{ padding: '120px 24px', background: 'var(--ink)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }} className="about-grid">
+    <section id="despre" style={{ background: 'var(--bg)', padding: 'clamp(64px, 9vh, 104px) 32px', position: 'relative' }}>
+      <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 54px' }} />
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
 
-        {/* Image */}
-        <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          style={{ position: 'relative' }}>
-          <div style={{ overflow: 'hidden', border: '1px solid var(--line)', position: 'relative' }} className="img-hover-zoom">
-            <img src="https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&q=85&fit=crop" alt="Lectie de muzica" style={{ width: '100%', height: 520, objectFit: 'cover', display: 'block', transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 40, alignItems: 'end', marginBottom: 56 }} className="about-head">
+          <div>
+            <Reveal><span className="eyebrow" style={{ marginBottom: 24, display: 'inline-flex' }}>01 — Despre Arry Production</span></Reveal>
+            <RevealLines
+              style={{ fontSize: 'clamp(23px, 5.4vw, 52px)', lineHeight: 1.16, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, color: 'var(--tx)', marginTop: 18 }}
+              lines={[
+                'Știm tot despre',
+                'educația muzicală',
+                'a copiilor,',
+                <span key="s" style={{ color: 'var(--sand)' }}>unde fiecare detaliu</span>,
+                'este gândit',
+              ]}
+            />
           </div>
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.35 }}
-            style={{ position: 'absolute', bottom: -1, right: -1, background: 'var(--ink)', padding: '18px 26px', border: '1px solid var(--line)' }}>
-            <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--orange)', margin: 0, lineHeight: 1 }}>10+</p>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginTop: 6, margin: 0 }}>Ani de experiență</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.5 }}
-            style={{ position: 'absolute', top: -1, left: -1, background: 'var(--ink)', padding: '18px 26px', border: '1px solid var(--line)' }}>
-            <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--orange)', margin: 0, lineHeight: 1 }}>300+</p>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginTop: 6, margin: 0 }}>Elevi fericiți</p>
-          </motion.div>
-        </motion.div>
+          <Reveal delay={0.15}>
+            <p style={{ fontSize: 15, color: 'var(--tx-mut)', lineHeight: 1.8, margin: 0, maxWidth: 380 }}>
+              Creăm condiții speciale de calitate a învățării și un mediu de
+              dezvoltare unic. Copiii, adolescenții și adulții descoperă bucuria
+              de a cânta, de a crea și de a se exprima liber prin artă.
+            </p>
+          </Reveal>
+        </div>
 
-        {/* Text */}
-        <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
-          <span className="eyebrow" style={{ marginBottom: 22 }}>Despre noi</span>
-          <h2 style={{ fontSize: 'clamp(34px, 4vw, 52px)', fontWeight: 900, color: '#fff', lineHeight: 1.08, letterSpacing: '-0.025em', margin: '18px 0 20px' }}>
-            Despre <span style={{ color: 'var(--orange)' }}>Arry Production</span>
-          </h2>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', lineHeight: 1.78, margin: '0 0 16px' }}>
-            Arry Production este mai mult decât o școală de muzică — este un loc unde copiii, adolescenții și adulții descoperă bucuria de a cânta, de a crea și de a se exprima liber prin artă.
-          </p>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', lineHeight: 1.78, margin: '0 0 44px' }}>
-            Profesorii noștri sunt artiști dedicați care adaptează fiecare lecție la personalitatea și ritmul fiecărui elev.
-          </p>
+        <Stagger className="mosaic">
+          <StaggerItem style={{ gridArea: 'a' }}>
+            <SandCard style={{ minHeight: 300, height: '100%' }}>
+              <span style={kicker}>Direcție</span>
+              <p style={{ ...cardTitle, fontSize: 21 }}>Pregătire pentru admiterea în licee și colegii de muzică</p>
+            </SandCard>
+          </StaggerItem>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
-            {vals.map((v, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                style={{ display: 'flex', gap: 14, padding: '18px', background: 'var(--ink)', transition: 'background-color 0.25s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink-raised)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--ink)'; }}>
-                <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>{v.icon}</span>
-                <div>
-                  <p style={{ fontWeight: 700, fontSize: 13.5, color: '#fff', margin: '0 0 4px' }}>{v.title}</p>
-                  <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, margin: 0 }}>{v.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+          <StaggerItem style={{ gridArea: 'b' }} className="ph-wrap">
+            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
+              <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&q=80&auto=format&fit=crop" alt="Microfon de studio" className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </Parallax>
+          </StaggerItem>
+
+          <StaggerItem style={{ gridArea: 'c' }}>
+            <SandCard style={{ height: '100%' }}>
+              <span style={kicker}>Scenă</span>
+              <p style={{ ...cardTitle, fontSize: 17 }}>Participare la concursuri și proiecte artistice</p>
+            </SandCard>
+          </StaggerItem>
+
+          <StaggerItem style={{ gridArea: 'd' }}>
+            <SandCard style={{ height: '100%' }}>
+              <span style={kicker}>Grijă</span>
+              <p style={{ ...cardTitle, fontSize: 17 }}>Susținere psihologică și emoțională</p>
+            </SandCard>
+          </StaggerItem>
+
+          <StaggerItem style={{ gridArea: 'e' }} className="ph-wrap">
+            <Parallax distance={26} style={{ height: '100%', minHeight: 220 }}>
+              <img src="https://images.unsplash.com/photo-1501612780327-45045538702b?w=800&q=80&auto=format&fit=crop" alt="Scenă de concert" className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </Parallax>
+          </StaggerItem>
+
+          <StaggerItem style={{ gridArea: 'f' }}>
+            <SandCard style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 28, flexWrap: 'wrap', height: '100%' }}>
+              <p style={{ ...cardTitle, fontSize: 22, margin: 0, flex: '1 1 240px' }}>Abordare individuală pentru fiecare elev</p>
+              <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, opacity: 0.75, flex: '1 1 240px' }}>
+                Profesorii noștri adaptează fiecare lecție la personalitatea și
+                ritmul elevului. Nu există un tipar unic — există parcursul tău.
+              </p>
+            </SandCard>
+          </StaggerItem>
+        </Stagger>
       </div>
+
       <style>{`
-        .img-hover-zoom:hover img { transform: scale(1.05); }
-        @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr !important; } }
+        .mosaic {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          grid-auto-rows: minmax(190px, auto);
+          grid-template-areas: "a b c" "a d e" "f f f";
+          gap: 14px;
+        }
+        @media (max-width: 860px) {
+          .about-head { grid-template-columns: 1fr !important; }
+          .mosaic { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(170px, auto); grid-template-areas: "a a" "b c" "d e" "f f"; }
+        }
+        @media (max-width: 520px) {
+          .mosaic { grid-template-columns: 1fr; grid-auto-rows: auto; grid-template-areas: "a" "b" "c" "d" "e" "f"; }
+        }
       `}</style>
     </section>
   );

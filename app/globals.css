@@ -73,59 +73,119 @@ html { scroll-behavior: smooth; }
 body { margin: 0; padding: 0; overflow-x: hidden; }
 img { display: block; max-width: 100%; }
 
-/* ── Public site base (scoped so the CRM is untouched) ────────── */
-.site-root {
-  min-height: 100vh;
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
+/* Dark ground so scroll/overscroll never flashes white on the public site.
+   The CRM paints its own cream/slate surfaces on top. */
+html { background: #100D0B; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
 
-.site-root :is(h1, h2, h3) { font-family: var(--font-playfair), 'Georgia', serif; }
+/* ── Public site base (scoped so the CRM is untouched) ────────── */
+.site-root {
+  /* Warm editorial-dark palette — overrides the shared tokens locally,
+     so the CRM (which reads them from :root) is unaffected. */
+  --ink: #100D0B;
+  --bg: #100D0B;
+  --bg-alt: #16110D;
+  --ink-raised: #1B1611;
+  --paper: #F2EDE6;
+  --tx: #F2EDE6;
+  --tx-mut: #9A938B;
+  --tx-faint: #5F5952;
+  --sand: #C7A988;
+  --sand-deep: #B8916B;
+  --sand-ink: #1A1512;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --red: #E11D1D;
+  /* Accent: warm champagne, not orange. Small marks only. */
+  --orange: #D8B892;
+  --accent: #D8B892;
 
-.site-root ::selection { background: var(--orange); color: #0a0a0b; }
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--tx-mut);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.site-root :is(h1, h2, h3, h4) {
+  font-family: var(--font-playfair), 'Georgia', serif;
+  color: var(--tx);
+}
+
+.site-root ::selection { background: var(--orange); color: #100D0B; }
 
 .site-root ::-webkit-scrollbar { width: 5px; }
-.site-root ::-webkit-scrollbar-track { background: var(--ink); }
-.site-root ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 3px; }
+.site-root ::-webkit-scrollbar-track { background: var(--bg); }
+.site-root ::-webkit-scrollbar-thumb { background: var(--sand-deep); border-radius: 3px; }
 
 .site-root button { cursor: pointer; border: none; background: none; font-family: inherit; }
 .site-root a { text-decoration: none; color: inherit; }
 
-/* Uppercase editorial label */
+/* Uppercase editorial micro-label */
 .eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--orange);
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--tx-faint);
+}
+.eyebrow::before {
+  content: ''; width: 26px; height: 1px; background: var(--sand-deep);
+}
+.eyebrow.centered { justify-content: center; }
+.eyebrow.plain::before { display: none; }
+
+/* Section divider: hairline + tiny index label */
+.rule {
+  border: 0; height: 1px; background: var(--line); margin: 0;
 }
 
-/* Text-link CTA: "VIEW MORE →" style — uppercase, thin underline reveal, no pill */
+/* Text link — uppercase, underline-reveal, arrow nudge */
 .link-cta {
   display: inline-flex; align-items: center; gap: 10px;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: inherit; background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--tx); background: none; border: none; cursor: pointer; padding: 0;
   position: relative;
 }
 .link-cta::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px;
+  content: ''; position: absolute; left: 0; right: 0; bottom: -5px; height: 1px;
   background: currentColor; transform: scaleX(0); transform-origin: left;
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .link-cta:hover::after { transform: scaleX(1); }
-.link-cta svg, .link-cta span.arrow { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
-.link-cta:hover .arrow { transform: translateX(4px); }
+.link-cta svg, .link-cta .arrow { transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.link-cta:hover .arrow { transform: translateX(5px); }
 
-/* Thin-border button that fills on hover — the one "solid" CTA shape allowed */
+/* Buttons */
 .btn-outline {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 15px 32px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  border: 1px solid var(--line-strong); border-radius: 2px; background: transparent; color: var(--paper);
-  cursor: pointer; transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  padding: 16px 34px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  border: 1px solid var(--line-strong); border-radius: 1px; background: transparent; color: var(--tx);
+  cursor: pointer; transition: background-color 0.28s ease, color 0.28s ease, border-color 0.28s ease;
 }
-.btn-outline:hover { background: var(--paper); color: var(--ink); border-color: var(--paper); }
-.btn-outline.solid { background: var(--orange); border-color: var(--orange); color: #fff; }
-.btn-outline.solid:hover { background: transparent; color: var(--orange); }
+.btn-outline:hover { background: var(--paper); color: var(--sand-ink); border-color: var(--paper); }
+.btn-outline.solid { background: var(--paper); border-color: var(--paper); color: var(--sand-ink); }
+.btn-outline.solid:hover { background: transparent; color: var(--paper); border-color: var(--line-strong); }
+
+/* Tighter gutters on small screens (beats inline section padding) */
+@media (max-width: 560px) {
+  .site-root > * > section,
+  .site-root section { padding-left: 20px !important; padding-right: 20px !important; }
+  .site-root .rule { max-width: none !important; }
+}
+
+/* Editorial photo treatment — dark, warm, high contrast */
+.site-root .ph {
+  filter: grayscale(0.35) brightness(0.72) contrast(1.12) sepia(0.12);
+  transition: filter 0.6s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-root .ph-wrap:hover .ph { transform: scale(1.05); filter: grayscale(0.15) brightness(0.82) contrast(1.12) sepia(0.1); }
+.site-root .ph-red {
+  filter: grayscale(0.2) brightness(0.6) contrast(1.25) sepia(0.5) hue-rotate(-18deg) saturate(2.6);
+}
 
 /* ── CRM area base (scoped so the public site is untouched) ───── */
 .crm-root {

@@ -6,7 +6,6 @@ import WhyUs from '@/components/WhyUs';
 import Founder from '@/components/Founder';
 import Gallery from '@/components/Gallery';
 import Testimonials from '@/components/Testimonials';
-import CTA from '@/components/CTA';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
 
@@ -21,7 +20,6 @@ export default function Home() {
       <Founder />
       <Gallery />
       <Testimonials />
-      <CTA />
       <Contact />
       <Footer />
     </>

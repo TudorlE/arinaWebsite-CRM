@@ -267,10 +267,9 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-w-0 max-w-full">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div style={{
-        position: 'relative', overflow: 'hidden', padding: '22px 32px',
+      <div className="relative overflow-hidden py-5 sm:py-6 px-5 sm:px-8 pl-16 lg:pl-8" style={{
         background: 'linear-gradient(135deg, #0f0820 0%, #1a0d38 55%, #0d1a2e 100%)',
         borderBottom: '1px solid rgba(201,160,32,0.18)',
       }}>
@@ -287,10 +286,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto overflow-x-hidden">
 
         {/* ── Stats cards ──────────────────────────────────── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-brand-500" sub="Elevi activi" trend={{ value: 12, label: 'față de luna trecută' }} />
           <StatCard label="Venituri lunare" value={stats ? `${stats.totalMonthlyIncome.toLocaleString()} MDL` : '—'} icon={DollarSign} color="bg-emerald-500" sub={`${stats?.paidThisMonth?.toLocaleString() ?? 0} MDL colectate`} trend={{ value: 8, label: 'față de luna trecută' }} />
           <StatCard label="Lecții azi" value={stats?.upcomingLessonsToday ?? '—'} icon={Calendar} color="bg-blue-500" sub="Programate" trend={{ value: 0, label: '' }} />
@@ -301,7 +300,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* Area chart */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <div className="lg:col-span-2 min-w-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Prezentare venituri</h2>

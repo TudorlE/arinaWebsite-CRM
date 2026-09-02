@@ -1,80 +1,117 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Play, X } from 'lucide-react';
+import { Reveal, Stagger, StaggerItem, EASE } from '@/components/motionx';
 
-const imgs = [
-  { src: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=600&q=80&fit=crop', alt: 'Concert', h: 280 },
-  { src: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=600&q=80&fit=crop', alt: 'Lecție pian', h: 200 },
-  { src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80&fit=crop', alt: 'Elevi', h: 240 },
-  { src: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&q=80&fit=crop', alt: 'Chitară', h: 200 },
-  { src: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600&q=80&fit=crop', alt: 'Canto', h: 280 },
-  { src: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80&fit=crop', alt: 'Recital', h: 240 },
-  { src: 'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=600&q=80&fit=crop', alt: 'Tobe', h: 220 },
-  { src: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=600&q=80&fit=crop', alt: 'Solfegiu', h: 200 },
-  { src: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&q=80&fit=crop', alt: 'Performanță', h: 260 },
+/**
+ * TODO: înlocuiește `id` cu ID-urile reale ale videoclipurilor de pe
+ * canalul de YouTube Arry Production (recitaluri, elevi, concursuri).
+ * ID-ul e partea de după `watch?v=` din link-ul YouTube.
+ */
+const videos = [
+  { id: 'jNQXAC9IVRw', title: 'Recital de pian — clasa de începători', who: 'Elevii Arry Studio' },
+  { id: 'M7lc1UVf-VE', title: 'Canto — spectacol de final de an', who: 'Corul școlii' },
+  { id: 'aqz-KE-bpKQ', title: 'Chitară & tobe — trupa școlii live', who: 'Trupa Arry' },
+  { id: 'ScMzIvxBSi4', title: 'Concurs internațional — premianții noștri', who: 'Elevi premiați' },
+  { id: 'kJQP7kiw5Fk', title: 'Sesiune de studio — prima piesă', who: 'Studio Arry' },
+  { id: 'e-ORhEE9VVg', title: 'Solfegiu în practică — atelier deschis', who: 'Atelier' },
 ];
 
+function Thumb({ id }: { id: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, #1B1611, #2A211A)' }} />;
+  return (
+    <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" className="ph" onError={() => setFailed(true)}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  );
+}
+
 export default function Gallery() {
-  const [lb, setLb] = useState<number | null>(null);
-
-  const prev = () => setLb(i => i !== null ? (i - 1 + imgs.length) % imgs.length : null);
-  const next = () => setLb(i => i !== null ? (i + 1) % imgs.length : null);
-
-  const col1 = imgs.filter((_, i) => i % 3 === 0);
-  const col2 = imgs.filter((_, i) => i % 3 === 1);
-  const col3 = imgs.filter((_, i) => i % 3 === 2);
-
-  const renderCol = (col: typeof imgs, offset: number) => col.map((img, ci) => {
-    const idx = ci * 3 + offset;
-    return (
-      <motion.div key={ci} initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: ci * 0.08, duration: 0.5 }}
-        onClick={() => setLb(idx)}
-        className="img-hover-zoom"
-        style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer', marginBottom: 16, height: img.h, border: '1px solid var(--line)' }}>
-        <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
-        <div className="gallery-caption" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,11,0.75), transparent 60%)', opacity: 0, transition: 'opacity 0.3s' }}>
-          <span style={{ position: 'absolute', bottom: 12, left: 16, color: '#fff', fontWeight: 700, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{img.alt}</span>
-        </div>
-      </motion.div>
-    );
-  });
+  const [active, setActive] = useState<string | null>(null);
 
   return (
-    <section id="galerie" style={{ padding: '120px 24px', background: 'var(--ink)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <motion.div initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} style={{ textAlign: 'center', marginBottom: 68 }}>
-          <span className="eyebrow" style={{ justifyContent: 'center', marginBottom: 20 }}>Galerie</span>
-          <h2 style={{ fontSize: 'clamp(34px, 4vw, 56px)', fontWeight: 900, color: '#fff', margin: '16px 0 18px', lineHeight: 1.08, letterSpacing: '-0.025em' }}>Momente muzicale</h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.42)', maxWidth: 500, margin: '0 auto', lineHeight: 1.7 }}>Fiecare imagine surprinde o poveste. Acesta este universul Arry Production.</p>
-        </motion.div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="gallery-grid">
-          <div>{renderCol(col1, 0)}</div>
-          <div style={{ marginTop: 32 }}>{renderCol(col2, 1)}</div>
-          <div>{renderCol(col3, 2)}</div>
+    <section id="galerie" style={{ padding: 'clamp(64px, 9vh, 104px) 32px', background: 'var(--bg)' }}>
+      <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 54px' }} />
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, flexWrap: 'wrap', marginBottom: 48 }}>
+          <div>
+            <Reveal><span className="eyebrow" style={{ marginBottom: 22, display: 'inline-flex' }}>07 — Galerie video</span></Reveal>
+            <Reveal delay={0.08}>
+              <h2 style={{ fontSize: 'clamp(27px, 6vw, 56px)', fontWeight: 800, color: 'var(--tx)', margin: '16px 0 0', lineHeight: 1.0, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                Momente<br />muzicale
+              </h2>
+            </Reveal>
+          </div>
+          <Reveal delay={0.14}>
+            <p style={{ fontSize: 14, color: 'var(--tx-mut)', maxWidth: 320, margin: 0, lineHeight: 1.7 }}>
+              Recitaluri, concerte și elevii noștri pe scenă — direct de pe canalul nostru de YouTube.
+            </p>
+          </Reveal>
         </div>
+
+        <Stagger className="vid-grid">
+          {videos.map(v => (
+            <StaggerItem key={v.id}>
+              <motion.button
+                onClick={() => setActive(v.id)}
+                whileHover="hover" initial="rest" animate="rest"
+                className="vid-card"
+                style={{ width: '100%', textAlign: 'left', border: '1px solid var(--line)', background: 'var(--bg)', padding: 0, cursor: 'pointer', display: 'block', overflow: 'hidden' }}
+              >
+                <div style={{ position: 'relative', aspectRatio: '16 / 10', overflow: 'hidden' }}>
+                  <motion.div variants={{ rest: { scale: 1 }, hover: { scale: 1.06 } }} transition={{ duration: 0.7, ease: EASE }} style={{ position: 'absolute', inset: 0 }}>
+                    <Thumb id={v.id} />
+                  </motion.div>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(16,13,11,0.8), rgba(16,13,11,0.1) 60%)' }} />
+                  <motion.span
+                    variants={{ rest: { scale: 1, opacity: 0.9 }, hover: { scale: 1.12, opacity: 1 } }}
+                    transition={{ duration: 0.3, ease: EASE }}
+                    style={{ position: 'absolute', top: '50%', left: '50%', x: '-50%', y: '-50%', width: 56, height: 56, borderRadius: '50%', border: '1.5px solid rgba(242,237,230,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,13,11,0.35)' }}
+                  >
+                    <Play style={{ width: 20, height: 20, color: 'var(--tx)', marginLeft: 3 }} fill="currentColor" />
+                  </motion.span>
+                </div>
+                <div style={{ padding: '16px 18px 18px' }}>
+                  <p style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--tx)', margin: '0 0 4px', lineHeight: 1.35 }}>{v.title}</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sand-deep)', margin: 0 }}>{v.who}</p>
+                </div>
+              </motion.button>
+            </StaggerItem>
+          ))}
+        </Stagger>
       </div>
 
-      {/* Lightbox */}
       <AnimatePresence>
-        {lb !== null && (
+        {active && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(5,5,6,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-            onClick={() => setLb(null)}>
-            <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} transition={{ duration: 0.25 }}
-              style={{ position: 'relative', maxWidth: 900, width: '100%' }} onClick={e => e.stopPropagation()}>
-              <img src={imgs[lb].src.replace('w=600', 'w=1200')} alt={imgs[lb].alt} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain', display: 'block', border: '1px solid var(--line)' }} />
-              <button onClick={() => setLb(null)} style={{ position: 'absolute', top: 12, right: 12, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-              <button onClick={prev} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 18 }}>‹</button>
-              <button onClick={next} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: '1px solid var(--line-strong)', background: 'rgba(10,10,11,0.7)', color: '#fff', cursor: 'pointer', fontSize: 18 }}>›</button>
+            onClick={() => setActive(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(6,5,4,0.9)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.35, ease: EASE }}
+              style={{ width: '100%', maxWidth: 960, position: 'relative' }}>
+              <button onClick={() => setActive(null)} aria-label="Închide" style={{ position: 'absolute', top: -46, right: 0, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--tx)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X style={{ width: 16, height: 16 }} />
+              </button>
+              <div style={{ position: 'relative', aspectRatio: '16 / 9', border: '1px solid var(--line-strong)', background: '#000' }}>
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${active}?autoplay=1&rel=0`}
+                  title="Videoclip Arry Studio"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+                />
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
       <style>{`
-        .img-hover-zoom:hover img { transform: scale(1.06); }
-        .img-hover-zoom:hover .gallery-caption { opacity: 1; }
-        @media (max-width: 768px) { .gallery-grid { grid-template-columns: repeat(2, 1fr) !important; } } @media (max-width: 480px) { .gallery-grid { grid-template-columns: 1fr !important; } }
+        .vid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .vid-card { transition: border-color 0.3s ease; }
+        .vid-card:hover { border-color: var(--sand-deep); }
+        @media (max-width: 880px) { .vid-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 540px) { .vid-grid { grid-template-columns: 1fr; } }
       `}</style>
     </section>
   );

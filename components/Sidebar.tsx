@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LogoMark } from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
@@ -29,8 +30,6 @@ const nav: NavItem[] = [
   { href: '/admin/settings',     label: 'Setări',      icon: Settings,                            teacherAllowed: true },
   { href: '/admin/ghid',         label: 'Ghid',        icon: BookOpen,                            teacherAllowed: true },
 ];
-
-const BARS = [38, 78, 50, 100, 66, 88, 42, 72];
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -111,27 +110,13 @@ export default function Sidebar() {
           <X style={{ width: 16, height: 16, color: '#fff' }} />
         </button>
         {/* Logo */}
-      <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          display: 'flex', alignItems: 'flex-end', gap: 2, height: 38, minWidth: 48, flexShrink: 0,
-          padding: '5px 9px 4px',
-          background: 'linear-gradient(145deg, #180c30, #261550)',
-          borderRadius: 11,
-          border: '1px solid rgba(201,160,32,0.38)',
-          boxShadow: '0 0 16px rgba(201,160,32,0.14)',
-        }}>
-          {BARS.map((h, i) => (
-            <div key={i} style={{
-              width: 2.5, borderRadius: 2, height: `${h}%`,
-              background: 'linear-gradient(to top, var(--gold-dark), var(--gold))',
-              animation: `crm-bar ${0.65 + (i % 4) * 0.14}s ease-in-out ${i * 0.09}s infinite alternate`,
-              transformOrigin: 'bottom',
-            }} />
-          ))}
+      <div style={{ padding: '22px 20px 18px', display: 'flex', alignItems: 'center', gap: 13 }}>
+        <div style={{ color: 'var(--gold)', display: 'flex', flexShrink: 0 }}>
+          <LogoMark size={30} withCord={false} />
         </div>
         <div>
-          <p style={{ fontWeight: 800, color: '#fff', fontSize: 14, lineHeight: 1.2, margin: 0, letterSpacing: '-0.01em' }}>
-            Arry Production
+          <p style={{ fontWeight: 800, color: '#fff', fontSize: 14, lineHeight: 1.2, margin: 0, letterSpacing: '0.04em', fontFamily: 'var(--font-anton), sans-serif', textTransform: 'uppercase' }}>
+            Arry Studio
           </p>
           <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: 9.5, margin: '2px 0 0', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
             CRM
