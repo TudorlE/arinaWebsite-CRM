@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     try {
       const { data: repl } = await supabase
         .from('lessons')
-        .select('date, time, discipline, students(name), teachers(name)')
+        .select('date, time, discipline, students(name), teachers!lessons_teacher_id_fkey(name)')
         .eq('replacement_teacher_id', teacherId)
         .order('date', { ascending: false })
         .limit(60);

@@ -58,7 +58,7 @@ export async function getLessonsInMonth(month: string, filters: StatsFilters = {
   const { from, to } = monthRange(month);
   let query = supabase
     .from('lessons')
-    .select('id, student_id, teacher_id, discipline, status, students(name), teachers(name), attendance(status)')
+    .select('id, student_id, teacher_id, discipline, status, students(name), teachers!lessons_teacher_id_fkey(name), attendance(status)')
     .gte('date', from)
     .lte('date', to);
 
@@ -75,7 +75,7 @@ export async function getLessonsInMonth(month: string, filters: StatsFilters = {
 export async function getAllLessons(filters: StatsFilters = {}): Promise<StatsLessonRow[]> {
   let query = supabase
     .from('lessons')
-    .select('id, student_id, teacher_id, discipline, status, students(name), teachers(name), attendance(status)');
+    .select('id, student_id, teacher_id, discipline, status, students(name), teachers!lessons_teacher_id_fkey(name), attendance(status)');
 
   if (filters.studentId) query = query.eq('student_id', filters.studentId);
   if (filters.teacherId) query = query.eq('teacher_id', filters.teacherId);

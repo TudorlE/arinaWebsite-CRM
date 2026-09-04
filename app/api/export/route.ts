@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     csv = toCSV(rows, ['id', 'name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_name', 'created_at']);
     filename = 'students.csv';
   } else if (type === 'lessons') {
-    const { data, error } = await supabase.from('lessons').select('*, students(name), teachers(name)').order('date', { ascending: false });
+    const { data, error } = await supabase.from('lessons').select('*, students(name), teachers!lessons_teacher_id_fkey(name)').order('date', { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     const rows = (data ?? []).map(({ students, teachers, ...l }: { students: { name: string } | null; teachers: { name: string } | null; [key: string]: unknown }) => ({
       ...l,

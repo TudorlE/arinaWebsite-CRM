@@ -7,13 +7,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
   const { data, error } = await supabase
     .from('lessons')
-    .select('*, students(name), teachers(name), cabinets(name, color)')
+    .select('*, students(name), teachers!lessons_teacher_id_fkey(name), replacement:teachers!lessons_replacement_teacher_id_fkey(name), cabinets(name, color)')
     .eq('id', id)
     .single();
   if (error || !data) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
-  const { students, teachers, cabinets, ...rest } = data as { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; [key: string]: unknown };
+  const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+  const { students, teachers, replacement, cabinets, ...rest } = data as Record<string, unknown>;
+  const cab = one(cabinets as { name: string; color: string } | null);
   return NextResponse.json({
-    lesson: { ...rest, student_name: students?.name ?? null, teacher_name: teachers?.name ?? null, cabinet_name: cabinets?.name ?? null, cabinet_color: cabinets?.color ?? null },
+    lesson: {
+      ...rest,
+      student_name: one(students as { name: string } | null)?.name ?? null,
+      teacher_name: one(teachers as { name: string } | null)?.name ?? null,
+      replacement_teacher_name: one(replacement as { name: string } | null)?.name ?? null,
+      cabinet_name: cab?.name ?? null,
+      cabinet_color: cab?.color ?? null,
+    },
   });
 }
 

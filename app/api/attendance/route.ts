@@ -23,7 +23,7 @@ export function buildAttendanceQuery(request: NextRequest, statusFilter: string 
   const embed = statusFilter ? 'attendance!inner(id,status,notes)' : 'attendance(id,status,notes)';
   let query = supabase
     .from('lessons')
-    .select(`id, date, time, discipline, student_id, teacher_id, students(name), teachers(name), ${embed}`, { count: 'exact' })
+    .select(`id, date, time, discipline, student_id, teacher_id, students(name), teachers!lessons_teacher_id_fkey(name), ${embed}`, { count: 'exact' })
     .lte('date', new Date().toISOString().split('T')[0])
     .order('date', { ascending: false })
     .order('time', { ascending: false });

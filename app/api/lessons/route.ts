@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('lessons')
-    .select('*, students(name), teachers(name), cabinets(name, color), attendance(status, notes)')
+    .select('*, students(name), teachers!lessons_teacher_id_fkey(name), replacement:teachers!lessons_replacement_teacher_id_fkey(name), cabinets(name, color), attendance(status, notes)')
     .order('date', { ascending: false })
     .order('time', { ascending: true });
 
@@ -25,15 +25,19 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   type Att = { status: string; notes: string | null };
-  type Row = { students: { name: string } | null; teachers: { name: string } | null; cabinets: { name: string; color: string } | null; attendance: Att | Att[] | null; [key: string]: unknown };
-  const lessons = (data ?? []).map(({ students, teachers, cabinets, attendance, ...l }: Row) => {
+  type Named = { name: string } | { name: string }[] | null;
+  type Row = { students: Named; teachers: Named; replacement: Named; cabinets: { name: string; color: string } | { name: string; color: string }[] | null; attendance: Att | Att[] | null; [key: string]: unknown };
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+  const lessons = (data ?? []).map(({ students, teachers, replacement, cabinets, attendance, ...l }: Row) => {
     const att = Array.isArray(attendance) ? attendance[0] : attendance;
+    const cab = one(cabinets);
     return {
       ...l,
-      student_name: students?.name ?? null,
-      teacher_name: teachers?.name ?? null,
-      cabinet_name: cabinets?.name ?? null,
-      cabinet_color: cabinets?.color ?? null,
+      student_name: one(students)?.name ?? null,
+      teacher_name: one(teachers)?.name ?? null,
+      replacement_teacher_name: one(replacement)?.name ?? null,
+      cabinet_name: cab?.name ?? null,
+      cabinet_color: cab?.color ?? null,
       attendance_status: att?.status ?? null,
       attendance_notes: att?.notes ?? null,
     };
