@@ -29,7 +29,10 @@ const blank = {
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
   const [form, setForm]     = useState(blank);
-  const [feeTouched, setFeeTouched] = useState(false);
+  // On edit, the stored fee stays put until the admin actually touches the
+  // pricing controls — we never want opening "Editează" to silently
+  // overwrite a custom amount. New students always track the pricing table.
+  const [pricingDirty, setPricingDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
@@ -48,11 +51,10 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         monthly_fee: String(student.monthly_fee ?? ''),
         plan: 'new', lessons: 4,
       });
-      setFeeTouched(true);
     } else {
       setForm(blank);
-      setFeeTouched(false);
     }
+    setPricingDirty(false);
     setErrors({});
   }, [student, open]);
 
@@ -85,11 +87,14 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     [pricedService, form.plan],
   );
 
-  // Auto-fill the monthly fee from the pricing table, unless manually overridden.
+  // Monthly fee always comes from the pricing table — no separate input to edit it.
+  // For a new student it tracks the selection live; for an existing one it only
+  // takes over once the admin has actually touched the pricing controls below.
   useEffect(() => {
-    if (feeTouched || !pricedService) return;
-    if (computedFee != null) setForm(prev => ({ ...prev, monthly_fee: String(computedFee) }));
-  }, [computedFee, pricedService, feeTouched]);
+    if (!pricedService || computedFee == null) return;
+    if (student && !pricingDirty) return;
+    setForm(prev => ({ ...prev, monthly_fee: String(computedFee) }));
+  }, [computedFee, pricedService, pricingDirty, student]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +198,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         </div>
 
         {/* Abonament — aceeași logică de prețuri ca la Plăți */}
-        <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-3">
+        <div className={`rounded-xl border p-3 space-y-3 ${errors.monthly_fee ? 'border-red-400 animate-field-error' : 'border-brand-200 dark:border-brand-900/50'} bg-brand-50/60 dark:bg-brand-900/15`}>
           <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonament</p>
           {!pricedService ? (
             <p className="text-xs text-slate-500 dark:text-slate-400">Selectează un instrument mai sus ca să apară prețurile.</p>
@@ -203,13 +208,13 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                 <Select
                   label="Serviciu"
                   value={pricedService}
-                  onChange={e => setForm(prev => ({ ...prev, instruments: [e.target.value, ...prev.instruments.filter(i => i !== pricedService)] }))}
+                  onChange={e => { setPricingDirty(true); setForm(prev => ({ ...prev, instruments: [e.target.value, ...prev.instruments.filter(i => i !== pricedService)] })); }}
                   options={form.instruments.filter(i => PRICING[i]).map(k => ({ value: k, label: PRICING[k].label }))}
                 />
                 <Select
                   label="Tip abonament"
                   value={form.plan}
-                  onChange={set('plan')}
+                  onChange={e => { setPricingDirty(true); set('plan')(e); }}
                   disabled={isFlat}
                   options={[
                     { value: 'old', label: 'Abonament vechi' },
@@ -225,7 +230,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                       <button
                         key={n}
                         type="button"
-                        onClick={() => setForm(p => ({ ...p, lessons: n }))}
+                        onClick={() => { setPricingDirty(true); setForm(p => ({ ...p, lessons: n })); }}
                         className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors
                           ${form.lessons === n
                             ? 'bg-brand-600 text-white border-brand-600'
@@ -237,20 +242,16 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                   </div>
                 </div>
               )}
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isFlat
-                  ? `Lecție de grup — ${svc?.flatMonthly} lei / lună`
-                  : <>Preț per lecție ({form.plan === 'old' ? 'vechi' : 'nou'}): <strong className="text-slate-700 dark:text-slate-200">{perLesson} lei</strong></>}
-              </p>
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/60 dark:border-brand-900/40">
+                {isFlat ? (
+                  <span>Lecție de grup — {svc?.flatMonthly} lei / lună</span>
+                ) : (
+                  <span>Preț per lecție ({form.plan === 'old' ? 'vechi' : 'nou'}): <strong className="text-slate-700 dark:text-slate-200">{perLesson} lei</strong></span>
+                )}
+                <span className="font-bold text-sm text-brand-700 dark:text-brand-300">{form.monthly_fee || computedFee} lei/lună</span>
+              </div>
             </>
           )}
-          <Input
-            label="Abonament lunar (MDL)"
-            value={form.monthly_fee}
-            onChange={e => { setFeeTouched(true); set('monthly_fee')(e); }}
-            shake={errors.monthly_fee}
-            type="number" min={0} step={50} placeholder="1000"
-          />
         </div>
 
         <Select
