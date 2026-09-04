@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
 import { INSTRUMENTS, Student, STUDENT_STATUSES } from '@/lib/types';
+import { PRICING, LESSON_COUNTS, subscriptionAmount, perLessonPrice, type PlanType, type LessonCount } from '@/lib/pricing';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -23,10 +24,12 @@ const blank = {
   name: '', birth_date: '', phone: '', email: '',
   instruments: [] as string[], teacher_id: '', notes: '', status: 'active',
   monthly_fee: '',
+  plan: 'new' as PlanType, lessons: 4 as LessonCount,
 };
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
   const [form, setForm]     = useState(blank);
+  const [feeTouched, setFeeTouched] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
@@ -43,9 +46,12 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         notes: student.notes ?? '',
         status: student.status ?? 'active',
         monthly_fee: String(student.monthly_fee ?? ''),
+        plan: 'new', lessons: 4,
       });
+      setFeeTouched(true);
     } else {
       setForm(blank);
+      setFeeTouched(false);
     }
     setErrors({});
   }, [student, open]);
@@ -64,6 +70,26 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     }));
     setErrors(prev => ({ ...prev, instruments: false }));
   };
+
+  // The service priced is the first selected instrument that has a price table.
+  const pricedService = form.instruments.find(i => PRICING[i]) ?? null;
+  const svc = pricedService ? PRICING[pricedService] : null;
+  const isFlat = svc?.flatMonthly != null;
+
+  const computedFee = useMemo(
+    () => (pricedService ? subscriptionAmount(pricedService, form.plan, form.lessons) : null),
+    [pricedService, form.plan, form.lessons],
+  );
+  const perLesson = useMemo(
+    () => (pricedService ? perLessonPrice(pricedService, form.plan) : null),
+    [pricedService, form.plan],
+  );
+
+  // Auto-fill the monthly fee from the pricing table, unless manually overridden.
+  useEffect(() => {
+    if (feeTouched || !pricedService) return;
+    if (computedFee != null) setForm(prev => ({ ...prev, monthly_fee: String(computedFee) }));
+  }, [computedFee, pricedService, feeTouched]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,9 +110,14 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
+          name: form.name, birth_date: form.birth_date, phone: form.phone, email: form.email,
+          instruments: form.instruments, notes: form.notes, status: form.status,
           teacher_id: form.teacher_id ? Number(form.teacher_id) : null,
           monthly_fee: Number(form.monthly_fee),
+          // structured plan info — kept for reference, ignored if the API doesn't store it
+          plan_type: isFlat ? null : form.plan,
+          lesson_count: isFlat ? null : form.lessons,
+          price_per_lesson: isFlat ? null : perLesson,
         }),
       });
       if (!res.ok) {
@@ -130,7 +161,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           />
           <Input label="Telefon"           value={form.phone}       onChange={set('phone')}       shake={errors.phone}       placeholder="+373 69 000 000" />
           <Input label="Email"             value={form.email}       onChange={set('email')}       shake={errors.email}       type="email" placeholder="elev@exemplu.ro" />
-          <Input label="Abonament lunar (MDL)" value={form.monthly_fee} onChange={set('monthly_fee')} shake={errors.monthly_fee} type="number" min={0} step={50} placeholder="1000" />
         </div>
 
         {/* Instruments multi-select */}
@@ -160,6 +190,67 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           {errors.instruments && (
             <p className="text-xs text-red-500 animate-fade-in">Selectează cel puțin un instrument</p>
           )}
+        </div>
+
+        {/* Abonament — aceeași logică de prețuri ca la Plăți */}
+        <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonament</p>
+          {!pricedService ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400">Selectează un instrument mai sus ca să apară prețurile.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select
+                  label="Serviciu"
+                  value={pricedService}
+                  onChange={e => setForm(prev => ({ ...prev, instruments: [e.target.value, ...prev.instruments.filter(i => i !== pricedService)] }))}
+                  options={form.instruments.filter(i => PRICING[i]).map(k => ({ value: k, label: PRICING[k].label }))}
+                />
+                <Select
+                  label="Tip abonament"
+                  value={form.plan}
+                  onChange={set('plan')}
+                  disabled={isFlat}
+                  options={[
+                    { value: 'old', label: 'Abonament vechi' },
+                    { value: 'new', label: 'Abonament nou' },
+                  ]}
+                />
+              </div>
+              {!isFlat && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Număr de lecții / lună</label>
+                  <div className="flex gap-2">
+                    {LESSON_COUNTS.map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, lessons: n }))}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors
+                          ${form.lessons === n
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400'}`}
+                      >
+                        {n} lecții
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {isFlat
+                  ? `Lecție de grup — ${svc?.flatMonthly} lei / lună`
+                  : <>Preț per lecție ({form.plan === 'old' ? 'vechi' : 'nou'}): <strong className="text-slate-700 dark:text-slate-200">{perLesson} lei</strong></>}
+              </p>
+            </>
+          )}
+          <Input
+            label="Abonament lunar (MDL)"
+            value={form.monthly_fee}
+            onChange={e => { setFeeTouched(true); set('monthly_fee')(e); }}
+            shake={errors.monthly_fee}
+            type="number" min={0} step={50} placeholder="1000"
+          />
         </div>
 
         <Select
