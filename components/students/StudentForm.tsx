@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
-import { INSTRUMENTS, LEVELS, Student, STUDENT_STATUSES } from '@/lib/types';
+import { INSTRUMENTS, Student, STUDENT_STATUSES } from '@/lib/types';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -21,12 +21,8 @@ interface Props {
 
 const blank = {
   name: '', birth_date: '', phone: '', email: '',
-  instruments: [] as string[], teacher_id: '', cabinet_id: '', notes: '', status: 'active',
-  level: 'beginner', monthly_fee: '',
-};
-
-const LEVEL_LABELS: Record<string, string> = {
-  beginner: 'Începător', intermediate: 'Intermediar', advanced: 'Avansat',
+  instruments: [] as string[], teacher_id: '', notes: '', status: 'active',
+  monthly_fee: '',
 };
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
@@ -34,7 +30,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
-  const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
 
   useEffect(() => {
     if (student) {
@@ -45,10 +40,8 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         email: student.email,
         instruments: student.instruments ?? [],
         teacher_id: String(student.teacher_id ?? ''),
-        cabinet_id: String(student.cabinet_id ?? ''),
         notes: student.notes ?? '',
         status: student.status ?? 'active',
-        level: student.level ?? 'beginner',
         monthly_fee: String(student.monthly_fee ?? ''),
       });
     } else {
@@ -93,7 +86,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         body: JSON.stringify({
           ...form,
           teacher_id: form.teacher_id ? Number(form.teacher_id) : null,
-          cabinet_id: form.cabinet_id ? Number(form.cabinet_id) : null,
           monthly_fee: Number(form.monthly_fee),
         }),
       });
@@ -111,7 +103,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
   };
 
   const teachers = teachersData?.teachers ?? [];
-  const cabinets = cabinetsData?.cabinets ?? [];
 
   const INSTRUMENT_COLORS: Record<string, string> = {
     'Piano': 'indigo', 'Chitară': 'purple', 'Tobe': 'yellow',
@@ -139,12 +130,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           />
           <Input label="Telefon"           value={form.phone}       onChange={set('phone')}       shake={errors.phone}       placeholder="+373 69 000 000" />
           <Input label="Email"             value={form.email}       onChange={set('email')}       shake={errors.email}       type="email" placeholder="elev@exemplu.ro" />
-          <Select
-            label="Nivel"
-            value={form.level}
-            onChange={set('level')}
-            options={LEVELS.map(l => ({ value: l, label: LEVEL_LABELS[l] }))}
-          />
           <Input label="Abonament lunar (MDL)" value={form.monthly_fee} onChange={set('monthly_fee')} shake={errors.monthly_fee} type="number" min={0} step={50} placeholder="1000" />
         </div>
 
@@ -177,22 +162,13 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Profesor"
-            value={form.teacher_id}
-            onChange={set('teacher_id')}
-            placeholder="Atribuie profesor"
-            options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
-          />
-          <Select
-            label="Cabinet"
-            value={form.cabinet_id}
-            onChange={set('cabinet_id')}
-            placeholder="Fără cabinet"
-            options={cabinets.map((c: { id: number; name: string }) => ({ value: c.id, label: c.name }))}
-          />
-        </div>
+        <Select
+          label="Profesor"
+          value={form.teacher_id}
+          onChange={set('teacher_id')}
+          placeholder="Atribuie profesor"
+          options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
+        />
 
         <Select
           label="Status"

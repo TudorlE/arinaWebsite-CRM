@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { Payment, MONTHS } from '@/lib/types';
+import {
+  PRICING, SERVICE_KEYS, LESSON_COUNTS, subscriptionAmount, perLessonPrice, planSummary,
+  type PlanType, type LessonCount,
+} from '@/lib/pricing';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -21,29 +25,30 @@ interface Props {
 
 const now = new Date();
 
-/** Today's date in Moldova (Europe/Chisinau) as YYYY-MM-DD. */
 function todayMoldova(): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Chisinau',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  });
-  return fmt.format(new Date()); // en-CA returns YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Chisinau', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
 }
 
 const blank = {
-  student_id: '', amount: '', month: String(now.getMonth() + 1),
+  student_id: '', service: SERVICE_KEYS[0], plan: 'new' as PlanType, lessons: 4 as LessonCount,
+  amount: '', month: String(now.getMonth() + 1),
   status: 'unpaid', payment_date: todayMoldova(), notes: '',
 };
 
 export default function PaymentForm({ open, onClose, onSaved, payment, defaultStudentId, showToast }: Props) {
   const [form, setForm]     = useState(blank);
+  const [amountTouched, setAmountTouched] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const { data: studentsData } = useSWR('/api/students', fetcher);
+  const students = studentsData?.students ?? [];
 
   useEffect(() => {
     if (payment) {
       setForm({
+        ...blank,
         student_id: String(payment.student_id),
         amount: String(payment.amount),
         month: String(payment.month),
@@ -51,23 +56,39 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         payment_date: payment.payment_date ?? todayMoldova(),
         notes: payment.notes ?? '',
       });
+      setAmountTouched(true);
     } else {
       setForm({ ...blank, payment_date: todayMoldova(), student_id: defaultStudentId ? String(defaultStudentId) : '' });
+      setAmountTouched(false);
     }
     setErrors({});
   }, [payment, open, defaultStudentId]);
 
+  const svc = PRICING[form.service];
+  const isFlat = svc?.flatMonthly != null;
+
+  const computedAmount = useMemo(
+    () => subscriptionAmount(form.service, form.plan, form.lessons),
+    [form.service, form.plan, form.lessons],
+  );
+  const perLesson = useMemo(
+    () => perLessonPrice(form.service, form.plan),
+    [form.service, form.plan],
+  );
+
+  // Auto-fill amount + notes from the pricing table, unless the user typed a custom amount.
+  useEffect(() => {
+    if (amountTouched || payment) return;
+    setForm(prev => ({
+      ...prev,
+      amount: computedAmount != null ? String(computedAmount) : prev.amount,
+      notes: planSummary(prev.service, prev.plan, prev.lessons),
+    }));
+  }, [computedAmount, form.service, form.plan, form.lessons, amountTouched, payment]);
+
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     setErrors(prev => ({ ...prev, [field]: false }));
-  };
-
-  // Auto-fill amount from student fee
-  const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const sid = Number(e.target.value);
-    const s = studentsData?.students?.find((x: { id: number; monthly_fee: number }) => x.id === sid);
-    setForm(prev => ({ ...prev, student_id: e.target.value, amount: s ? String(s.monthly_fee) : prev.amount }));
-    setErrors(prev => ({ ...prev, student_id: false }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,13 +105,19 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
           student_id: Number(form.student_id),
           amount: Number(form.amount),
           month: Number(form.month),
           year: now.getFullYear(),
+          status: form.status,
           payment_date: form.payment_date || todayMoldova(),
           due_date: null,
+          notes: form.notes || null,
+          // structured plan info (API stores if columns exist, otherwise ignores)
+          plan_type: isFlat ? null : form.plan,
+          lesson_count: isFlat ? null : form.lessons,
+          price_per_lesson: isFlat ? null : perLesson,
+          service: form.service,
         }),
       });
       if (!res.ok) {
@@ -106,27 +133,76 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     }
   };
 
-  const students = studentsData?.students ?? [];
-
   return (
     <Modal open={open} onClose={onClose} title={payment ? 'Editează plată' : 'Înregistrează plată'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <Select
+          label="Elev"
+          value={form.student_id}
+          onChange={e => { setForm(p => ({ ...p, student_id: e.target.value })); setErrors(p => ({ ...p, student_id: false })); }}
+          shake={errors.student_id}
+          placeholder="Selectează elev"
+          options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
+        />
+
+        {!payment && (
+          <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonament</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select
+                label="Serviciu"
+                value={form.service}
+                onChange={set('service')}
+                options={SERVICE_KEYS.map(k => ({ value: k, label: PRICING[k].label }))}
+              />
+              <Select
+                label="Tip abonament"
+                value={form.plan}
+                onChange={set('plan')}
+                disabled={isFlat}
+                options={[
+                  { value: 'old', label: 'Abonament vechi' },
+                  { value: 'new', label: 'Abonament nou' },
+                ]}
+              />
+            </div>
+            {!isFlat && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Număr de lecții / lună</label>
+                <div className="flex gap-2">
+                  {LESSON_COUNTS.map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, lessons: n }))}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors
+                        ${form.lessons === n
+                          ? 'bg-brand-600 text-white border-brand-600'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400'}`}
+                    >
+                      {n} lecții
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isFlat
+                ? `Lecție de grup — ${svc?.flatMonthly} lei / lună`
+                : <>Preț per lecție ({form.plan === 'old' ? 'vechi' : 'nou'}): <strong className="text-slate-700 dark:text-slate-200">{perLesson} lei</strong></>}
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Elev"
-            value={form.student_id}
-            onChange={handleStudentChange}
-            shake={errors.student_id}
-            placeholder="Selectează elev"
-            options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
+          <Input
+            label="Sumă (MDL)"
+            value={form.amount}
+            onChange={e => { setAmountTouched(true); set('amount')(e); }}
+            shake={errors.amount}
+            type="number" min={0}
           />
-          <Input label="Sumă (MDL)" value={form.amount} onChange={set('amount')} shake={errors.amount} type="number" min={0} />
-          <Select
-            label="Lună"
-            value={form.month}
-            onChange={set('month')}
-            options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
-          />
+          <Select label="Lună" value={form.month} onChange={set('month')} options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))} />
           <Select
             label="Status"
             value={form.status}

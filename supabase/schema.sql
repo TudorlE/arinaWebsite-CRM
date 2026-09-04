@@ -184,6 +184,8 @@ CREATE TABLE IF NOT EXISTS recurring_schedules (
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS recurring_schedule_id bigint REFERENCES recurring_schedules(id) ON DELETE SET NULL;
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS is_customized boolean NOT NULL DEFAULT false;
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS discipline text;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS replacement_teacher_id bigint REFERENCES teachers(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS lessons_replacement_teacher_idx ON lessons (replacement_teacher_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS lessons_recurring_date_uniq
   ON lessons (recurring_schedule_id, date) WHERE recurring_schedule_id IS NOT NULL;

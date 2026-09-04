@@ -10,8 +10,10 @@ import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
+import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
 
 const WEEKDAY_LETTERS = ['D', 'L', 'Ma', 'Mi', 'J', 'V', 'S']; // 0=Sun..6=Sat
 
@@ -26,17 +28,19 @@ function daysInMonth(ref: Date): Date[] {
   return Array.from({ length: count }, (_, i) => new Date(year, month, i + 1));
 }
 
-type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered';
+type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered' | 'replacement';
 
 const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string }[] = [
   { mark: 'present',           char: '✓', label: 'Prezent / Finalizată',   className: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
   { mark: 'excused_absence',   char: 'M', label: 'Absență motivată',       className: 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200' },
   { mark: 'unexcused_absence', char: 'N', label: 'Absență nemotivată',     className: 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200' },
   { mark: 'recovered',         char: 'R', label: 'Recuperare',             className: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200' },
+  { mark: 'replacement',       char: 'I', label: 'Înlocuire (alt profesor)', className: 'text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200' },
   { mark: 'cancelled',         char: 'X', label: 'Anulată',                className: 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' },
 ];
 
 function symbolFor(l: Lesson): { char: string; className: string; title: string } {
+  if (l.replacement_teacher_id) return { char: 'I', className: 'text-violet-700 bg-violet-50', title: `Înlocuire${l.replacement_teacher_name ? ` — ${l.replacement_teacher_name}` : ''}` };
   if (l.status === 'cancelled') return { char: 'X', className: 'text-red-700 bg-red-50', title: 'Anulată' };
   if (l.status === 'recovered') return { char: 'R', className: 'text-sky-700 bg-sky-50', title: 'Recuperare' };
   if (l.attendance_status === 'unexcused_absence') return { char: 'N', className: 'text-rose-700 bg-rose-50', title: 'Absență nemotivată' };
@@ -61,6 +65,9 @@ export default function AttendanceRegisterPage() {
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
+  // When set, the popover shows a teacher picker for "who did the replacement".
+  // `lessonId: 0` means "create the lesson first, then set the replacement".
+  const [replacingFor, setReplacingFor] = useState<{ lessonId: number; studentId: number; date: string } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNoteId, setSavingNoteId] = useState<number | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -76,6 +83,7 @@ export default function AttendanceRegisterPage() {
       if (target.closest('[data-cell-trigger]')) return;
       setActiveCell(null);
       setPopoverPos(null);
+      setReplacingFor(null);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -91,7 +99,11 @@ export default function AttendanceRegisterPage() {
   const { data: disciplineTeachersData, mutate: mutateDisciplineTeachers } = useSWR('/api/discipline-teachers', fetcher);
   const allStudents: Student[] = studentsData?.students ?? [];
   const teachers: Teacher[] = teachersData?.teachers ?? [];
-  const allLessons: Lesson[] = lessonsData?.lessons ?? [];
+  const teacherName = (tid: number | null | undefined) => teachers.find(t => t.id === tid)?.name ?? null;
+  const allLessons: Lesson[] = ((lessonsData?.lessons ?? []) as Lesson[]).map(l => ({
+    ...l,
+    replacement_teacher_name: l.replacement_teacher_id ? teacherName(l.replacement_teacher_id) : null,
+  }));
   const disciplineTeachers: { discipline: string; teacher_id: number | null; teacher_name: string | null }[] = disciplineTeachersData?.assignments ?? [];
 
   const days = daysInMonth(monthRef);
@@ -118,7 +130,67 @@ export default function AttendanceRegisterPage() {
     return s.charAt(0).toUpperCase() + s.slice(1);
   })();
 
-  const setMark = async (lesson: Lesson, mark: Mark) => {
+  /** Creates a lesson for an empty register cell so it can be marked. */
+  const createLessonForCell = async (studentId: number, dateStr: string): Promise<Lesson | null> => {
+    const student = allStudents.find(s => s.id === studentId);
+    const teacherId = student?.teacher_id ?? (effectiveTeacherId ?? null);
+    if (!teacherId) {
+      toast('Elevul nu are un profesor atribuit — atribuie-l mai întâi din Elevi', 'error');
+      return null;
+    }
+    const discipline = fDiscipline || (student?.instruments?.[0] ?? null);
+    const res = await fetch('/api/lessons', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id: studentId, teacher_id: teacherId, date: dateStr,
+        time: DEFAULT_SLOT, duration: 45, discipline,
+      }),
+    });
+    if (!res.ok) { toast('Nu s-a putut crea lecția', 'error'); return null; }
+    const { lesson } = await res.json();
+    return lesson as Lesson;
+  };
+
+  const applyReplacement = async (lessonId: number, replacementTeacherId: number) => {
+    setSavingCell('repl');
+    try {
+      await Promise.all([
+        fetch(`/api/lessons/${lessonId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ replacement_teacher_id: replacementTeacherId, status: 'completed' }),
+        }),
+        fetch('/api/attendance', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lesson_id: lessonId, status: 'present' }),
+        }),
+      ]);
+      mutateLessons();
+      toast('Înlocuire salvată', 'success');
+    } catch {
+      toast('Eroare la salvare', 'error');
+    } finally {
+      setSavingCell(null);
+      setReplacingFor(null);
+      setActiveCell(null);
+    }
+  };
+
+  const setMark = async (lessonArg: Lesson | { studentId: number; date: string }, mark: Mark) => {
+    // Empty cell → create the lesson first.
+    let lesson: Lesson;
+    if ('id' in lessonArg) {
+      lesson = lessonArg;
+    } else {
+      const created = await createLessonForCell(lessonArg.studentId, lessonArg.date);
+      if (!created) return;
+      lesson = created;
+    }
+
+    if (mark === 'replacement') {
+      setReplacingFor({ lessonId: lesson.id, studentId: lesson.student_id, date: lesson.date });
+      return;
+    }
+
     const cellKey = `${lesson.student_id}|${lesson.date}`;
     setSavingCell(cellKey);
     try {
@@ -184,12 +256,12 @@ export default function AttendanceRegisterPage() {
   };
 
   const openCell = (dateStr: string, cellLessons: Lesson[], studentId: number, rect: DOMRect) => {
-    if (cellLessons.length === 0) return; // adding lessons happens only from Program Privat
     if (!canEdit) {
       toast(role === null ? 'Se încarcă permisiunile… mai încearcă o dată în o clipă' : 'Nu ai permisiunea de a edita registrul', 'error');
       return;
     }
     const key = `${studentId}|${dateStr}`;
+    setReplacingFor(null);
     if (activeCell === key) {
       setActiveCell(null);
       setPopoverPos(null);
@@ -315,38 +387,79 @@ export default function AttendanceRegisterPage() {
                       <td key={dateStr} className={`relative border border-slate-200 dark:border-slate-800 p-0 text-center ${isWeekend ? 'bg-slate-50/70 dark:bg-slate-800/30' : ''}`}>
                         <button
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.currentTarget.getBoundingClientRect()); }}
-                          disabled={cellLessons.length === 0}
                           data-cell-trigger
-                          title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : sym?.title}
+                          title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : (sym?.title ?? 'Click pentru a marca situația')}
                           className={`relative w-full h-14 flex items-center justify-center text-xl font-bold transition-colors
-                            ${sym ? sym.className : ''} ${canEdit && cellLessons.length > 0 ? 'hover:brightness-95 cursor-pointer' : 'cursor-default'}
+                            ${sym ? sym.className : 'text-slate-200 dark:text-slate-700'} ${canEdit ? 'hover:brightness-95 hover:bg-amber-50/60 dark:hover:bg-amber-900/20 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
-                          {savingCell === key ? '…' : (sym?.char ?? '')}
+                          {savingCell === key ? '…' : (sym?.char ?? (canEdit ? '·' : ''))}
                           {primary?.attendance_notes && (
                             <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
                           )}
                         </button>
 
-                        {isMenu && cellLessons.length > 0 && popoverPos && createPortal(
+                        {isMenu && popoverPos && createPortal(
                           <div
                             ref={popoverRef}
                             onClick={e => e.stopPropagation()}
                             style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left }}
                             className="z-50 w-64 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in"
                           >
-                            {cellLessons.map(l => (
+                            {replacingFor ? (
+                              <div className="p-1">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-2">Cine a făcut înlocuirea?</p>
+                                <div className="max-h-52 overflow-auto flex flex-col gap-1">
+                                  {teachers.map(tt => (
+                                    <button key={tt.id}
+                                      onClick={async () => {
+                                        let lid = replacingFor.lessonId;
+                                        if (lid === 0) {
+                                          const created = await createLessonForCell(replacingFor.studentId, replacingFor.date);
+                                          if (!created) return;
+                                          lid = created.id;
+                                        }
+                                        applyReplacement(lid, tt.id);
+                                      }}
+                                      className="text-left px-2.5 py-1.5 rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-violet-50 dark:hover:bg-violet-900/30"
+                                    >
+                                      {tt.name}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button onClick={() => setReplacingFor(null)} className="mt-1.5 text-[11px] text-slate-400 hover:text-slate-600 px-2">← înapoi</button>
+                              </div>
+                            ) : cellLessons.length === 0 ? (
+                              <div className="p-1">
+                                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 px-0.5">
+                                  Nicio lecție — alege situația (se creează o lecție):
+                                </p>
+                                <div className="grid grid-cols-3 gap-1">
+                                  {MARK_OPTIONS.map(opt => (
+                                    <button
+                                      key={opt.mark}
+                                      onClick={() => setMark({ studentId: s.id, date: dateStr }, opt.mark)}
+                                      title={opt.label}
+                                      className={`h-9 rounded-md border text-xs font-bold flex flex-col items-center justify-center leading-none gap-0.5 transition-colors ${opt.className}`}
+                                    >
+                                      <span className="text-sm">{opt.char}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : cellLessons.map(l => (
                               <div key={l.id} className="mb-2.5 last:mb-0">
                                 <div className="flex items-center justify-between mb-1.5 px-0.5">
                                   <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                                     {l.time?.slice(0, 5)} · {l.discipline ?? '—'} · {l.teacher_name}
+                                    {l.replacement_teacher_name && <span className="text-violet-600 dark:text-violet-400"> · înloc. {l.replacement_teacher_name}</span>}
                                   </p>
                                   <div className="flex items-center gap-0.5 flex-shrink-0">
                                     <button onClick={() => { setEditLesson(l); setActiveCell(null); }} className="p-1 rounded-md text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30"><Pencil className="w-3 h-3" /></button>
                                     <button onClick={() => { setDeleteTarget(l); setActiveCell(null); }} className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-5 gap-1 mb-1.5">
+                                <div className="grid grid-cols-6 gap-1 mb-1.5">
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
@@ -358,6 +471,12 @@ export default function AttendanceRegisterPage() {
                                     </button>
                                   ))}
                                 </div>
+                                {l.replacement_teacher_id && (
+                                  <button onClick={() => fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replacement_teacher_id: null }) }).then(() => { mutateLessons(); toast('Înlocuire eliminată', 'success'); })}
+                                    className="w-full mb-1.5 text-[11px] text-violet-600 dark:text-violet-400 hover:underline">
+                                    Elimină înlocuirea ({l.replacement_teacher_name})
+                                  </button>
+                                )}
                                 <div className="flex items-center gap-1">
                                   <MessageSquare className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
                                   <input
@@ -396,8 +515,9 @@ export default function AttendanceRegisterPage() {
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-amber-50 text-amber-700 font-bold flex items-center justify-center border border-amber-200">M</span>Absență motivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-sky-50 text-sky-700 font-bold flex items-center justify-center border border-sky-200">R</span>Recuperare</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-violet-50 text-violet-700 font-bold flex items-center justify-center border border-violet-200">I</span>Înlocuire</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-red-50 text-red-700 font-bold flex items-center justify-center border border-red-200">X</span>Anulată</span>
-          {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe un marcaj îl schimbă · lecțiile noi se adaugă din Program Privat</span>}
+          {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe orice căsuță pentru a marca situația</span>}
         </div>
       </main>
 

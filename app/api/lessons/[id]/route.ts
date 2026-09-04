@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const propagate = (body.propagate as 'only' | 'future' | 'all' | undefined) ?? 'only';
-    const allowed = ['student_id', 'teacher_id', 'date', 'time', 'duration', 'status', 'notes', 'cabinet_id', 'discipline'];
+    const allowed = ['student_id', 'teacher_id', 'date', 'time', 'duration', 'status', 'notes', 'cabinet_id', 'discipline', 'replacement_teacher_id'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
 
     const { data: current, error: fetchErr } = await supabase
@@ -46,7 +46,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     // Plain lesson, or an explicit "only this occurrence" edit on a recurring one.
     if (propagate === 'only' || !isRecurring) {
       const rowUpdate = isRecurring ? { ...update, is_customized: true } : update;
-      const { data, error } = await supabase.from('lessons').update(rowUpdate).eq('id', id).select().single();
+      let { data, error } = await supabase.from('lessons').update(rowUpdate).eq('id', id).select().single();
+      // replacement_teacher_id column may not be migrated yet — strip and retry.
+      if (error && error.message.includes('replacement_teacher_id')) {
+        const safe = { ...rowUpdate }; delete (safe as Record<string, unknown>).replacement_teacher_id;
+        ({ data, error } = await supabase.from('lessons').update(safe).eq('id', id).select().single());
+      }
       if (error || !data) return NextResponse.json({ error: error?.message ?? 'Lesson not found' }, { status: 404 });
       return NextResponse.json({ lesson: data });
     }

@@ -13,5 +13,5 @@ export function generateSlots(startHHMM: string, endHHMM: string, stepMinutes: n
   return slots;
 }
 
-/** Standard lesson slots: 45min apart, 13:00–20:30 inclusive. */
-export const DEFAULT_TIME_SLOTS = generateSlots('13:00', '20:30', 45);
+/** Standard lesson slots: 45min apart, 13:15–20:45 inclusive. */
+export const DEFAULT_TIME_SLOTS = generateSlots('13:15', '20:45', 45);

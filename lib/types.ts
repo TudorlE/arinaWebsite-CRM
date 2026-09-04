@@ -78,6 +78,8 @@ export interface Lesson {
   cabinet_name?: string | null;
   cabinet_color?: string | null;
   discipline?: string | null;
+  replacement_teacher_id?: number | null;
+  replacement_teacher_name?: string | null;
   recurring_schedule_id?: number | null;
   is_customized?: boolean;
   created_at: string;

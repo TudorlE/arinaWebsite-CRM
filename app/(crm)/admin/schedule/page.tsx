@@ -14,7 +14,7 @@ const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-// Standard cabinet-table time slots (45min lessons, 13:00-20:00). Any
+// Standard cabinet-table time slots (45min lessons, 13:15-20:45). Any
 // additional times already used by existing lessons on the selected day
 // are appended so nothing gets hidden.
 const DEFAULT_SLOTS = DEFAULT_TIME_SLOTS;

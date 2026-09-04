@@ -32,7 +32,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const totalPaid = (payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
 
-    return NextResponse.json({ stats, totalPaid });
+    // Înlocuiri făcute de acest profesor (a ținut lecția în locul titularului).
+    let replacements: { date: string; time: string; student: string | null; discipline: string | null; titular: string | null }[] = [];
+    try {
+      const { data: repl } = await supabase
+        .from('lessons')
+        .select('date, time, discipline, students(name), teachers(name)')
+        .eq('replacement_teacher_id', teacherId)
+        .order('date', { ascending: false })
+        .limit(60);
+      replacements = ((repl ?? []) as unknown[]).map(row => {
+        const r = row as { date: string; time: string; discipline: string | null; students: { name: string } | { name: string }[] | null; teachers: { name: string } | { name: string }[] | null };
+        const stu = Array.isArray(r.students) ? r.students[0] : r.students;
+        const tea = Array.isArray(r.teachers) ? r.teachers[0] : r.teachers;
+        return { date: r.date, time: r.time, student: stu?.name ?? null, discipline: r.discipline, titular: tea?.name ?? null };
+      });
+    } catch { /* column not migrated yet — ignore */ }
+
+    return NextResponse.json({ stats, totalPaid, replacements });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Internal server error' }, { status: 500 });
   }

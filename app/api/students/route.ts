@@ -32,13 +32,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { name, birth_date, phone, email, instruments, level, monthly_fee, teacher_id, cabinet_id, notes, status } = await request.json();
-    if (!name || !birth_date || !phone || !email || !instruments?.length || !level || !monthly_fee) {
+    if (!name || !birth_date || !phone || !email || !instruments?.length || !monthly_fee) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const { data: student, error } = await supabase
       .from('students')
       .insert({
-        name, birth_date, phone, email, instruments, level,
+        name, birth_date, phone, email, instruments,
+        level: level ?? 'beginner',
         monthly_fee: Number(monthly_fee),
         teacher_id: teacher_id ? Number(teacher_id) : null,
         cabinet_id: cabinet_id ? Number(cabinet_id) : null,
