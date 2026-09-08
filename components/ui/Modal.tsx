@@ -43,9 +43,9 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
       />
 
       {/* Dialog */}
-      <div className={`relative w-full ${sizes[size]} bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 animate-modal-pop overflow-hidden`}>
+      <div className={`relative w-full ${sizes[size]} max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl ring-1 ring-slate-900/5 dark:ring-white/10 animate-modal-pop overflow-hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-900 shrink-0">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">{title}</h2>
           <button
             onClick={onClose}
@@ -56,7 +56,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 overflow-y-auto">
           {children}
         </div>
       </div>
