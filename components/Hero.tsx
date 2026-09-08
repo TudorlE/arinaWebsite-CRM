@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { EASE, RevealLines } from '@/components/motionx';
 import { openBooking } from '@/components/Booking';
+import { useLocale } from '@/lib/i18n';
 
 export default function Hero() {
   const ref = useRef<HTMLElement>(null);
@@ -11,6 +12,8 @@ export default function Hero() {
   const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '16%']);
   const imgScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
   const copyY = useTransform(scrollYProgress, [0, 1], [0, 64]);
+  const { t } = useLocale();
+  const h = t.hero;
 
   const go = (href: string) => document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
 
@@ -20,26 +23,25 @@ export default function Hero() {
 
         <motion.div className="hero-copy hero-copy-in" style={{ y: copyY, padding: '72px 44px 72px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <span className="eyebrow" style={{ marginBottom: 30 }}>
-            Școală de Muzică Premium · Chișinău
+            {h.eyebrow}
           </span>
 
           <RevealLines tag="h1"
             style={{ fontSize: 'clamp(34px, 6.4vw, 82px)', lineHeight: 1.12, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, color: 'var(--tx)' }}
-            lines={['Descoperă', 'lumea', 'creației']}
+            lines={h.lines}
           />
 
           <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--sand)', margin: '22px 0 0' }}>
-            cu Arry Production Studio
+            {h.kicker}
           </p>
 
           <p style={{ fontSize: 16, color: 'var(--tx-mut)', maxWidth: 440, margin: '26px 0 38px', lineHeight: 1.75 }}>
-            Școala unde pasiunea pentru muzică devine performanță — de la primele
-            note la concertul de vis. Pian, tobe, canto, chitară și solfegiu.
+            {h.desc}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-            <button onClick={openBooking} className="btn-outline solid">Înscrie-te la o lecție de probă</button>
-            <button onClick={() => go('#cursuri')} className="btn-outline">Vezi cursurile</button>
+            <button onClick={openBooking} className="btn-outline solid">{h.ctaBook}</button>
+            <button onClick={() => go('#cursuri')} className="btn-outline">{h.ctaCourses}</button>
           </div>
         </motion.div>
 
@@ -51,7 +53,7 @@ export default function Hero() {
           <motion.img
             style={{ y: imgY, scale: imgScale, position: 'absolute', inset: '-10% 0', width: '100%', height: '120%', objectFit: 'cover' }}
             src="https://images.unsplash.com/photo-1520166012956-add9ba0835cb?w=1100&q=80&auto=format&fit=crop"
-            alt="Pian sub lumină caldă"
+            alt={h.imgAlt}
             className="ph ph-red"
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--bg) 0%, rgba(16,13,11,0.1) 22%, rgba(16,13,11,0) 45%)' }} />
@@ -62,9 +64,9 @@ export default function Hero() {
               background: 'rgba(16,13,11,0.62)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
               border: '1px solid var(--line-strong)', maxWidth: 280,
             }}>
-            <p style={{ fontSize: 19, fontWeight: 800, color: 'var(--tx)', margin: 0, letterSpacing: '0.02em' }}>+373 60 081 991</p>
-            <p style={{ fontSize: 11.5, color: 'var(--tx-mut)', margin: '6px 0 0', lineHeight: 1.5 }}>
-              Sună-ne pentru o lecție de probă gratuită sau programează o vizită la studio.
+            <p style={{ fontSize: 19, fontWeight: 800, color: '#F2EDE6', margin: 0, letterSpacing: '0.02em' }}>+373 60 081 991</p>
+            <p style={{ fontSize: 11.5, color: 'rgba(242,237,230,0.72)', margin: '6px 0 0', lineHeight: 1.5 }}>
+              {h.phoneNote}
             </p>
           </motion.div>
 
@@ -72,12 +74,12 @@ export default function Hero() {
             position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'right center',
             fontSize: 9.5, fontWeight: 700, letterSpacing: '0.34em', textTransform: 'uppercase', color: 'rgba(242,237,230,0.55)',
           }}>
-            Fotografii din studio
+            {h.photoLabel}
           </span>
         </motion.div>
       </div>
 
-      <motion.button onClick={() => go('#despre')} aria-label="Derulează în jos"
+      <motion.button onClick={() => go('#despre')} aria-label={h.scrollAria}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
         style={{ position: 'absolute', left: 34, bottom: 26, width: 34, height: 34, border: '1px solid var(--line-strong)', background: 'none', color: 'var(--tx-mut)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
         className="hide-mobile">

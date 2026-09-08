@@ -73,43 +73,65 @@ html { scroll-behavior: smooth; }
 body { margin: 0; padding: 0; overflow-x: hidden; }
 img { display: block; max-width: 100%; }
 
-/* Dark ground so scroll/overscroll never flashes white on the public site.
-   The CRM paints its own cream/slate surfaces on top. */
-html { background: #100D0B; }
+/* Ground behind the page so scroll/overscroll never flashes the wrong
+   theme. The CRM paints its own cream/slate surfaces on top. */
+html { background: #FAF7F2; }
+html.dark { background: #100D0B; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
 
 /* ── Public site base (scoped so the CRM is untouched) ────────── */
+/* Warm editorial palette, in both a light and a dark reading — overrides
+   the shared tokens locally, so the CRM (which reads them from :root) is
+   unaffected. Default (no .dark on <html>) is light; html.dark switches it. */
 .site-root {
-  /* Warm editorial-dark palette — overrides the shared tokens locally,
-     so the CRM (which reads them from :root) is unaffected. */
-  --ink: #100D0B;
-  --bg: #100D0B;
-  --bg-alt: #16110D;
-  --ink-raised: #1B1611;
-  --paper: #F2EDE6;
-  --tx: #F2EDE6;
-  --tx-mut: #9A938B;
-  --tx-faint: #5F5952;
-  --sand: #C7A988;
-  --sand-deep: #B8916B;
-  --sand-ink: #1A1512;
-  --line: rgba(255, 255, 255, 0.10);
-  --line-strong: rgba(255, 255, 255, 0.22);
-  --red: #E11D1D;
-  /* Accent: warm champagne, not orange. Small marks only. */
-  --orange: #D8B892;
-  --accent: #D8B892;
+  --ink: #FAF7F2;
+  --bg: #FAF7F2;
+  --bg-alt: #F1EAE0;
+  --ink-raised: #ECE3D6;
+  --paper: #18140F;
+  --tx: #211B15;
+  --tx-mut: #55493D;
+  --tx-faint: #8A7C6C;
+  --sand: #9C6B3D;
+  --sand-deep: #7E5530;
+  --sand-ink: #FAF7F2;
+  --line: rgba(24, 20, 15, 0.12);
+  --line-strong: rgba(24, 20, 15, 0.26);
+  --red: #C81E1E;
+  /* Accent: warm champagne/bronze. Small marks only. */
+  --orange: #9C6B3D;
+  --accent: #9C6B3D;
 
   min-height: 100vh;
   background: var(--bg);
   color: var(--tx-mut);
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.75;
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+html.dark .site-root {
+  --ink: #100D0B;
+  --bg: #100D0B;
+  --bg-alt: #16110D;
+  --ink-raised: #1B1611;
+  --paper: #F2EDE6;
+  --tx: #F2EDE6;
+  --tx-mut: #ACA59B;
+  --tx-faint: #6B655D;
+  --sand: #C7A988;
+  --sand-deep: #B8916B;
+  --sand-ink: #1A1512;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --red: #E11D1D;
+  --orange: #D8B892;
+  --accent: #D8B892;
 }
 
 .site-root :is(h1, h2, h3, h4) {
@@ -117,7 +139,7 @@ html { background: #100D0B; }
   color: var(--tx);
 }
 
-.site-root ::selection { background: var(--orange); color: #100D0B; }
+.site-root ::selection { background: var(--orange); color: var(--sand-ink); }
 
 .site-root ::-webkit-scrollbar { width: 5px; }
 .site-root ::-webkit-scrollbar-track { background: var(--bg); }
@@ -208,15 +230,41 @@ html { background: #100D0B; }
   .site-root .rule { max-width: none !important; }
 }
 
-/* Editorial photo treatment — dark, warm, high contrast */
+/* Editorial photo treatment — warm, high contrast; softer in light mode,
+   deliberately darkened in dark mode so photos sit into the dark ground. */
 .site-root .ph {
-  filter: grayscale(0.35) brightness(0.72) contrast(1.12) sepia(0.12);
+  filter: grayscale(0.12) brightness(0.98) contrast(1.06) sepia(0.06);
   transition: filter 0.6s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.site-root .ph-wrap:hover .ph { transform: scale(1.05); filter: grayscale(0.15) brightness(0.82) contrast(1.12) sepia(0.1); }
+.site-root .ph-wrap:hover .ph { transform: scale(1.05); filter: grayscale(0.05) brightness(1.02) contrast(1.06) sepia(0.04); }
 .site-root .ph-red {
+  filter: grayscale(0.1) brightness(0.95) contrast(1.15) sepia(0.35) hue-rotate(-18deg) saturate(1.8);
+}
+html.dark .site-root .ph {
+  filter: grayscale(0.35) brightness(0.72) contrast(1.12) sepia(0.12);
+}
+html.dark .site-root .ph-wrap:hover .ph { filter: grayscale(0.15) brightness(0.82) contrast(1.12) sepia(0.1); }
+html.dark .site-root .ph-red {
   filter: grayscale(0.2) brightness(0.6) contrast(1.25) sepia(0.5) hue-rotate(-18deg) saturate(2.6);
 }
+
+/* Theme toggle + language switcher */
+.theme-toggle {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: transparent; color: var(--tx-mut); cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+}
+.theme-toggle:hover { color: var(--tx); border-color: var(--sand-deep); background: var(--bg-alt); }
+
+.lang-switch { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 20px; flex-shrink: 0; }
+.lang-pill {
+  padding: 5px 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  border-radius: 16px; color: var(--tx-faint); background: none; border: none; cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+.lang-pill:hover { color: var(--tx); }
+.lang-pill.active { background: var(--sand); color: var(--sand-ink); }
 
 /* ── CRM area base (scoped so the public site is untouched) ───── */
 .crm-root {

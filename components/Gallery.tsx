@@ -3,20 +3,14 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, X } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem, EASE } from '@/components/motionx';
+import { useLocale } from '@/lib/i18n';
 
 /**
  * TODO: înlocuiește `id` cu ID-urile reale ale videoclipurilor de pe
  * canalul de YouTube Arry Production (recitaluri, elevi, concursuri).
  * ID-ul e partea de după `watch?v=` din link-ul YouTube.
  */
-const videos = [
-  { id: 'jNQXAC9IVRw', title: 'Recital de pian — clasa de începători', who: 'Elevii Arry Studio' },
-  { id: 'M7lc1UVf-VE', title: 'Canto — spectacol de final de an', who: 'Corul școlii' },
-  { id: 'aqz-KE-bpKQ', title: 'Chitară & tobe — trupa școlii live', who: 'Trupa Arry' },
-  { id: 'ScMzIvxBSi4', title: 'Concurs internațional — premianții noștri', who: 'Elevi premiați' },
-  { id: 'kJQP7kiw5Fk', title: 'Sesiune de studio — prima piesă', who: 'Studio Arry' },
-  { id: 'e-ORhEE9VVg', title: 'Solfegiu în practică — atelier deschis', who: 'Atelier' },
-];
+const videoIds = ['jNQXAC9IVRw', 'M7lc1UVf-VE', 'aqz-KE-bpKQ', 'ScMzIvxBSi4', 'kJQP7kiw5Fk', 'e-ORhEE9VVg'];
 
 function Thumb({ id }: { id: string }) {
   const [failed, setFailed] = useState(false);
@@ -29,6 +23,9 @@ function Thumb({ id }: { id: string }) {
 
 export default function Gallery() {
   const [active, setActive] = useState<string | null>(null);
+  const { t } = useLocale();
+  const g = t.gallery;
+  const videos = g.videos.map((v, i) => ({ ...v, id: videoIds[i] }));
 
   return (
     <section id="galerie" style={{ padding: 'clamp(64px, 9vh, 104px) 32px', background: 'var(--bg)' }}>
@@ -36,16 +33,16 @@ export default function Gallery() {
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, flexWrap: 'wrap', marginBottom: 48 }}>
           <div>
-            <Reveal><span className="eyebrow" style={{ marginBottom: 22, display: 'inline-flex' }}>07 — Galerie video</span></Reveal>
+            <Reveal><span className="eyebrow" style={{ marginBottom: 22, display: 'inline-flex' }}>{g.eyebrow}</span></Reveal>
             <Reveal delay={0.08}>
               <h2 style={{ fontSize: 'clamp(27px, 6vw, 56px)', fontWeight: 800, color: 'var(--tx)', margin: '16px 0 0', lineHeight: 1.0, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-                Momente<br />muzicale
+                {g.titleLines[0]}<br />{g.titleLines[1]}
               </h2>
             </Reveal>
           </div>
           <Reveal delay={0.14}>
             <p style={{ fontSize: 14, color: 'var(--tx-mut)', maxWidth: 320, margin: 0, lineHeight: 1.7 }}>
-              Recitaluri, concerte și elevii noștri pe scenă — direct de pe canalul nostru de YouTube.
+              {g.desc}
             </p>
           </Reveal>
         </div>
@@ -69,7 +66,7 @@ export default function Gallery() {
                     transition={{ duration: 0.3, ease: EASE }}
                     style={{ position: 'absolute', top: '50%', left: '50%', x: '-50%', y: '-50%', width: 56, height: 56, borderRadius: '50%', border: '1.5px solid rgba(242,237,230,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,13,11,0.35)' }}
                   >
-                    <Play style={{ width: 20, height: 20, color: 'var(--tx)', marginLeft: 3 }} fill="currentColor" />
+                    <Play style={{ width: 20, height: 20, color: '#F2EDE6', marginLeft: 3 }} fill="currentColor" />
                   </motion.span>
                 </div>
                 <div style={{ padding: '16px 18px 18px' }}>
@@ -89,13 +86,13 @@ export default function Gallery() {
             style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(6,5,4,0.9)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.35, ease: EASE }}
               style={{ width: '100%', maxWidth: 960, position: 'relative' }}>
-              <button onClick={() => setActive(null)} aria-label="Închide" style={{ position: 'absolute', top: -46, right: 0, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--tx)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <button onClick={() => setActive(null)} aria-label={g.closeAria} style={{ position: 'absolute', top: -46, right: 0, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--tx)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                 <X style={{ width: 16, height: 16 }} />
               </button>
               <div style={{ position: 'relative', aspectRatio: '16 / 9', border: '1px solid var(--line-strong)', background: '#000' }}>
                 <iframe
                   src={`https://www.youtube-nocookie.com/embed/${active}?autoplay=1&rel=0`}
-                  title="Videoclip Arry Studio"
+                  title={g.modalTitle}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}

@@ -1,27 +1,26 @@
 'use client';
 import { motion } from 'framer-motion';
+import { useLocale } from '@/lib/i18n';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-const info = [
-  { label: 'Adresă', value: 'str. Mitropolit Bănulescu-Bodoni 25\nChișinău, Republica Moldova' },
-  { label: 'Telefon', value: '+373 60 081 991', href: 'tel:+37360081991' },
-  { label: 'Email', value: 'contact@arryproduction.md', href: 'mailto:contact@arryproduction.md' },
-  { label: 'Program', value: 'Luni–Vineri: 10:00–20:00\nSâmbătă: 10:00–16:00' },
-];
+const infoHrefs = [undefined, 'tel:+37360081991', 'mailto:contact@arryproduction.md', undefined];
 
 // OpenStreetMap embed — no API key, no frame-busting. bbox around central Chișinău.
 const MAP_SRC = 'https://www.openstreetmap.org/export/embed.html?bbox=28.8180%2C47.0155%2C28.8560%2C47.0340&layer=mapnik&marker=47.0245%2C28.8353';
 
 export default function Contact() {
+  const { t } = useLocale();
+  const info = t.contact.info.map((it, i) => ({ ...it, href: infoHrefs[i] }));
+
   return (
     <section id="contact" style={{ padding: 'clamp(64px, 9vh, 104px) 0 0', background: 'var(--bg)' }}>
       <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 70px', width: 'calc(100% - 64px)' }} />
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px' }}>
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease }} style={{ marginBottom: 48 }}>
-          <span className="eyebrow" style={{ marginBottom: 22 }}>08 — Contacte</span>
+          <span className="eyebrow" style={{ marginBottom: 22 }}>{t.contact.eyebrow}</span>
           <h2 style={{ fontSize: 'clamp(30px, 3.6vw, 50px)', fontWeight: 800, color: 'var(--tx)', margin: '16px 0 0', lineHeight: 1.05, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-            Vino la studio
+            {t.contact.title}
           </h2>
         </motion.div>
 
@@ -49,7 +48,7 @@ export default function Contact() {
       <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }}
         style={{ marginTop: 64, borderTop: '1px solid var(--line)', height: 420, position: 'relative', overflow: 'hidden', background: 'var(--bg-alt)' }}>
         <iframe
-          title="Hartă Arry Studio"
+          title={t.contact.mapTitle}
           src={MAP_SRC}
           sandbox="allow-scripts allow-same-origin allow-popups"
           style={{ width: '100%', height: '100%', border: 0, filter: 'grayscale(0.9) invert(0.92) contrast(0.85) hue-rotate(180deg)' }}
@@ -59,8 +58,8 @@ export default function Contact() {
         <span className="map-pulse" />
         <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease }}
           style={{ position: 'absolute', left: 32, top: 28, padding: '16px 20px', background: 'rgba(16,13,11,0.78)', backdropFilter: 'blur(8px)', border: '1px solid var(--line-strong)' }}>
-          <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--tx)', margin: '0 0 6px' }}>Arry Studio</p>
-          <p style={{ fontSize: 12, color: 'var(--tx-mut)', margin: 0 }}>Centrul Chișinăului</p>
+          <p style={{ fontWeight: 800, fontSize: 15, color: '#F2EDE6', margin: '0 0 6px' }}>Arry Studio</p>
+          <p style={{ fontSize: 12, color: 'rgba(242,237,230,0.72)', margin: 0 }}>{t.contact.mapCaption}</p>
         </motion.div>
       </motion.div>
 

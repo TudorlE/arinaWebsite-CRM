@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { LogoMark } from '@/components/Logo';
 import { EASE } from '@/components/motionx';
-
-const COURSES = ['Pian', 'Tobe', 'Canto', 'Chitară', 'Solfegiu'];
+import { useLocale } from '@/lib/i18n';
 
 const Ctx = createContext<{ open: () => void }>({ open: () => {} });
 export const useBooking = () => useContext(Ctx);
@@ -46,6 +45,9 @@ function Dialog({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const { t } = useLocale();
+  const b = t.booking;
+  const COURSES = t.common.courses;
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
@@ -62,8 +64,8 @@ function Dialog({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       if (res.ok) setDone(true);
-      else { const d = await res.json().catch(() => ({})); setApiError(d.error ?? 'Eroare la trimitere. Încearcă din nou.'); }
-    } catch { setApiError('Eroare de rețea. Verifică conexiunea.'); }
+      else { const d = await res.json().catch(() => ({})); setApiError(d.error ?? b.apiError); }
+    } catch { setApiError(b.networkError); }
     finally { setLoading(false); }
   };
 
@@ -87,40 +89,40 @@ function Dialog({ onClose }: { onClose: () => void }) {
         <div className="bk-rail" style={{ background: 'var(--bg-alt)', padding: '40px 34px', borderRight: '1px solid var(--line)', position: 'relative' }}>
           <div style={{ color: 'var(--accent)' }}><LogoMark size={40} withCord={false} /></div>
           <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, color: 'var(--tx)', margin: '26px 0 14px', lineHeight: 1.15 }}>
-            Programează o lecție de probă
+            {b.title}
           </p>
           <p style={{ fontSize: 13.5, color: 'var(--tx-mut)', lineHeight: 1.7, margin: 0 }}>
-            Prima ședință este gratuită și fără obligații. Te sunăm în maximum 24 de ore ca să stabilim ziua și profesorul potrivit.
+            {b.desc}
           </p>
           <motion.div
             initial="hidden" animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }}
             style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {['Prima lecție gratuită', 'Fără contract pe termen lung', 'Profesori — muzicieni activi'].map(b => (
-              <motion.div key={b} variants={{ hidden: { opacity: 0, x: -14 }, show: { opacity: 1, x: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+            {b.bullets.map(bl => (
+              <motion.div key={bl} variants={{ hidden: { opacity: 0, x: -14 }, show: { opacity: 1, x: 0 } }} transition={{ duration: 0.4, ease: EASE }}
                 style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: 'var(--tx)' }}>
-                <motion.span animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 5, height: 5, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />{b}
+                <motion.span animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 5, height: 5, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />{bl}
               </motion.div>
             ))}
           </motion.div>
           <a href="tel:+37360081991" style={{ position: 'absolute', left: 34, bottom: 34, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--tx)' }} className="bk-phone">
-            sau sună: +373 60 081 991
+            {b.phoneCta}: +373 60 081 991
           </a>
         </div>
 
         {/* Form */}
         <div style={{ padding: '34px 34px 38px' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-            <button onClick={onClose} aria-label="Închide" style={{ width: 36, height: 36, border: '1px solid var(--line)', color: 'var(--tx-mut)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={onClose} aria-label={b.close} style={{ width: 36, height: 36, border: '1px solid var(--line)', color: 'var(--tx-mut)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X style={{ width: 16, height: 16 }} />
             </button>
           </div>
 
           {done ? (
             <div style={{ padding: '30px 0', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, color: 'var(--tx)', margin: '0 0 12px' }}>Îți mulțumim!</p>
-              <p style={{ color: 'var(--tx-mut)', lineHeight: 1.7, margin: '0 0 26px', fontSize: 14 }}>Am primit cererea ta. Te contactăm în 24 de ore.</p>
-              <button onClick={onClose} className="btn-outline">Închide</button>
+              <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, color: 'var(--tx)', margin: '0 0 12px' }}>{b.thanksTitle}</p>
+              <p style={{ color: 'var(--tx-mut)', lineHeight: 1.7, margin: '0 0 26px', fontSize: 14 }}>{b.thanksDesc}</p>
+              <button onClick={onClose} className="btn-outline">{b.close}</button>
             </div>
           ) : (
             <motion.form onSubmit={submit}
@@ -128,28 +130,28 @@ function Dialog({ onClose }: { onClose: () => void }) {
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } } }}
               style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <motion.input variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
-                placeholder="Numele tău *" value={form.name} onChange={set('name')} onFocus={ef} onBlur={eb('name')} style={{ ...field, borderBottomColor: errors.name ? 'var(--red)' : 'var(--line-strong)' }} />
+                placeholder={b.namePh} value={form.name} onChange={set('name')} onFocus={ef} onBlur={eb('name')} style={{ ...field, borderBottomColor: errors.name ? 'var(--red)' : 'var(--line-strong)' }} />
               <motion.div variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
                 style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                <input placeholder="Telefon *" value={form.phone} onChange={set('phone')} onFocus={ef} onBlur={eb('phone')} style={{ ...field, borderBottomColor: errors.phone ? 'var(--red)' : 'var(--line-strong)' }} />
-                <input placeholder="Vârsta" value={form.age} onChange={set('age')} onFocus={ef} onBlur={eb('age')} style={field} />
+                <input placeholder={b.phonePh} value={form.phone} onChange={set('phone')} onFocus={ef} onBlur={eb('phone')} style={{ ...field, borderBottomColor: errors.phone ? 'var(--red)' : 'var(--line-strong)' }} />
+                <input placeholder={b.agePh} value={form.age} onChange={set('age')} onFocus={ef} onBlur={eb('age')} style={field} />
               </motion.div>
               <motion.input variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
-                placeholder="Email *" type="email" value={form.email} onChange={set('email')} onFocus={ef} onBlur={eb('email')} style={{ ...field, borderBottomColor: errors.email ? 'var(--red)' : 'var(--line-strong)' }} />
+                placeholder={b.emailPh} type="email" value={form.email} onChange={set('email')} onFocus={ef} onBlur={eb('email')} style={{ ...field, borderBottomColor: errors.email ? 'var(--red)' : 'var(--line-strong)' }} />
               <motion.select variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
                 value={form.course} onChange={set('course')} onFocus={ef} onBlur={eb('course')} style={{ ...field, borderBottomColor: errors.course ? 'var(--red)' : 'var(--line-strong)', color: form.course ? 'var(--tx)' : 'var(--tx-faint)' }}>
-                <option value="" style={{ background: '#16110D' }}>Cursul dorit *</option>
-                {COURSES.map(c => <option key={c} value={c} style={{ background: '#16110D' }}>{c}</option>)}
+                <option value="" style={{ background: 'var(--ink)', color: 'var(--tx)' }}>{b.coursePh}</option>
+                {COURSES.map(c => <option key={c} value={c} style={{ background: 'var(--ink)', color: 'var(--tx)' }}>{c}</option>)}
               </motion.select>
               <motion.textarea variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
-                placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={2} onFocus={ef} onBlur={eb('message')} style={{ ...field, resize: 'none' }} />
+                placeholder={b.messagePh} value={form.message} onChange={set('message')} rows={2} onFocus={ef} onBlur={eb('message')} style={{ ...field, resize: 'none' }} />
               <motion.button variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
                 whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
                 type="submit" disabled={loading} className="btn-outline solid" style={{ width: '100%', opacity: loading ? 0.7 : 1, marginTop: 4 }}>
-                {loading ? 'Se trimite…' : 'Trimite cererea'}
+                {loading ? b.sending : b.submit}
               </motion.button>
-              {apiError && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '12px 14px', border: '1px solid var(--red)', background: 'rgba(225,29,29,0.1)', color: '#F2C6C6', fontSize: 13 }}>{apiError}</motion.div>}
-              <motion.p variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }} transition={{ duration: 0.4, ease: EASE }} style={{ fontSize: 11.5, color: 'var(--tx-faint)', margin: 0 }}>Prima lecție de probă este gratuită · Fără obligații</motion.p>
+              {apiError && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '12px 14px', border: '1px solid var(--red)', background: 'rgba(225,29,29,0.1)', color: 'var(--red)', fontSize: 13 }}>{apiError}</motion.div>}
+              <motion.p variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }} transition={{ duration: 0.4, ease: EASE }} style={{ fontSize: 11.5, color: 'var(--tx-faint)', margin: 0 }}>{b.footNote}</motion.p>
             </motion.form>
           )}
         </div>

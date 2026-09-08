@@ -20,6 +20,14 @@ export const metadata: Metadata = {
   },
 };
 
+const THEME_BOOT_SCRIPT = `
+try {
+  var t = localStorage.getItem('arry-theme');
+  if (t === 'light') document.documentElement.classList.remove('dark');
+  else document.documentElement.classList.add('dark');
+} catch (e) { document.documentElement.classList.add('dark'); }
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -27,6 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${playfair.variable} ${anton.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

@@ -1,18 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
-import { Menu, X, ExternalLink } from 'lucide-react';
+import { Menu, X, ExternalLink, Sun, Moon } from 'lucide-react';
 import { LogoLockup } from '@/components/Logo';
 import { openBooking } from '@/components/Booking';
-
-const links = [
-  { href: '#acasa', label: 'Acasă' },
-  { href: '#despre', label: 'Despre' },
-  { href: '#cursuri', label: 'Cursuri' },
-  { href: '#galerie', label: 'Galerie' },
-  { href: '#fondator', label: 'Arina Bădulescu' },
-  { href: '#contact', label: 'Contact' },
-];
+import { useTheme } from '@/components/ThemeProvider';
+import { useLocale } from '@/lib/i18n';
+import { LOCALES } from '@/lib/translations';
 
 const PHONE = '+373 60 081 991';
 
@@ -22,6 +16,9 @@ export default function Navbar() {
   const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || '/admin';
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
+  const { theme, toggleTheme } = useTheme();
+  const { locale, setLocale, t } = useLocale();
+  const links = t.nav.links;
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -35,6 +32,29 @@ export default function Navbar() {
   };
   const book = () => { setOpen(false); openBooking(); };
 
+  const navBg = theme === 'dark' ? 'rgba(16, 13, 11, 0.88)' : 'rgba(250, 247, 242, 0.88)';
+  const mobileBg = theme === 'dark' ? 'rgba(16,13,11,0.98)' : 'rgba(250,247,242,0.98)';
+
+  const LangSwitch = ({ style }: { style?: React.CSSProperties }) => (
+    <div className="lang-switch" style={style}>
+      {LOCALES.map(l => (
+        <button key={l.code} onClick={() => setLocale(l.code)} className={`lang-pill${locale === l.code ? ' active' : ''}`}>
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const ThemeToggle = ({ style }: { style?: React.CSSProperties }) => (
+    <motion.button
+      whileHover={{ scale: 1.08, rotate: 12 }} whileTap={{ scale: 0.9 }}
+      onClick={toggleTheme} className="theme-toggle" style={style}
+      aria-label={theme === 'dark' ? t.theme.toLight : t.theme.toDark}
+    >
+      {theme === 'dark' ? <Sun style={{ width: 16, height: 16 }} /> : <Moon style={{ width: 16, height: 16 }} />}
+    </motion.button>
+  );
+
   return (
     <>
       <motion.nav
@@ -43,7 +63,7 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          background: scrolled ? 'rgba(16, 13, 11, 0.88)' : 'transparent',
+          background: scrolled ? navBg : 'transparent',
           backdropFilter: scrolled ? 'blur(18px)' : 'none',
           WebkitBackdropFilter: scrolled ? 'blur(18px)' : 'none',
           borderBottom: `1px solid ${scrolled ? 'var(--line)' : 'transparent'}`,
@@ -53,7 +73,7 @@ export default function Navbar() {
         <div style={{ maxWidth: 1240, margin: '0 auto', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
 
           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => go('#acasa')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--tx)' }}>
-            <LogoLockup />
+            <LogoLockup sub={t.nav.logoSub} />
           </motion.button>
 
           <motion.div
@@ -71,19 +91,24 @@ export default function Navbar() {
             ))}
           </motion.div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 22 }} className="hide-mobile">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="hide-mobile">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="link-cta" style={{ fontSize: 11, color: 'var(--tx-mut)', letterSpacing: '0.06em' }}>{PHONE}</a>
             <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="link-cta" style={{ fontSize: 11, color: 'var(--tx-faint)' }}>
-              CRM <ExternalLink style={{ width: 12, height: 12 }} />
+              {t.nav.crm} <ExternalLink style={{ width: 12, height: 12 }} />
             </a>
+            <LangSwitch />
+            <ThemeToggle />
             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5 }}>
-              Programează o lecție
+              {t.nav.bookBtn}
             </motion.button>
           </div>
 
-          <button onClick={() => setOpen(v => !v)} style={{ display: 'none', padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx)' }} className="show-mobile">
-            {open ? <X style={{ width: 24, height: 24 }} /> : <Menu style={{ width: 24, height: 24 }} />}
-          </button>
+          <div style={{ display: 'none', alignItems: 'center', gap: 10 }} className="show-mobile">
+            <ThemeToggle />
+            <button onClick={() => setOpen(v => !v)} style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx)' }}>
+              {open ? <X style={{ width: 24, height: 24 }} /> : <Menu style={{ width: 24, height: 24 }} />}
+            </button>
+          </div>
         </div>
         <motion.div style={{ scaleX: progress, transformOrigin: '0%', height: 2, background: 'var(--accent)', opacity: scrolled ? 1 : 0, transition: 'opacity 0.3s' }} />
       </motion.nav>
@@ -91,7 +116,7 @@ export default function Navbar() {
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}
-            style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: 'rgba(16,13,11,0.98)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--line)' }}>
+            style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: mobileBg, backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--line)' }}>
             <motion.div
               initial="hidden" animate="show"
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }}
@@ -105,10 +130,11 @@ export default function Navbar() {
                 </motion.button>
               ))}
               <motion.div variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <LangSwitch style={{ alignSelf: 'center' }} />
                 <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="btn-outline" style={{ justifyContent: 'center' }}>{PHONE}</a>
-                <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ justifyContent: 'center' }}>CRM <ExternalLink style={{ width: 14, height: 14 }} /></a>
-                <button onClick={book} className="btn-outline solid" style={{ justifyContent: 'center' }}>Programează o lecție</button>
+                <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ justifyContent: 'center' }}>{t.nav.crm} <ExternalLink style={{ width: 14, height: 14 }} /></a>
+                <button onClick={book} className="btn-outline solid" style={{ justifyContent: 'center' }}>{t.nav.bookBtn}</button>
               </motion.div>
             </motion.div>
           </motion.div>

@@ -2,26 +2,10 @@
 import { motion } from 'framer-motion';
 import { Users, Layers, Trophy, Music2, UserRound, CalendarClock, Clock3 } from 'lucide-react';
 import { Reveal, CountUp, EASE } from '@/components/motionx';
+import { useLocale } from '@/lib/i18n';
 
-const reasons = [
-  { t: 'Metode moderne\nde predare', d: 'Îmbinăm teoria cu practica, într-un spațiu gândit pentru concentrare și creativitate.' },
-  { t: 'Scenă și\nconcursuri', d: 'Elevii noștri urcă pe scenă la recitaluri și concursuri naționale și internaționale.' },
-  { t: 'Program\nflexibil', d: 'Orare adaptate fiecărui elev, în inima orașului, ușor de ajuns.' },
-  { t: 'Atmosferă\nde creație', d: 'Profesori care sunt muzicieni activi și îți transmit dragostea pentru artă.' },
-];
-
-const stats = [
-  { icon: Users, n: 300, suf: '+', unit: 'elevi', d: 'și-au descoperit talentul cu noi' },
-  { icon: Layers, n: 10, suf: '', unit: 'direcții', d: 'de studiu, de la instrument la teorie' },
-  { icon: Trophy, n: 25, suf: '+', unit: 'concursuri', d: 'și festivaluri naționale și internaționale' },
-  { icon: Music2, text: 'Profesori', d: 'care sunt muzicieni activi pe scenă' },
-];
-
-const format = [
-  { icon: UserRound, t: '1 la 1 cu profesorul', d: 'Atenție completă, ritm adaptat fiecărui elev.' },
-  { icon: CalendarClock, t: 'Copii, adolescenți și adulți', d: 'De la 5 ani. Niciodată nu e prea târziu să începi.' },
-  { icon: Clock3, t: '30–60 de minute', d: 'Durata ședinței, în funcție de nivel și vârstă.' },
-];
+const statIcons = [Users, Layers, Trophy, Music2];
+const formatIcons = [UserRound, CalendarClock, Clock3];
 
 const ReasonBlock = ({ t, d, align, delay }: { t: string; d: string; align: 'left' | 'right'; delay: number }) => (
   <motion.div
@@ -37,15 +21,21 @@ const ReasonBlock = ({ t, d, align, delay }: { t: string; d: string; align: 'lef
 );
 
 export default function WhyUs() {
+  const { t } = useLocale();
+  const w = t.whyus;
+  const reasons = w.reasons;
+  const stats = w.stats.map((s, i) => ({ ...s, icon: statIcons[i] }));
+  const format = w.format.map((f, i) => ({ ...f, icon: formatIcons[i] }));
+
   return (
     <section style={{ background: 'var(--bg)', padding: 'clamp(64px, 9vh, 104px) 32px' }}>
       <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 54px' }} />
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
 
-        <Reveal><span className="eyebrow centered" style={{ marginBottom: 8, width: '100%', justifyContent: 'center' }}>04 — De ce noi</span></Reveal>
+        <Reveal><span className="eyebrow centered" style={{ marginBottom: 8, width: '100%', justifyContent: 'center' }}>{w.eyebrow}</span></Reveal>
         <Reveal delay={0.05}>
           <p style={{ textAlign: 'center', color: 'var(--tx-mut)', fontSize: 15, maxWidth: 460, margin: '0 auto 20px', lineHeight: 1.7 }}>
-            Patru motive pentru care părinții și elevii aleg Arry Studio.
+            {w.subtitle}
           </p>
         </Reveal>
 
@@ -66,7 +56,7 @@ export default function WhyUs() {
             </svg>
             <motion.h2 variants={{ hidden: { opacity: 0, scale: 0.88 }, shown: { opacity: 1, scale: 1 } }} transition={{ duration: 0.7, ease: EASE, delay: 0.4 }}
               style={{ fontSize: 'clamp(40px, 5.5vw, 64px)', fontWeight: 800, textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.0, letterSpacing: '-0.02em', margin: 0, color: 'var(--tx)', position: 'relative', zIndex: 2 }}>
-              De ce<br />noi?
+              {w.ringTitle[0]}<br />{w.ringTitle[1]}
             </motion.h2>
           </motion.div>
 
@@ -80,9 +70,9 @@ export default function WhyUs() {
         <hr className="rule" style={{ margin: '86px 0 46px' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20, flexWrap: 'wrap', marginBottom: 40 }}>
           <Reveal>
-            <span className="eyebrow" style={{ marginBottom: 20, display: 'inline-flex' }}>05 — Echipa</span>
+            <span className="eyebrow" style={{ marginBottom: 20, display: 'inline-flex' }}>{w.statsEyebrow}</span>
             <h2 style={{ fontSize: 'clamp(28px, 3.4vw, 46px)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '-0.02em', margin: '14px 0 0', color: 'var(--tx)', lineHeight: 1.02 }}>
-              Suntem o echipă<br />profesionistă
+              {w.statsTitleLines[0]}<br />{w.statsTitleLines[1]}
             </h2>
           </Reveal>
         </div>
@@ -97,7 +87,7 @@ export default function WhyUs() {
               <p style={{ fontSize: 'clamp(26px, 3vw, 34px)', fontWeight: 700, color: 'var(--tx)', margin: '18px 0 6px', fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.01em' }}>
                 {'text' in s
                   ? s.text
-                  : <><CountUp value={s.n} suffix={s.suf} /> <span style={{ fontSize: '0.55em', color: 'var(--tx-mut)', fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600 }}>{s.unit}</span></>}
+                  : <><CountUp value={s.n as number} suffix={s.suf} /> <span style={{ fontSize: '0.55em', color: 'var(--tx-mut)', fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600 }}>{s.unit}</span></>}
               </p>
               <p style={{ fontSize: 13, color: 'var(--tx-mut)', margin: 0, lineHeight: 1.55 }}>{s.d}</p>
             </motion.div>
@@ -107,9 +97,9 @@ export default function WhyUs() {
         {/* Lesson format */}
         <hr className="rule" style={{ margin: '86px 0 46px' }} />
         <Reveal>
-          <span className="eyebrow" style={{ marginBottom: 20, display: 'inline-flex' }}>06 — Formatul lecțiilor</span>
+          <span className="eyebrow" style={{ marginBottom: 20, display: 'inline-flex' }}>{w.formatEyebrow}</span>
           <h2 style={{ fontSize: 'clamp(26px, 3vw, 40px)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '-0.02em', margin: '14px 0 40px', color: 'var(--tx)' }}>
-            Cum se desfășoară
+            {w.formatTitle}
           </h2>
         </Reveal>
         <div className="fmt-grid">

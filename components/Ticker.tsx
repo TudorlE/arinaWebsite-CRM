@@ -1,9 +1,13 @@
-const ITEMS = ['Pian', 'Canto', 'Chitară', 'Tobe', 'Solfegiu', 'Înregistrări în studio'];
+'use client';
+import { useLocale } from '@/lib/i18n';
 
 export default function Ticker() {
+  const { t } = useLocale();
+  const items = [...t.common.courses, t.common.studioRecording];
+
   const row = (key: string) => (
     <div className="tick-row" key={key}>
-      {ITEMS.map((it, i) => (
+      {items.map((it, i) => (
         <span className="tick-item" key={i}>
           {it}
           <span className="tick-dot" />

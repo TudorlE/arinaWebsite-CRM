@@ -2,20 +2,23 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useLocale } from '@/lib/i18n';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-const data = [
-  { name: 'Maria Ionescu', role: 'Mamă a unui elev de pian', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=160&q=80&auto=format&fit=crop&crop=face', text: 'Fiul meu are 8 ani și în 6 luni de la Arry Production a progresat incredibil. Nu îl mai poți scoate de la pian! Profesorii sunt răbdători și plini de entuziasm, iar recitalurile ne emoționează de fiecare dată.' },
-  { name: 'Elena Dragomir', role: 'Elevă de canto, 24 ani', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&q=80&auto=format&fit=crop&crop=face', text: 'Visam să cânt de mică. La Arry Production mi-am găsit vocea și, mai mult decât atât, mi-am găsit comunitatea. Profesorul meu m-a ajutat să depășesc emoțiile scenice și acum urc pe scenă cu plăcere.' },
-  { name: 'Radu Constantin', role: 'Tată a două eleve', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&q=80&auto=format&fit=crop&crop=face', text: 'Ambele fiice ale mele sunt la Arry Production de 2 ani. Rezultatele sunt vizibile, iar recitalurile de final de an sunt emoționante. Se simte că fiecare profesor își iubește meseria. Recomand cu căldură!' },
-  { name: 'Alexandru Popa', role: 'Elev de tobe, 16 ani', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&q=80&auto=format&fit=crop&crop=face', text: 'Am venit fără nicio experiență și acum cânt în trupa școlii. Atmosfera de aici este de neegalat — simți că muzica curge prin sălile de curs și că ești luat în serios de la prima lecție.' },
-  { name: 'Cristina Marin', role: 'Elevă de pian, 30 ani', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&q=80&auto=format&fit=crop&crop=face', text: 'Niciodată nu e prea târziu să înveți muzică. La 30 de ani am început pianul de la zero și acum cânt piese pe care le admiram la alții. Programul flexibil m-a ajutat să împac lecțiile cu serviciul.' },
+const avatars = [
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=160&q=80&auto=format&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&q=80&auto=format&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&q=80&auto=format&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&q=80&auto=format&fit=crop&crop=face',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&q=80&auto=format&fit=crop&crop=face',
 ];
 
 export default function Testimonials() {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState(1);
+  const { t: tr } = useLocale();
+  const data = tr.testimonials.data.map((d, i) => ({ ...d, avatar: avatars[i] }));
   const go = (i: number) => { setDir(i > idx ? 1 : -1); setIdx((i + data.length) % data.length); };
   const t = data[idx];
 
@@ -24,14 +27,14 @@ export default function Testimonials() {
       <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 54px' }} />
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease }} style={{ marginBottom: 48 }}>
-          <span className="eyebrow" style={{ marginBottom: 22 }}>07 — Păreri</span>
+          <span className="eyebrow" style={{ marginBottom: 22 }}>{tr.testimonials.eyebrow}</span>
           <h2 style={{ fontSize: 'clamp(30px, 3.6vw, 50px)', fontWeight: 800, color: 'var(--tx)', margin: '16px 0 0', lineHeight: 1.05, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
-            Ce spun elevii<br />și părinții
+            {tr.testimonials.titleLines[0]}<br />{tr.testimonials.titleLines[1]}
           </h2>
         </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 20, alignItems: 'center' }} className="tst-row">
-          <motion.button onClick={() => go(idx - 1)} aria-label="Anterior" className="tst-arrow" whileHover={{ scale: 1.1, x: -3 }} whileTap={{ scale: 0.92 }}>
+          <motion.button onClick={() => go(idx - 1)} aria-label={tr.testimonials.prevAria} className="tst-arrow" whileHover={{ scale: 1.1, x: -3 }} whileTap={{ scale: 0.92 }}>
             <ArrowLeft style={{ width: 18, height: 18 }} />
           </motion.button>
 
@@ -62,7 +65,7 @@ export default function Testimonials() {
             </AnimatePresence>
           </div>
 
-          <motion.button onClick={() => go(idx + 1)} aria-label="Următor" className="tst-arrow" whileHover={{ scale: 1.1, x: 3 }} whileTap={{ scale: 0.92 }}>
+          <motion.button onClick={() => go(idx + 1)} aria-label={tr.testimonials.nextAria} className="tst-arrow" whileHover={{ scale: 1.1, x: 3 }} whileTap={{ scale: 0.92 }}>
             <ArrowRight style={{ width: 18, height: 18 }} />
           </motion.button>
         </div>
