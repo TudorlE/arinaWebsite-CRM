@@ -52,26 +52,33 @@ export default function Navbar() {
       >
         <div style={{ maxWidth: 1240, margin: '0 auto', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
 
-          <button onClick={() => go('#acasa')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--tx)' }}>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => go('#acasa')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--tx)' }}>
             <LogoLockup />
-          </button>
+          </motion.button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 30 }} className="hide-mobile">
+          <motion.div
+            initial="hidden" animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.35 } } }}
+            style={{ display: 'flex', alignItems: 'center', gap: 30 }} className="hide-mobile"
+          >
             {links.map(l => (
-              <button key={l.href} onClick={() => go(l.href)} className="link-cta" style={{ fontSize: 11, letterSpacing: '0.13em', color: 'var(--tx-mut)' }}>
+              <motion.button key={l.href} onClick={() => go(l.href)} className="link-cta" style={{ fontSize: 11, letterSpacing: '0.13em', color: 'var(--tx-mut)' }}
+                variants={{ hidden: { opacity: 0, y: -8 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ color: 'var(--tx)' }}
+              >
                 {l.label}
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 22 }} className="hide-mobile">
             <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="link-cta" style={{ fontSize: 11, color: 'var(--tx-mut)', letterSpacing: '0.06em' }}>{PHONE}</a>
             <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="link-cta" style={{ fontSize: 11, color: 'var(--tx-faint)' }}>
               CRM <ExternalLink style={{ width: 12, height: 12 }} />
             </a>
-            <button onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5 }}>
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5 }}>
               Programează o lecție
-            </button>
+            </motion.button>
           </div>
 
           <button onClick={() => setOpen(v => !v)} style={{ display: 'none', padding: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tx)' }} className="show-mobile">
@@ -85,19 +92,25 @@ export default function Navbar() {
         {open && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}
             style={{ position: 'fixed', top: 70, left: 0, right: 0, zIndex: 40, background: 'rgba(16,13,11,0.98)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--line)' }}>
-            <div style={{ maxWidth: 1240, margin: '0 auto', padding: '18px 24px 26px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <motion.div
+              initial="hidden" animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }}
+              style={{ maxWidth: 1240, margin: '0 auto', padding: '18px 24px 26px', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {links.map(l => (
-                <button key={l.href} onClick={() => go(l.href)}
+                <motion.button key={l.href} onClick={() => go(l.href)}
+                  variants={{ hidden: { opacity: 0, x: -16 }, show: { opacity: 1, x: 0 } }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  whileTap={{ scale: 0.97 }}
                   style={{ textAlign: 'left', padding: '14px 4px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--tx)', background: 'none', border: 'none', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}>
                   {l.label}
-                </button>
+                </motion.button>
               ))}
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <motion.div variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="btn-outline" style={{ justifyContent: 'center' }}>{PHONE}</a>
                 <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ justifyContent: 'center' }}>CRM <ExternalLink style={{ width: 14, height: 14 }} /></a>
                 <button onClick={book} className="btn-outline solid" style={{ justifyContent: 'center' }}>Programează o lecție</button>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,5 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
+import Ticker from '@/components/Ticker';
 import About from '@/components/About';
 import Courses from '@/components/Courses';
 import WhyUs from '@/components/WhyUs';
@@ -14,6 +15,7 @@ export default function Home() {
     <>
       <Navbar />
       <Hero />
+      <Ticker />
       <About />
       <Courses />
       <WhyUs />

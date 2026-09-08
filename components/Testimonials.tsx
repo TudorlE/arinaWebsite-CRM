@@ -31,9 +31,9 @@ export default function Testimonials() {
         </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 20, alignItems: 'center' }} className="tst-row">
-          <button onClick={() => go(idx - 1)} aria-label="Anterior" className="tst-arrow">
+          <motion.button onClick={() => go(idx - 1)} aria-label="Anterior" className="tst-arrow" whileHover={{ scale: 1.1, x: -3 }} whileTap={{ scale: 0.92 }}>
             <ArrowLeft style={{ width: 18, height: 18 }} />
-          </button>
+          </motion.button>
 
           <div style={{ position: 'relative', overflow: 'hidden' }}>
             <AnimatePresence mode="wait">
@@ -42,12 +42,18 @@ export default function Testimonials() {
                 transition={{ duration: 0.35, ease }}
                 style={{ border: '1px solid var(--line)', padding: '40px 40px', background: 'var(--bg)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 26 }}>
-                  <img src={t.avatar} alt={t.name} className="ph" style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: '50%' }} />
+                  <motion.img src={t.avatar} alt={t.name} className="ph" whileHover={{ scale: 1.08 }} transition={{ duration: 0.3, ease }}
+                    style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: '50%' }} />
                   <div>
                     <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--tx)', margin: '0 0 3px' }}>{t.name}</p>
                     <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sand-deep)', margin: 0 }}>{t.role}</p>
                   </div>
-                  <span style={{ marginLeft: 'auto', color: 'var(--orange)', fontSize: 13, letterSpacing: 2 }}>★★★★★</span>
+                  <motion.span initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.2 } } }}
+                    style={{ marginLeft: 'auto', color: 'var(--orange)', fontSize: 13, letterSpacing: 2 }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <motion.span key={i} variants={{ hidden: { opacity: 0, scale: 0.4 }, show: { opacity: 1, scale: 1 } }} transition={{ duration: 0.3, ease }} style={{ display: 'inline-block' }}>★</motion.span>
+                    ))}
+                  </motion.span>
                 </div>
                 <p style={{ fontSize: 17, color: 'var(--tx)', lineHeight: 1.75, fontStyle: 'italic', margin: 0, fontFamily: 'var(--font-playfair), serif' }}>
                   „{t.text}”
@@ -56,15 +62,16 @@ export default function Testimonials() {
             </AnimatePresence>
           </div>
 
-          <button onClick={() => go(idx + 1)} aria-label="Următor" className="tst-arrow">
+          <motion.button onClick={() => go(idx + 1)} aria-label="Următor" className="tst-arrow" whileHover={{ scale: 1.1, x: 3 }} whileTap={{ scale: 0.92 }}>
             <ArrowRight style={{ width: 18, height: 18 }} />
-          </button>
+          </motion.button>
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 32 }}>
           {data.map((_, i) => (
-            <button key={i} onClick={() => go(i)} aria-label={`Testimonial ${i + 1}`}
-              style={{ height: 2, border: 'none', cursor: 'pointer', transition: 'all 0.3s', background: i === idx ? 'var(--orange)' : 'var(--line-strong)', width: i === idx ? 28 : 14 }} />
+            <motion.button key={i} onClick={() => go(i)} aria-label={`Testimonial ${i + 1}`} whileHover={{ scaleY: 1.8 }}
+              animate={{ width: i === idx ? 28 : 14, background: i === idx ? 'var(--orange)' : 'var(--line-strong)' }} transition={{ duration: 0.3, ease }}
+              style={{ height: 2, border: 'none', cursor: 'pointer' }} />
           ))}
         </div>
       </div>

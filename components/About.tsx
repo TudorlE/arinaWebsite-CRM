@@ -1,14 +1,15 @@
 'use client';
-import { Reveal, RevealLines, Stagger, StaggerItem, Parallax } from '@/components/motionx';
+import { motion } from 'framer-motion';
+import { Reveal, RevealLines, Stagger, StaggerItem, Parallax, EASE } from '@/components/motionx';
 
 const SandCard = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div style={{
+  <motion.div whileHover={{ y: -6, scale: 1.015 }} transition={{ duration: 0.35, ease: EASE }} style={{
     background: 'linear-gradient(160deg, var(--sand) 0%, var(--sand-deep) 100%)',
     color: 'var(--sand-ink)', padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     ...style,
   }}>
     {children}
-  </div>
+  </motion.div>
 );
 
 const kicker: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.55 };

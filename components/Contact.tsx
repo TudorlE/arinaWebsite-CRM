@@ -35,6 +35,7 @@ export default function Contact() {
             );
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
+                whileHover={{ y: -4, borderColor: 'var(--sand-deep)' }}
                 style={{ borderTop: '1px solid var(--line-strong)', paddingTop: 22 }}>
                 {item.href
                   ? <a href={item.href} className="link-cta" style={{ display: 'block', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>{inner}</a>
@@ -55,10 +56,12 @@ export default function Contact() {
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
         />
-        <div style={{ position: 'absolute', left: 32, top: 28, padding: '16px 20px', background: 'rgba(16,13,11,0.78)', backdropFilter: 'blur(8px)', border: '1px solid var(--line-strong)' }}>
+        <span className="map-pulse" />
+        <motion.div initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease }}
+          style={{ position: 'absolute', left: 32, top: 28, padding: '16px 20px', background: 'rgba(16,13,11,0.78)', backdropFilter: 'blur(8px)', border: '1px solid var(--line-strong)' }}>
           <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--tx)', margin: '0 0 6px' }}>Arry Studio</p>
           <p style={{ fontSize: 12, color: 'var(--tx-mut)', margin: 0 }}>Centrul Chișinăului</p>
-        </div>
+        </motion.div>
       </motion.div>
 
       <style>{`

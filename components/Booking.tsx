@@ -92,13 +92,17 @@ function Dialog({ onClose }: { onClose: () => void }) {
           <p style={{ fontSize: 13.5, color: 'var(--tx-mut)', lineHeight: 1.7, margin: 0 }}>
             Prima ședință este gratuită și fără obligații. Te sunăm în maximum 24 de ore ca să stabilim ziua și profesorul potrivit.
           </p>
-          <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <motion.div
+            initial="hidden" animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }}
+            style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {['Prima lecție gratuită', 'Fără contract pe termen lung', 'Profesori — muzicieni activi'].map(b => (
-              <div key={b} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: 'var(--tx)' }}>
-                <span style={{ width: 5, height: 5, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />{b}
-              </div>
+              <motion.div key={b} variants={{ hidden: { opacity: 0, x: -14 }, show: { opacity: 1, x: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: 'var(--tx)' }}>
+                <motion.span animate={{ scale: [1, 1.4, 1] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} style={{ width: 5, height: 5, background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />{b}
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
           <a href="tel:+37360081991" style={{ position: 'absolute', left: 34, bottom: 34, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--tx)' }} className="bk-phone">
             sau sună: +373 60 081 991
           </a>
@@ -119,24 +123,34 @@ function Dialog({ onClose }: { onClose: () => void }) {
               <button onClick={onClose} className="btn-outline">Închide</button>
             </div>
           ) : (
-            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <input placeholder="Numele tău *" value={form.name} onChange={set('name')} onFocus={ef} onBlur={eb('name')} style={{ ...field, borderBottomColor: errors.name ? 'var(--red)' : 'var(--line-strong)' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <motion.form onSubmit={submit}
+              initial="hidden" animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.15 } } }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <motion.input variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                placeholder="Numele tău *" value={form.name} onChange={set('name')} onFocus={ef} onBlur={eb('name')} style={{ ...field, borderBottomColor: errors.name ? 'var(--red)' : 'var(--line-strong)' }} />
+              <motion.div variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                 <input placeholder="Telefon *" value={form.phone} onChange={set('phone')} onFocus={ef} onBlur={eb('phone')} style={{ ...field, borderBottomColor: errors.phone ? 'var(--red)' : 'var(--line-strong)' }} />
                 <input placeholder="Vârsta" value={form.age} onChange={set('age')} onFocus={ef} onBlur={eb('age')} style={field} />
-              </div>
-              <input placeholder="Email *" type="email" value={form.email} onChange={set('email')} onFocus={ef} onBlur={eb('email')} style={{ ...field, borderBottomColor: errors.email ? 'var(--red)' : 'var(--line-strong)' }} />
-              <select value={form.course} onChange={set('course')} onFocus={ef} onBlur={eb('course')} style={{ ...field, borderBottomColor: errors.course ? 'var(--red)' : 'var(--line-strong)', color: form.course ? 'var(--tx)' : 'var(--tx-faint)' }}>
+              </motion.div>
+              <motion.input variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                placeholder="Email *" type="email" value={form.email} onChange={set('email')} onFocus={ef} onBlur={eb('email')} style={{ ...field, borderBottomColor: errors.email ? 'var(--red)' : 'var(--line-strong)' }} />
+              <motion.select variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                value={form.course} onChange={set('course')} onFocus={ef} onBlur={eb('course')} style={{ ...field, borderBottomColor: errors.course ? 'var(--red)' : 'var(--line-strong)', color: form.course ? 'var(--tx)' : 'var(--tx-faint)' }}>
                 <option value="" style={{ background: '#16110D' }}>Cursul dorit *</option>
                 {COURSES.map(c => <option key={c} value={c} style={{ background: '#16110D' }}>{c}</option>)}
-              </select>
-              <textarea placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={2} onFocus={ef} onBlur={eb('message')} style={{ ...field, resize: 'none' }} />
-              <button type="submit" disabled={loading} className="btn-outline solid" style={{ width: '100%', opacity: loading ? 0.7 : 1, marginTop: 4 }}>
+              </motion.select>
+              <motion.textarea variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                placeholder="Mesaj (opțional)" value={form.message} onChange={set('message')} rows={2} onFocus={ef} onBlur={eb('message')} style={{ ...field, resize: 'none' }} />
+              <motion.button variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: EASE }}
+                whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
+                type="submit" disabled={loading} className="btn-outline solid" style={{ width: '100%', opacity: loading ? 0.7 : 1, marginTop: 4 }}>
                 {loading ? 'Se trimite…' : 'Trimite cererea'}
-              </button>
-              {apiError && <div style={{ padding: '12px 14px', border: '1px solid var(--red)', background: 'rgba(225,29,29,0.1)', color: '#F2C6C6', fontSize: 13 }}>{apiError}</div>}
-              <p style={{ fontSize: 11.5, color: 'var(--tx-faint)', margin: 0 }}>Prima lecție de probă este gratuită · Fără obligații</p>
-            </form>
+              </motion.button>
+              {apiError && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '12px 14px', border: '1px solid var(--red)', background: 'rgba(225,29,29,0.1)', color: '#F2C6C6', fontSize: 13 }}>{apiError}</motion.div>}
+              <motion.p variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }} transition={{ duration: 0.4, ease: EASE }} style={{ fontSize: 11.5, color: 'var(--tx-faint)', margin: 0 }}>Prima lecție de probă este gratuită · Fără obligații</motion.p>
+            </motion.form>
           )}
         </div>
       </motion.div>
