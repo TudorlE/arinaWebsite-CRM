@@ -191,7 +191,18 @@ export default function StudentProfilePage({ params }: PageProps) {
               </div>
 
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
-                <p className="text-xs text-slate-400">Profesor: {student.teacher_name ?? 'Neatribuit'}</p>
+                {(student.subscriptions?.length ?? 0) > 0 ? (
+                  <div className="text-xs text-slate-400 space-y-0.5">
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Profesori:</p>
+                    {student.subscriptions!.map(s => (
+                      <p key={s.instrument} className="pl-2">
+                        {s.instrument}: <span className={s.teacher_name ? '' : 'italic'}>{s.teacher_name ?? 'Neatribuit'}</span>
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Profesor: {student.teacher_name ?? 'Neatribuit'}</p>
+                )}
                 <p className="text-xs text-slate-400">Cabinet: {student.cabinet_name ?? 'Neatribuit'}</p>
                 {(student.parent_name || student.parent_phone) && (
                   <p className="text-xs text-slate-400">Părinte: {student.parent_name ?? '—'}{student.parent_phone ? ` · ${student.parent_phone}` : ''}</p>

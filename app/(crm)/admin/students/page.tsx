@@ -176,10 +176,18 @@ export default function StudentsPage() {
                     {instr}
                   </Badge>
                 ))}
-                {student.teacher_name && (
-                  <span className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">{student.teacher_name}</span>
-                )}
               </div>
+              {(student.subscriptions?.some(s => s.teacher_name)) ? (
+                <div className="flex flex-col gap-0.5">
+                  {student.subscriptions!.filter(s => s.teacher_name).map(s => (
+                    <span key={s.instrument} className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">
+                      {s.instrument}: {s.teacher_name}
+                    </span>
+                  ))}
+                </div>
+              ) : student.teacher_name && (
+                <span className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">{student.teacher_name}</span>
+              )}
 
               <div className="flex items-center justify-end mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">

@@ -41,6 +41,9 @@ export interface StudentSubscription {
   plan: 'old' | 'new';
   lessons: 4 | 8 | 12;
   monthly_fee: number;
+  /** Each instrument can have its own teacher. */
+  teacher_id?: number | null;
+  teacher_name?: string | null;
 }
 
 export interface Student {

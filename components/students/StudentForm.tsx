@@ -25,7 +25,7 @@ const blank = {
   parent_name: '', parent_phone: '',
   instruments: [] as string[],
   subscriptions: [] as StudentSubscription[],
-  teacher_id: '', notes: '', status: 'active',
+  notes: '', status: 'active',
 };
 
 /** A brand-new default subscription for an instrument — 4 lecții, abonament nou. */
@@ -34,7 +34,7 @@ function defaultSubscriptionFor(instrument: string): StudentSubscription | null 
   if (!svc) return null;
   const lessons: LessonCount = 4;
   const plan: PlanType = 'new';
-  return { instrument, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? 0 };
+  return { instrument, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? 0, teacher_id: null };
 }
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
@@ -54,7 +54,9 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           .map((instr, i) => {
             const def = defaultSubscriptionFor(instr);
             if (!def) return null;
-            return i === 0 ? { ...def, monthly_fee: Number(student.monthly_fee) || def.monthly_fee } : def;
+            return i === 0
+              ? { ...def, monthly_fee: Number(student.monthly_fee) || def.monthly_fee, teacher_id: student.teacher_id ?? null }
+              : def;
           })
           .filter((s): s is StudentSubscription => s != null);
       }
@@ -67,7 +69,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         parent_phone: student.parent_phone ?? '',
         instruments,
         subscriptions,
-        teacher_id: String(student.teacher_id ?? ''),
         notes: student.notes ?? '',
         status: student.status ?? 'active',
       });
@@ -98,11 +99,12 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     setErrors(prev => ({ ...prev, instruments: false }));
   };
 
-  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons'>>) => {
+  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons' | 'teacher_id'>>) => {
     setForm(prev => ({
       ...prev,
       subscriptions: prev.subscriptions.map(s => {
         if (s.instrument !== instrument) return s;
+        if ('teacher_id' in patch) return { ...s, teacher_id: patch.teacher_id ?? null };
         const plan = patch.plan ?? s.plan;
         const lessons = patch.lessons ?? s.lessons;
         return { ...s, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? s.monthly_fee };
@@ -118,6 +120,11 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     if (!form.name.trim())             newErrors.name = true;
     if (form.instruments.length === 0) newErrors.instruments = true;
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+
+    // students.teacher_id (single FK, used by attendance/stats/schedule elsewhere)
+    // mirrors the first instrument's assigned teacher, since each instrument
+    // can now have its own.
+    const primaryTeacherId = form.subscriptions.find(s => s.teacher_id)?.teacher_id ?? null;
 
     setLoading(true);
     try {
@@ -137,7 +144,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           subscriptions: form.subscriptions,
           monthly_fee: totalFee,
           notes: form.notes, status: form.status,
-          teacher_id: form.teacher_id ? Number(form.teacher_id) : null,
+          teacher_id: primaryTeacherId,
         }),
       });
       if (!res.ok) {
@@ -267,6 +274,13 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                         </div>
                       )}
                     </div>
+                    <Select
+                      label="Profesor"
+                      value={sub.teacher_id ?? ''}
+                      onChange={e => updateSubscription(instr, { teacher_id: e.target.value ? Number(e.target.value) : null })}
+                      placeholder="Atribuie profesor"
+                      options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
+                    />
                     <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/50 dark:border-brand-900/30">
                       <span>{isFlatP ? `Lecție de grup — ${svcP.flatMonthly} lei/lună` : <>Preț per lecție: <strong className="text-slate-700 dark:text-slate-200">{perLessonP} lei</strong></>}</span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">{sub.monthly_fee} lei/lună</span>
@@ -277,14 +291,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
             </div>
           )}
         </div>
-
-        <Select
-          label="Profesor"
-          value={form.teacher_id}
-          onChange={set('teacher_id')}
-          placeholder="Atribuie profesor"
-          options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
-        />
 
         <Select
           label="Status"

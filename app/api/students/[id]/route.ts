@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, friendlyDbError } from '@/lib/supabase';
+import { withTeacherNames } from '@/lib/pricing';
+import type { StudentSubscription } from '@/lib/types';
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const { data: student, error } = await supabase
-    .from('students')
-    .select('*, teachers(name), cabinets(name)')
-    .eq('id', id)
-    .single();
+  const [{ data: student, error }, { data: teachersData }] = await Promise.all([
+    supabase.from('students').select('*, teachers(name), cabinets(name)').eq('id', id).single(),
+    supabase.from('teachers').select('id, name'),
+  ]);
   if (error || !student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
 
   const { data: notes } = await supabase
@@ -18,9 +19,15 @@ export async function GET(_req: NextRequest, { params }: Params) {
     .eq('student_id', id)
     .order('created_at', { ascending: false });
 
-  const { teachers, cabinets, ...rest } = student as { teachers: { name: string } | null; cabinets: { name: string } | null; [key: string]: unknown };
+  const { teachers, cabinets, subscriptions, ...rest } = student as { teachers: { name: string } | null; cabinets: { name: string } | null; subscriptions?: StudentSubscription[]; [key: string]: unknown };
+  const teacherMap = new Map<number, string>((teachersData ?? []).map((t: { id: number; name: string }) => [t.id, t.name]));
   return NextResponse.json({
-    student: { ...rest, teacher_name: teachers?.name ?? null, cabinet_name: cabinets?.name ?? null },
+    student: {
+      ...rest,
+      teacher_name: teachers?.name ?? null,
+      cabinet_name: cabinets?.name ?? null,
+      subscriptions: withTeacherNames(subscriptions, teacherMap),
+    },
     notes: notes ?? [],
   });
 }

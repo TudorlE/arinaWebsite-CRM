@@ -71,6 +71,17 @@ export function sumSubscriptions(subs: { monthly_fee: number }[]): number {
   return subs.reduce((sum, s) => sum + (Number(s.monthly_fee) || 0), 0);
 }
 
+/** Atașează teacher_name fiecărui abonament, pe baza teacher_id (profesor per instrument). */
+export function withTeacherNames<T extends { teacher_id?: number | null }>(
+  subs: T[] | undefined,
+  teacherMap: Map<number, string>,
+): (T & { teacher_name: string | null })[] {
+  return (subs ?? []).map(s => ({
+    ...s,
+    teacher_name: s.teacher_id ? teacherMap.get(Number(s.teacher_id)) ?? null : null,
+  }));
+}
+
 /** Text scurt pentru câmpul „note” al plății. */
 export function planSummary(service: string, plan: PlanType, lessons: LessonCount): string {
   const p = PRICING[service];

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, friendlyDbError } from '@/lib/supabase';
 import { createPaymentForStudent } from '@/lib/payments';
+import { withTeacherNames } from '@/lib/pricing';
+import type { StudentSubscription } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -17,13 +19,19 @@ export async function GET(request: NextRequest) {
   if (level)      query = query.eq('level', level);
   if (search)     query = query.ilike('name', `%${search}%`);
 
-  const { data, error } = await query;
+  const [{ data, error }, { data: teachersData }] = await Promise.all([
+    query,
+    supabase.from('teachers').select('id, name'),
+  ]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const students = (data ?? []).map(({ teachers, cabinets, ...s }: { teachers: { name: string } | null; cabinets: { name: string } | null; [key: string]: unknown }) => ({
+  const teacherMap = new Map<number, string>((teachersData ?? []).map((t: { id: number; name: string }) => [t.id, t.name]));
+
+  const students = (data ?? []).map(({ teachers, cabinets, subscriptions, ...s }: { teachers: { name: string } | null; cabinets: { name: string } | null; subscriptions?: StudentSubscription[]; [key: string]: unknown }) => ({
     ...s,
     teacher_name: teachers?.name ?? null,
     cabinet_name: cabinets?.name ?? null,
+    subscriptions: withTeacherNames(subscriptions, teacherMap),
   }));
 
   return NextResponse.json({ students });
