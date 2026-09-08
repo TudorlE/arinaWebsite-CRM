@@ -1,11 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET() {
+/**
+ * GET /api/stats?month=1-12&year=YYYY
+ * Month/year scope the payment- and lesson-count stats; defaults to the
+ * current month. "Lecții azi" always reflects the real current date.
+ */
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const monthParam = searchParams.get('month');
+    const yearParam  = searchParams.get('year');
+
     const today = new Date().toISOString().split('T')[0];
-    const cm    = new Date().getMonth() + 1;
-    const cy    = new Date().getFullYear();
+    const cm    = monthParam ? Number(monthParam) : new Date().getMonth() + 1;
+    const cy    = yearParam  ? Number(yearParam)  : new Date().getFullYear();
     const monthStart = `${cy}-${String(cm).padStart(2, '0')}-01`;
     const monthEnd   = `${cy}-${String(cm).padStart(2, '0')}-31`;
 

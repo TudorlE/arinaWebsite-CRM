@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
 import { useRouter } from 'next/navigation';
@@ -7,7 +8,7 @@ import {
   Users, DollarSign, Calendar, AlertCircle,
   TrendingUp, TrendingDown,
   Clock, LayoutDashboard, ChevronRight,
-  Banknote, Flame,
+  Banknote, Flame, ChevronLeft,
 } from 'lucide-react';
 import { DashboardStats, MONTHS, Payment } from '@/lib/types';
 import {
@@ -238,12 +239,23 @@ function UpcomingLessonRow({ lesson, index }: {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const now = new Date();
-  const { data } = useSWR<{ stats: DashboardStats }>('/api/stats', fetcher, { refreshInterval: 30000 });
+  const today = new Date();
+  const [selMonth, setSelMonth] = useState(today.getMonth() + 1); // 1-12
+  const [selYear, setSelYear]   = useState(today.getFullYear());
+  const now = new Date(selYear, selMonth - 1, 1);
+
+  const goMonth = (delta: number) => {
+    const d = new Date(selYear, selMonth - 1 + delta, 1);
+    setSelMonth(d.getMonth() + 1);
+    setSelYear(d.getFullYear());
+  };
+  const isCurrentMonth = selMonth === today.getMonth() + 1 && selYear === today.getFullYear();
+
+  const { data } = useSWR<{ stats: DashboardStats }>(`/api/stats?month=${selMonth}&year=${selYear}`, fetcher, { refreshInterval: 30000 });
   const { data: lessonsData } = useSWR('/api/lessons?status=scheduled', fetcher);
   const { data: paymentsData } = useSWRImmutable('/api/payments', fetcher);
 
-  const { data: revData } = useSWR<{ summary: RevenueSummary }>('/api/payments/revenue', fetcher, { refreshInterval: 60_000 });
+  const { data: revData } = useSWR<{ summary: RevenueSummary }>(`/api/payments/revenue?month=${selMonth}&year=${selYear}`, fetcher, { refreshInterval: 60_000 });
   const revSummary = revData?.summary;
 
   const stats = data?.stats;
@@ -254,9 +266,9 @@ export default function DashboardPage() {
 
   const allPaymentsArr: Payment[] = paymentsData?.payments ?? [];
 
-  // Area chart — last 6 months income
+  // Area chart — 6 months ending at the selected month
   const chartData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const d = new Date(selYear, selMonth - 1 - (5 - i), 1);
     const m = d.getMonth() + 1;
     const y = d.getFullYear();
     const income = (paymentsData?.payments ?? [])
@@ -275,13 +287,46 @@ export default function DashboardPage() {
       }}>
         <div style={{ position: 'absolute', top: -30, left: -20, width: 200, height: 200, borderRadius: '50%', background: 'rgba(201,160,32,0.08)', filter: 'blur(60px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -20, right: 60, width: 160, height: 160, borderRadius: '50%', background: 'rgba(109,40,217,0.1)', filter: 'blur(48px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ padding: '10px', background: 'rgba(201,160,32,0.15)', borderRadius: 16, border: '1px solid rgba(201,160,32,0.3)' }}>
-            <LayoutDashboard style={{ width: 26, height: 26, color: '#c9a020' }} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ padding: '10px', background: 'rgba(201,160,32,0.15)', borderRadius: 16, border: '1px solid rgba(201,160,32,0.3)' }}>
+              <LayoutDashboard style={{ width: 26, height: 26, color: '#c9a020' }} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Panou general</h1>
+              <p style={{ color: 'rgba(201,160,32,0.7)', fontSize: 13, fontWeight: 500, margin: '3px 0 0' }}>{MONTHS[now.getMonth()]} {now.getFullYear()} — privire de ansamblu</p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Panou general</h1>
-            <p style={{ color: 'rgba(201,160,32,0.7)', fontSize: 13, fontWeight: 500, margin: '3px 0 0' }}>{MONTHS[now.getMonth()]} {now.getFullYear()} — privire de ansamblu</p>
+
+          {/* Month switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(201,160,32,0.25)', borderRadius: 12, padding: 4 }}>
+            <button
+              onClick={() => goMonth(-1)}
+              aria-label="Luna anterioară"
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, border: 'none', background: 'transparent', color: '#e2d5a8', cursor: 'pointer' }}
+              className="hover:bg-white/10"
+            >
+              <ChevronLeft style={{ width: 16, height: 16 }} />
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', minWidth: 130, textAlign: 'center' }}>
+              {MONTHS[selMonth - 1]} {selYear}
+            </span>
+            <button
+              onClick={() => goMonth(1)}
+              aria-label="Luna următoare"
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, border: 'none', background: 'transparent', color: '#e2d5a8', cursor: 'pointer' }}
+              className="hover:bg-white/10"
+            >
+              <ChevronRight style={{ width: 16, height: 16 }} />
+            </button>
+            {!isCurrentMonth && (
+              <button
+                onClick={() => { setSelMonth(today.getMonth() + 1); setSelYear(today.getFullYear()); }}
+                style={{ fontSize: 11, fontWeight: 700, color: '#c9a020', background: 'rgba(201,160,32,0.15)', border: '1px solid rgba(201,160,32,0.3)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', marginLeft: 2 }}
+              >
+                Azi
+              </button>
+            )}
           </div>
         </div>
       </div>
