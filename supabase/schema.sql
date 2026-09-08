@@ -117,8 +117,20 @@ CREATE TABLE IF NOT EXISTS cabinet_teacher_assignments (
   UNIQUE(cabinet_id, day_of_week)
 );
 
-ALTER TABLE cabinets                   ENABLE ROW LEVEL SECURITY;
+-- Excepție punctuală (o singură dată) — pentru cazuri speciale, separată
+-- de șablonul săptămânal recurent de mai sus.
+CREATE TABLE IF NOT EXISTS cabinet_teacher_overrides (
+  id         bigserial PRIMARY KEY,
+  cabinet_id bigint NOT NULL REFERENCES cabinets(id) ON DELETE CASCADE,
+  date       date   NOT NULL,
+  teacher_id bigint REFERENCES teachers(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (cabinet_id, date)
+);
+
+ALTER TABLE cabinets                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cabinet_teacher_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cabinet_teacher_overrides   ENABLE ROW LEVEL SECURITY;
 
 -- ── Migration: add cabinet_id to lessons ──────────────────────
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS cabinet_id bigint REFERENCES cabinets(id) ON DELETE SET NULL;
@@ -135,6 +147,7 @@ DROP POLICY IF EXISTS "Allow all on student_notes"               ON student_note
 DROP POLICY IF EXISTS "Allow all on events"                      ON events;
 DROP POLICY IF EXISTS "Allow all on cabinets"                    ON cabinets;
 DROP POLICY IF EXISTS "Allow all on cabinet_teacher_assignments" ON cabinet_teacher_assignments;
+DROP POLICY IF EXISTS "Allow all on cabinet_teacher_overrides"   ON cabinet_teacher_overrides;
 CREATE POLICY "Allow all on teachers"                       ON teachers                       FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on students"                       ON students                       FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on lessons"                        ON lessons                        FOR ALL TO anon USING (true) WITH CHECK (true);
@@ -143,6 +156,7 @@ CREATE POLICY "Allow all on student_notes"                  ON student_notes    
 CREATE POLICY "Allow all on events"                         ON events                         FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on cabinets"                       ON cabinets                       FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on cabinet_teacher_assignments"    ON cabinet_teacher_assignments     FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on cabinet_teacher_overrides"      ON cabinet_teacher_overrides       FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- ── Migration: registrations (public site contact form leads) ────
 -- Already live in Supabase; not originally captured in this file.
@@ -236,6 +250,10 @@ CREATE POLICY "Allow all on auditions"           ON auditions           FOR ALL 
 
 ALTER TABLE students ADD COLUMN IF NOT EXISTS cabinet_id bigint REFERENCES cabinets(id) ON DELETE SET NULL;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS notes text;
+-- Mai multe abonamente pe elev (unul per instrument) + contact părinte.
+ALTER TABLE students ADD COLUMN IF NOT EXISTS subscriptions jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_name text;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_phone text;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive','paused'));
 
 ALTER TABLE lessons DROP CONSTRAINT IF EXISTS lessons_status_check;

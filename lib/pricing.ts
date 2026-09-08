@@ -66,6 +66,11 @@ export function perLessonPrice(service: string, plan: PlanType): number | null {
   return p.perLesson[plan] ?? null;
 }
 
+/** Suma tuturor abonamentelor unui elev (unul per instrument). */
+export function sumSubscriptions(subs: { monthly_fee: number }[]): number {
+  return subs.reduce((sum, s) => sum + (Number(s.monthly_fee) || 0), 0);
+}
+
 /** Text scurt pentru câmpul „note” al plății. */
 export function planSummary(service: string, plan: PlanType, lessons: LessonCount): string {
   const p = PRICING[service];

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
-import { INSTRUMENTS, Student, STUDENT_STATUSES } from '@/lib/types';
-import { PRICING, LESSON_COUNTS, subscriptionAmount, perLessonPrice, type PlanType, type LessonCount } from '@/lib/pricing';
+import { INSTRUMENTS, Student, StudentSubscription, STUDENT_STATUSES } from '@/lib/types';
+import { PRICING, LESSON_COUNTS, subscriptionAmount, perLessonPrice, sumSubscriptions, type PlanType, type LessonCount } from '@/lib/pricing';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -22,39 +22,58 @@ interface Props {
 
 const blank = {
   name: '', birth_date: '', phone: '', email: '',
-  instruments: [] as string[], teacher_id: '', notes: '', status: 'active',
-  monthly_fee: '',
-  plan: 'new' as PlanType, lessons: 4 as LessonCount,
+  parent_name: '', parent_phone: '',
+  instruments: [] as string[],
+  subscriptions: [] as StudentSubscription[],
+  teacher_id: '', notes: '', status: 'active',
 };
+
+/** A brand-new default subscription for an instrument — 4 lecții, abonament nou. */
+function defaultSubscriptionFor(instrument: string): StudentSubscription | null {
+  const svc = PRICING[instrument];
+  if (!svc) return null;
+  const lessons: LessonCount = 4;
+  const plan: PlanType = 'new';
+  return { instrument, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? 0 };
+}
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
   const [form, setForm]     = useState(blank);
-  // On edit, the stored fee stays put until the admin actually touches the
-  // pricing controls — we never want opening "Editează" to silently
-  // overwrite a custom amount. New students always track the pricing table.
-  const [pricingDirty, setPricingDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
 
   useEffect(() => {
     if (student) {
+      const instruments = student.instruments ?? [];
+      // Older rows have no per-instrument breakdown — best-effort backfill so
+      // the admin sees something sensible and can adjust immediately.
+      let subscriptions = student.subscriptions ?? [];
+      if (subscriptions.length === 0 && instruments.length > 0) {
+        subscriptions = instruments
+          .map((instr, i) => {
+            const def = defaultSubscriptionFor(instr);
+            if (!def) return null;
+            return i === 0 ? { ...def, monthly_fee: Number(student.monthly_fee) || def.monthly_fee } : def;
+          })
+          .filter((s): s is StudentSubscription => s != null);
+      }
       setForm({
         name: student.name,
         birth_date: student.birth_date ?? '',
-        phone: student.phone,
-        email: student.email,
-        instruments: student.instruments ?? [],
+        phone: student.phone ?? '',
+        email: student.email ?? '',
+        parent_name: student.parent_name ?? '',
+        parent_phone: student.parent_phone ?? '',
+        instruments,
+        subscriptions,
         teacher_id: String(student.teacher_id ?? ''),
         notes: student.notes ?? '',
         status: student.status ?? 'active',
-        monthly_fee: String(student.monthly_fee ?? ''),
-        plan: 'new', lessons: 4,
       });
     } else {
       setForm(blank);
     }
-    setPricingDirty(false);
     setErrors({});
   }, [student, open]);
 
@@ -64,46 +83,39 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
   };
 
   const toggleInstrument = (instr: string) => {
-    setForm(prev => ({
-      ...prev,
-      instruments: prev.instruments.includes(instr)
-        ? prev.instruments.filter(i => i !== instr)
-        : [...prev.instruments, instr],
-    }));
+    setForm(prev => {
+      const has = prev.instruments.includes(instr);
+      const instruments = has ? prev.instruments.filter(i => i !== instr) : [...prev.instruments, instr];
+      let subscriptions = prev.subscriptions;
+      if (has) {
+        subscriptions = subscriptions.filter(s => s.instrument !== instr);
+      } else if (!subscriptions.some(s => s.instrument === instr)) {
+        const def = defaultSubscriptionFor(instr);
+        subscriptions = def ? [...subscriptions, def] : subscriptions;
+      }
+      return { ...prev, instruments, subscriptions };
+    });
     setErrors(prev => ({ ...prev, instruments: false }));
   };
 
-  // The service priced is the first selected instrument that has a price table.
-  const pricedService = form.instruments.find(i => PRICING[i]) ?? null;
-  const svc = pricedService ? PRICING[pricedService] : null;
-  const isFlat = svc?.flatMonthly != null;
+  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons'>>) => {
+    setForm(prev => ({
+      ...prev,
+      subscriptions: prev.subscriptions.map(s => {
+        if (s.instrument !== instrument) return s;
+        const plan = patch.plan ?? s.plan;
+        const lessons = patch.lessons ?? s.lessons;
+        return { ...s, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? s.monthly_fee };
+      }),
+    }));
+  };
 
-  const computedFee = useMemo(
-    () => (pricedService ? subscriptionAmount(pricedService, form.plan, form.lessons) : null),
-    [pricedService, form.plan, form.lessons],
-  );
-  const perLesson = useMemo(
-    () => (pricedService ? perLessonPrice(pricedService, form.plan) : null),
-    [pricedService, form.plan],
-  );
-
-  // Monthly fee always comes from the pricing table — no separate input to edit it.
-  // For a new student it tracks the selection live; for an existing one it only
-  // takes over once the admin has actually touched the pricing controls below.
-  useEffect(() => {
-    if (!pricedService || computedFee == null) return;
-    if (student && !pricingDirty) return;
-    setForm(prev => ({ ...prev, monthly_fee: String(computedFee) }));
-  }, [computedFee, pricedService, pricingDirty, student]);
+  const totalFee = sumSubscriptions(form.subscriptions);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, boolean> = {};
-    if (!form.name.trim())         newErrors.name = true;
-    if (!form.birth_date)          newErrors.birth_date = true;
-    if (!form.phone.trim())        newErrors.phone = true;
-    if (!form.email.trim())        newErrors.email = true;
-    if (!form.monthly_fee)         newErrors.monthly_fee = true;
+    if (!form.name.trim())             newErrors.name = true;
     if (form.instruments.length === 0) newErrors.instruments = true;
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
 
@@ -115,14 +127,17 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name, birth_date: form.birth_date, phone: form.phone, email: form.email,
-          instruments: form.instruments, notes: form.notes, status: form.status,
+          name: form.name.trim(),
+          birth_date: form.birth_date || null,
+          phone: form.phone.trim() || null,
+          email: form.email.trim() || null,
+          parent_name: form.parent_name.trim() || null,
+          parent_phone: form.parent_phone.trim() || null,
+          instruments: form.instruments,
+          subscriptions: form.subscriptions,
+          monthly_fee: totalFee,
+          notes: form.notes, status: form.status,
           teacher_id: form.teacher_id ? Number(form.teacher_id) : null,
-          monthly_fee: Number(form.monthly_fee),
-          // structured plan info — kept for reference, ignored if the API doesn't store it
-          plan_type: isFlat ? null : form.plan,
-          lesson_count: isFlat ? null : form.lessons,
-          price_per_lesson: isFlat ? null : perLesson,
         }),
       });
       if (!res.ok) {
@@ -157,15 +172,16 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     <Modal open={open} onClose={onClose} title={student ? 'Editează elev' : 'Adaugă elev nou'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Nume complet"      value={form.name}        onChange={set('name')}        shake={errors.name}        placeholder="Ana Ionescu" />
+          <Input label="Nume complet *"    value={form.name}        onChange={set('name')}        shake={errors.name}        placeholder="Ana Ionescu" />
           <DatePicker
-            label="Data nașterii"
+            label="Data nașterii (opțional)"
             value={form.birth_date}
-            onChange={v => { setForm(prev => ({ ...prev, birth_date: v })); setErrors(prev => ({ ...prev, birth_date: false })); }}
-            shake={errors.birth_date}
+            onChange={v => { setForm(prev => ({ ...prev, birth_date: v })); }}
           />
-          <Input label="Telefon"           value={form.phone}       onChange={set('phone')}       shake={errors.phone}       placeholder="+373 69 000 000" />
-          <Input label="Email"             value={form.email}       onChange={set('email')}       shake={errors.email}       type="email" placeholder="elev@exemplu.ro" />
+          <Input label="Telefon (opțional)" value={form.phone}       onChange={set('phone')}       placeholder="+373 69 000 000" />
+          <Input label="Email (opțional)"   value={form.email}       onChange={set('email')}       type="email" placeholder="elev@exemplu.ro" />
+          <Input label="Nume prenume părinte (opțional)" value={form.parent_name}  onChange={set('parent_name')}  placeholder="Maria Ionescu" />
+          <Input label="Telefon părinte (opțional)"      value={form.parent_phone} onChange={set('parent_phone')} placeholder="+373 69 000 000" />
         </div>
 
         {/* Instruments multi-select */}
@@ -195,62 +211,70 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           {errors.instruments && (
             <p className="text-xs text-red-500 animate-fade-in">Selectează cel puțin un instrument</p>
           )}
+          <p className="text-xs text-slate-400">Poți alege mai multe instrumente — fiecare are propriul abonament mai jos.</p>
         </div>
 
-        {/* Abonament — aceeași logică de prețuri ca la Plăți */}
-        <div className={`rounded-xl border p-3 space-y-3 ${errors.monthly_fee ? 'border-red-400 animate-field-error' : 'border-brand-200 dark:border-brand-900/50'} bg-brand-50/60 dark:bg-brand-900/15`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonament</p>
-          {!pricedService ? (
+        {/* Abonamente — unul per instrument, aceeași logică de prețuri ca la Plăți */}
+        <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonamente</p>
+            {form.subscriptions.length > 0 && (
+              <span className="text-sm font-bold text-brand-700 dark:text-brand-300">Total: {totalFee} lei/lună</span>
+            )}
+          </div>
+          {form.instruments.length === 0 ? (
             <p className="text-xs text-slate-500 dark:text-slate-400">Selectează un instrument mai sus ca să apară prețurile.</p>
           ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select
-                  label="Serviciu"
-                  value={pricedService}
-                  onChange={e => { setPricingDirty(true); setForm(prev => ({ ...prev, instruments: [e.target.value, ...prev.instruments.filter(i => i !== pricedService)] })); }}
-                  options={form.instruments.filter(i => PRICING[i]).map(k => ({ value: k, label: PRICING[k].label }))}
-                />
-                <Select
-                  label="Tip abonament"
-                  value={form.plan}
-                  onChange={e => { setPricingDirty(true); set('plan')(e); }}
-                  disabled={isFlat}
-                  options={[
-                    { value: 'old', label: 'Abonament vechi' },
-                    { value: 'new', label: 'Abonament nou' },
-                  ]}
-                />
-              </div>
-              {!isFlat && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Număr de lecții / lună</label>
-                  <div className="flex gap-2">
-                    {LESSON_COUNTS.map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => { setPricingDirty(true); setForm(p => ({ ...p, lessons: n })); }}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors
-                          ${form.lessons === n
-                            ? 'bg-brand-600 text-white border-brand-600'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400'}`}
-                      >
-                        {n} lecții
-                      </button>
-                    ))}
+            <div className="space-y-2.5">
+              {form.instruments.map(instr => {
+                const sub = form.subscriptions.find(s => s.instrument === instr);
+                const svcP = PRICING[instr];
+                if (!svcP || !sub) return null;
+                const isFlatP = svcP.flatMonthly != null;
+                const perLessonP = perLessonPrice(instr, sub.plan);
+                return (
+                  <div key={instr} className="rounded-lg border border-brand-200/70 dark:border-brand-900/40 bg-white/70 dark:bg-slate-900/30 p-2.5 space-y-2">
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{svcP.label}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Select
+                        label="Tip abonament"
+                        value={sub.plan}
+                        onChange={e => updateSubscription(instr, { plan: e.target.value as PlanType })}
+                        disabled={isFlatP}
+                        options={[
+                          { value: 'old', label: 'Abonament vechi' },
+                          { value: 'new', label: 'Abonament nou' },
+                        ]}
+                      />
+                      {!isFlatP && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Nr. lecții / lună</label>
+                          <div className="flex gap-1.5">
+                            {LESSON_COUNTS.map(n => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => updateSubscription(instr, { lessons: n })}
+                                className={`flex-1 py-1.5 rounded-md text-xs font-bold border transition-colors
+                                  ${sub.lessons === n
+                                    ? 'bg-brand-600 text-white border-brand-600'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-brand-400'}`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/50 dark:border-brand-900/30">
+                      <span>{isFlatP ? `Lecție de grup — ${svcP.flatMonthly} lei/lună` : <>Preț per lecție: <strong className="text-slate-700 dark:text-slate-200">{perLessonP} lei</strong></>}</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200">{sub.monthly_fee} lei/lună</span>
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/60 dark:border-brand-900/40">
-                {isFlat ? (
-                  <span>Lecție de grup — {svc?.flatMonthly} lei / lună</span>
-                ) : (
-                  <span>Preț per lecție ({form.plan === 'old' ? 'vechi' : 'nou'}): <strong className="text-slate-700 dark:text-slate-200">{perLesson} lei</strong></span>
-                )}
-                <span className="font-bold text-sm text-brand-700 dark:text-brand-300">{form.monthly_fee || computedFee} lei/lună</span>
-              </div>
-            </>
+                );
+              })}
+            </div>
           )}
         </div>
 

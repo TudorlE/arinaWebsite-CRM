@@ -29,10 +29,24 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    const allowed = ['name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee', 'teacher_id', 'cabinet_id', 'notes', 'status'];
+    const allowed = [
+      'name', 'birth_date', 'phone', 'email', 'instruments', 'level', 'monthly_fee',
+      'subscriptions', 'parent_name', 'parent_phone', 'teacher_id', 'cabinet_id', 'notes', 'status',
+    ];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
     if (update.birth_date === '') update.birth_date = null;
-    const { data: student, error } = await supabase.from('students').update(update).eq('id', id).select().single();
+    if (update.phone === '') update.phone = null;
+    if (update.email === '') update.email = null;
+    if (update.parent_name === '') update.parent_name = null;
+    if (update.parent_phone === '') update.parent_phone = null;
+
+    let { data: student, error } = await supabase.from('students').update(update).eq('id', id).select().single();
+    // subscriptions/parent_name/parent_phone columns not migrated yet — retry without them.
+    if (error && /subscriptions|parent_name|parent_phone/.test(error.message)) {
+      const safe = { ...update };
+      delete safe.subscriptions; delete safe.parent_name; delete safe.parent_phone;
+      ({ data: student, error } = await supabase.from('students').update(safe).eq('id', id).select().single());
+    }
     if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
     if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     return NextResponse.json({ student });

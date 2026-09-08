@@ -31,27 +31,45 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, birth_date, phone, email, instruments, level, monthly_fee, teacher_id, cabinet_id, notes, status } = await request.json();
-    if (!name || !birth_date || !phone || !email || !instruments?.length || !monthly_fee) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const {
+      name, birth_date, phone, email, instruments, level, monthly_fee, subscriptions,
+      parent_name, parent_phone, teacher_id, cabinet_id, notes, status,
+    } = await request.json();
+    // Only the name and at least one instrument are required — everything else is optional.
+    if (!name?.trim() || !instruments?.length) {
+      return NextResponse.json({ error: 'Numele și cel puțin un instrument sunt obligatorii' }, { status: 400 });
     }
-    const { data: student, error } = await supabase
-      .from('students')
-      .insert({
-        name, birth_date, phone, email, instruments,
-        level: level ?? 'beginner',
-        monthly_fee: Number(monthly_fee),
-        teacher_id: teacher_id ? Number(teacher_id) : null,
-        cabinet_id: cabinet_id ? Number(cabinet_id) : null,
-        notes: notes ?? null,
-        status: status ?? 'active',
-      })
-      .select()
-      .single();
+
+    const baseInsert = {
+      name: name.trim(),
+      birth_date: birth_date || null,
+      phone: phone?.trim() || null,
+      email: email?.trim() || null,
+      instruments,
+      level: level ?? 'beginner',
+      monthly_fee: Number(monthly_fee) || 0,
+      teacher_id: teacher_id ? Number(teacher_id) : null,
+      cabinet_id: cabinet_id ? Number(cabinet_id) : null,
+      notes: notes ?? null,
+      status: status ?? 'active',
+    };
+    const fullInsert = {
+      ...baseInsert,
+      subscriptions: subscriptions ?? [],
+      parent_name: parent_name?.trim() || null,
+      parent_phone: parent_phone?.trim() || null,
+    };
+
+    let { data: student, error } = await supabase.from('students').insert(fullInsert).select().single();
+    // subscriptions/parent_name/parent_phone columns not migrated yet — retry without them.
+    if (error && /subscriptions|parent_name|parent_phone/.test(error.message)) {
+      ({ data: student, error } = await supabase.from('students').insert(baseInsert).select().single());
+    }
     if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
+
     // Automation: auto-create the current month "unpaid" payment for the new student.
-    if (student?.id) {
-      try { await createPaymentForStudent(Number(student.id), Number(monthly_fee)); } catch { /* non-fatal */ }
+    if (student?.id && baseInsert.monthly_fee > 0) {
+      try { await createPaymentForStudent(Number(student.id), baseInsert.monthly_fee); } catch { /* non-fatal */ }
     }
     return NextResponse.json({ student }, { status: 201 });
   } catch {

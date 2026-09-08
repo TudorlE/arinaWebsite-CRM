@@ -35,15 +35,27 @@ export interface Teacher {
 
 export type StudentStatus = 'active' | 'inactive' | 'paused';
 
+/** One instrument's subscription — a student can have several, one per instrument. */
+export interface StudentSubscription {
+  instrument: string;
+  plan: 'old' | 'new';
+  lessons: 4 | 8 | 12;
+  monthly_fee: number;
+}
+
 export interface Student {
   id: number;
   name: string;
   /** @deprecated superseded by birth_date — kept only for old rows that never got one */
   age?: number;
   birth_date?: string | null; // YYYY-MM-DD
-  phone: string;
-  email: string;
+  phone?: string | null;
+  email?: string | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
   instruments: string[];
+  /** One subscription per instrument. Falls back to the single monthly_fee for older rows. */
+  subscriptions?: StudentSubscription[];
   level: 'beginner' | 'intermediate' | 'advanced';
   monthly_fee: number;
   teacher_id?: number;
@@ -186,6 +198,15 @@ export interface CabinetTeacherAssignment {
   teacher_id: number | null;
   teacher_name?: string | null;
   day_of_week: number; // 0=Sun, 1=Mon … 6=Sat
+}
+
+/** One-off override of the weekly cabinet↔teacher template, for a single date. */
+export interface CabinetTeacherOverride {
+  id: number;
+  cabinet_id: number;
+  date: string; // YYYY-MM-DD
+  teacher_id: number | null;
+  teacher_name?: string | null;
 }
 
 export interface Payment {

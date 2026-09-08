@@ -78,13 +78,16 @@ export default function SchedulePage() {
   const weekDates  = getWeekDates(reference);
   const rangeFrom  = fmtDate(weekDates[0]);
   const rangeTo    = fmtDate(weekDates[6]);
+  // Cabinet table: one day at a time, rows = time slots, columns = cabinets.
+  const selectedDate = fmtDate(weekDates[selectedDayIdx]);
 
   const { data: allData, mutate } = useSWR('/api/lessons', fetcher);
   const allLessons: Lesson[] = allData?.lessons ?? [];
-  const { data: cabinetsData, mutate: mutateCabinets } = useSWR('/api/cabinets', fetcher);
+  const { data: cabinetsData, mutate: mutateCabinets } = useSWR(`/api/cabinets?date=${selectedDate}`, fetcher);
   const cabinets: Cabinet[] = cabinetsData?.cabinets ?? [];
   const assignments: { id: number; cabinet_id: number; day_of_week: number; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.assignments ?? [];
   const dayStatuses: CabinetDayStatus[] = cabinetsData?.dayStatuses ?? [];
+  const overrides: { id: number; cabinet_id: number; date: string; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.overrides ?? [];
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
   const teachersList: { id: number; name: string }[] = teachersData?.teachers ?? [];
   const lessons = allLessons
@@ -92,8 +95,6 @@ export default function SchedulePage() {
     .filter((l: Lesson) => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
     .filter((l: Lesson) => !statusFilterSched || l.status === statusFilterSched);
 
-  // Cabinet table: one day at a time, rows = time slots, columns = cabinets.
-  const selectedDate = fmtDate(weekDates[selectedDayIdx]);
   const dayLessons = allLessons
     .filter(l => l.date === selectedDate)
     .filter(l => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
@@ -118,6 +119,8 @@ export default function SchedulePage() {
   const assignmentFor = (cabinetId: number) => assignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === selectedDow);
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
+  // Excepție punctuală — doar pentru data selectată, separată de șablonul săptămânal de mai sus.
+  const overrideFor = (cabinetId: number) => overrides.find(o => o.cabinet_id === cabinetId && o.date === selectedDate);
 
   const toggleDayStatus = async (cabinetId: number, current: 'liber' | 'ocupat') => {
     const next = current === 'liber' ? 'ocupat' : 'liber';
@@ -183,6 +186,25 @@ export default function SchedulePage() {
       mutateCabinets();
     } finally {
       setSavingAssignment(null);
+    }
+  };
+
+  // Excepție punctuală: alt profesor decât cel obișnuit, doar pentru ziua selectată.
+  const [openOverrideFor, setOpenOverrideFor] = useState<number | null>(null);
+  const handleOverrideChange = async (cabinetId: number, teacherId: string) => {
+    setSavingAssignment(cabinetId);
+    try {
+      const res = await fetch(`/api/cabinets/${cabinetId}/override`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: selectedDate, teacher_id: teacherId || null }),
+      });
+      if (!res.ok) { toast('Eroare la salvarea excepției', 'error'); return; }
+      toast(teacherId ? 'Excepție salvată pentru azi' : 'Excepție eliminată', 'success');
+      mutateCabinets();
+    } finally {
+      setSavingAssignment(null);
+      setOpenOverrideFor(null);
     }
   };
 
@@ -354,21 +376,71 @@ export default function SchedulePage() {
                   {!isStudent && (
                     <tr className="bg-brand-50/60">
                       <th className="border border-brand-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-brand-400 text-left">Profesor</th>
-                      {cabinetColumns.map(col => (
-                        <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal">
-                          {typeof col.id === 'number' ? (
-                            <select
-                              value={assignmentFor(col.id)?.teacher_id ?? ''}
-                              onChange={e => handleTeacherChange(col.id as number, e.target.value)}
-                              disabled={savingAssignment === col.id}
-                              className="w-full text-sm font-semibold text-gray-700 border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
-                            >
-                              <option value="">— fără profesor —</option>
-                              {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                            </select>
-                          ) : <span className="block text-center text-xs text-gray-300">—</span>}
-                        </th>
-                      ))}
+                      {cabinetColumns.map(col => {
+                        if (typeof col.id !== 'number') {
+                          return <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal"><span className="block text-center text-xs text-gray-300">—</span></th>;
+                        }
+                        const cabinetId = col.id;
+                        const override = overrideFor(cabinetId);
+                        return (
+                          <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal align-top">
+                            {override ? (
+                              <div className="rounded-md border border-amber-300 bg-amber-50 p-1.5 space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700">Excepție azi</p>
+                                <select
+                                  value={override.teacher_id ?? ''}
+                                  onChange={e => handleOverrideChange(cabinetId, e.target.value)}
+                                  disabled={savingAssignment === cabinetId}
+                                  className="w-full text-sm font-semibold text-amber-900 border border-amber-300 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                                >
+                                  <option value="">— fără profesor —</option>
+                                  {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOverrideChange(cabinetId, '')}
+                                  disabled={savingAssignment === cabinetId}
+                                  className="text-[10px] font-semibold text-amber-700 hover:underline"
+                                >
+                                  ✕ Revino la profesorul obișnuit
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <select
+                                  value={assignmentFor(cabinetId)?.teacher_id ?? ''}
+                                  onChange={e => handleTeacherChange(cabinetId, e.target.value)}
+                                  disabled={savingAssignment === cabinetId}
+                                  className="w-full text-sm font-semibold text-gray-700 border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
+                                >
+                                  <option value="">— fără profesor —</option>
+                                  {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                                {isAdmin && (openOverrideFor === cabinetId ? (
+                                  <select
+                                    autoFocus
+                                    value=""
+                                    onChange={e => e.target.value && handleOverrideChange(cabinetId, e.target.value)}
+                                    onBlur={() => setOpenOverrideFor(null)}
+                                    className="w-full text-xs font-semibold text-amber-700 border border-amber-300 rounded-md px-2 py-1 bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  >
+                                    <option value="">Excepție azi — alege profesor…</option>
+                                    {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                  </select>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenOverrideFor(cabinetId)}
+                                    className="text-[10px] font-semibold text-slate-400 hover:text-amber-600 hover:underline"
+                                  >
+                                    + Excepție pentru azi
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </th>
+                        );
+                      })}
                     </tr>
                   )}
                 </thead>

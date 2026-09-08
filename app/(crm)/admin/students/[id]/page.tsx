@@ -174,11 +174,11 @@ export default function StudentProfilePage({ params }: PageProps) {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <Phone className="w-4 h-4 flex-shrink-0" />
-                  <span>{student.phone}</span>
+                  <span>{student.phone || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <Mail className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{student.email}</span>
+                  <span className="truncate">{student.email || '—'}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600 dark:text-slate-400">
                   <Music2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -193,6 +193,9 @@ export default function StudentProfilePage({ params }: PageProps) {
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
                 <p className="text-xs text-slate-400">Profesor: {student.teacher_name ?? 'Neatribuit'}</p>
                 <p className="text-xs text-slate-400">Cabinet: {student.cabinet_name ?? 'Neatribuit'}</p>
+                {(student.parent_name || student.parent_phone) && (
+                  <p className="text-xs text-slate-400">Părinte: {student.parent_name ?? '—'}{student.parent_phone ? ` · ${student.parent_phone}` : ''}</p>
+                )}
                 <p className="text-xs text-slate-400">Data înscrierii: {new Date(student.created_at).toLocaleDateString('ro-RO')}</p>
                 <p className="text-xs text-slate-400">Total achitat: {totalPaid.toLocaleString()} MDL</p>
                 {student.notes && (

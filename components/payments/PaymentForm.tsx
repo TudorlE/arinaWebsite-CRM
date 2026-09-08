@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { Payment, MONTHS } from '@/lib/types';
+import { Payment, MONTHS, StudentSubscription } from '@/lib/types';
 import {
   PRICING, SERVICE_KEYS, LESSON_COUNTS, subscriptionAmount, perLessonPrice, planSummary,
   type PlanType, type LessonCount,
@@ -44,6 +44,8 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   const [loading, setLoading] = useState(false);
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
+  const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
+  const studentSubs: StudentSubscription[] = selectedStudent?.subscriptions ?? [];
 
   useEffect(() => {
     if (payment) {
@@ -89,6 +91,26 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     setErrors(prev => ({ ...prev, [field]: false }));
+  };
+
+  const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sid = e.target.value;
+    const stu = students.find((s: { id: number }) => String(s.id) === sid);
+    const subs: StudentSubscription[] = stu?.subscriptions ?? [];
+    setForm(prev => ({
+      ...prev, student_id: sid,
+      service: subs[0]?.instrument ?? prev.service,
+      plan: subs[0]?.plan ?? prev.plan,
+      lessons: subs[0]?.lessons ?? prev.lessons,
+    }));
+    setErrors(prev => ({ ...prev, student_id: false }));
+  };
+
+  /** Picking a service from the student's own abonamente also loads its plan + nr. lecții. */
+  const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const service = e.target.value;
+    const sub = studentSubs.find(s => s.instrument === service);
+    setForm(prev => ({ ...prev, service, plan: sub?.plan ?? prev.plan, lessons: sub?.lessons ?? prev.lessons }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +161,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         <Select
           label="Elev"
           value={form.student_id}
-          onChange={e => { setForm(p => ({ ...p, student_id: e.target.value })); setErrors(p => ({ ...p, student_id: false })); }}
+          onChange={handleStudentChange}
           shake={errors.student_id}
           placeholder="Selectează elev"
           options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
@@ -148,12 +170,19 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         {!payment && (
           <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-3">
             <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonament</p>
+            {studentSubs.length > 1 && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">Acest elev are {studentSubs.length} abonamente — alege pentru care e plata.</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Serviciu"
                 value={form.service}
-                onChange={set('service')}
-                options={SERVICE_KEYS.map(k => ({ value: k, label: PRICING[k].label }))}
+                onChange={handleServiceChange}
+                options={
+                  studentSubs.length > 0
+                    ? studentSubs.map(s => ({ value: s.instrument, label: `${PRICING[s.instrument]?.label ?? s.instrument} — ${s.lessons} lecții (${s.plan === 'old' ? 'vechi' : 'nou'})` }))
+                    : SERVICE_KEYS.map(k => ({ value: k, label: PRICING[k].label }))
+                }
               />
               <Select
                 label="Tip abonament"
