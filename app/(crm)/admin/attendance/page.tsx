@@ -61,6 +61,7 @@ export default function AttendanceRegisterPage() {
   const { toasts, toast, remove } = useToast();
   const { push: pushAction } = useActionHistory();
   const [monthRef, setMonthRef] = useState(new Date());
+  const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
@@ -112,11 +113,14 @@ export default function AttendanceRegisterPage() {
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
   const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
-  // Admin filtering now comes from the discipline's own assigned teacher (the
-  // select embedded in the table header) instead of a separate dropdown —
-  // and it resolves each student's teacher for THAT instrument specifically
-  // (from their per-instrument subscription), not just their primary teacher_id.
-  const effectiveTeacherId = role === 'teacher' ? myTeacherId : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null);
+  // Admin filtering: an explicit pick from "Toți profesorii" (in the table
+  // header, above Elev) wins; otherwise, when a discipline tab is selected,
+  // fall back to that discipline's assigned teacher. Either way, matching
+  // resolves each student's teacher for the SPECIFIC instrument (from their
+  // per-instrument subscription) rather than just their primary teacher_id.
+  const effectiveTeacherId = role === 'teacher'
+    ? myTeacherId
+    : (fTeacher ? Number(fTeacher) : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null));
 
   const studentDisciplineTeacherId = (s: Student, discipline: string): number | null =>
     s.subscriptions?.find(sub => sub.instrument === discipline)?.teacher_id ?? s.teacher_id ?? null;
@@ -428,6 +432,19 @@ export default function AttendanceRegisterPage() {
             <thead>
               <tr>
                 <th className="sticky left-0 top-0 z-20 bg-white border border-black px-4 py-3 text-left align-bottom" style={{ minWidth: 220, width: 220 }}>
+                  {role === 'admin' && (
+                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white border-2 border-slate-300 shadow-sm normal-case">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filtru profesor</span>
+                      <select
+                        value={fTeacher}
+                        onChange={e => setFTeacher(e.target.value)}
+                        className="w-full text-sm font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md -ml-0.5"
+                      >
+                        <option value="">Toți profesorii</option>
+                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   {fDiscipline ? (
                     <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white border-2 border-amber-400 shadow-sm normal-case">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
