@@ -557,6 +557,7 @@ export default function SchedulePage() {
         defaultDate={addDate}
         defaultTime={addTime}
         defaultCabinetId={addCabinetId}
+        hideDate
         showToast={toast}
       />
 

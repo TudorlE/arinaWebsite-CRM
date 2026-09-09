@@ -113,3 +113,18 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/** Clears a lesson's attendance mark entirely — used to undo a first-ever mark on a lesson. */
+export async function DELETE(request: NextRequest) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  if (forbidden) return forbidden;
+
+  const { searchParams } = new URL(request.url);
+  const lessonId = searchParams.get('lesson_id');
+  if (!lessonId) return NextResponse.json({ error: 'Missing lesson_id' }, { status: 400 });
+
+  const { error } = await supabase.from('attendance').delete().eq('lesson_id', Number(lessonId));
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}

@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, Download, MessageSquare, Check } from 'lucide-react';
-import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+import { useActionHistory } from '@/lib/actionHistory';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
@@ -59,8 +59,8 @@ export default function AttendanceRegisterPage() {
   const canEdit = role === 'admin' || role === 'teacher';
 
   const { toasts, toast, remove } = useToast();
+  const { push: pushAction } = useActionHistory();
   const [monthRef, setMonthRef] = useState(new Date());
-  const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
@@ -112,14 +112,28 @@ export default function AttendanceRegisterPage() {
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
   const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
-  const effectiveTeacherId = role === 'teacher' ? myTeacherId : (fTeacher ? Number(fTeacher) : null);
+  // Admin filtering now comes from the discipline's own assigned teacher (the
+  // select embedded in the table header) instead of a separate dropdown —
+  // and it resolves each student's teacher for THAT instrument specifically
+  // (from their per-instrument subscription), not just their primary teacher_id.
+  const effectiveTeacherId = role === 'teacher' ? myTeacherId : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null);
+
+  const studentDisciplineTeacherId = (s: Student, discipline: string): number | null =>
+    s.subscriptions?.find(sub => sub.instrument === discipline)?.teacher_id ?? s.teacher_id ?? null;
+  const studentTeachesWith = (s: Student, teacherId: number): boolean =>
+    s.teacher_id === teacherId || (s.subscriptions ?? []).some(sub => sub.teacher_id === teacherId);
+
   const students = allStudents
-    .filter(s => !effectiveTeacherId || s.teacher_id === effectiveTeacherId)
-    .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline));
+    .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline))
+    .filter(s => {
+      if (!effectiveTeacherId) return true;
+      return fDiscipline
+        ? studentDisciplineTeacherId(s, fDiscipline) === effectiveTeacherId
+        : studentTeachesWith(s, effectiveTeacherId);
+    });
 
   const byCell: Record<string, Lesson[]> = {};
   for (const l of monthLessons) {
-    if (effectiveTeacherId && l.teacher_id !== effectiveTeacherId) continue;
     if (fDiscipline && l.discipline !== fDiscipline) continue;
     const key = `${l.student_id}|${l.date}`;
     (byCell[key] ??= []).push(l);
@@ -133,12 +147,13 @@ export default function AttendanceRegisterPage() {
   /** Creates a lesson for an empty register cell so it can be marked. */
   const createLessonForCell = async (studentId: number, dateStr: string): Promise<Lesson | null> => {
     const student = allStudents.find(s => s.id === studentId);
-    const teacherId = student?.teacher_id ?? (effectiveTeacherId ?? null);
+    const discipline = fDiscipline || (student?.instruments?.[0] ?? null);
+    const teacherId = (student && discipline ? studentDisciplineTeacherId(student, discipline) : null)
+      ?? student?.teacher_id ?? effectiveTeacherId ?? null;
     if (!teacherId) {
       toast('Elevul nu are un profesor atribuit — atribuie-l mai întâi din Elevi', 'error');
       return null;
     }
-    const discipline = fDiscipline || (student?.instruments?.[0] ?? null);
     const res = await fetch('/api/lessons', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -175,13 +190,32 @@ export default function AttendanceRegisterPage() {
     }
   };
 
+  /** The core mutation behind every mark — reused directly by redo. */
+  const applyMarkMutation = async (lessonId: number, mark: Exclude<Mark, 'replacement'>, notes: string | null) => {
+    if (mark === 'cancelled' || mark === 'recovered') {
+      await fetch(`/api/lessons/${lessonId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: mark }),
+      });
+    } else if (mark === 'present') {
+      await Promise.all([
+        fetch(`/api/lessons/${lessonId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }) }),
+        fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lessonId, status: 'present', notes }) }),
+      ]);
+    } else {
+      await fetch('/api/attendance', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lessonId, status: mark, notes }),
+      });
+    }
+  };
+
   const setMark = async (lessonArg: Lesson | { studentId: number; date: string }, mark: Mark) => {
     // Empty cell → create the lesson first.
+    const wasNew = !('id' in lessonArg);
     let lesson: Lesson;
-    if ('id' in lessonArg) {
-      lesson = lessonArg;
+    if (!wasNew) {
+      lesson = lessonArg as Lesson;
     } else {
-      const created = await createLessonForCell(lessonArg.studentId, lessonArg.date);
+      const created = await createLessonForCell((lessonArg as { studentId: number; date: string }).studentId, (lessonArg as { studentId: number; date: string }).date);
       if (!created) return;
       lesson = created;
     }
@@ -192,24 +226,50 @@ export default function AttendanceRegisterPage() {
     }
 
     const cellKey = `${lesson.student_id}|${lesson.date}`;
+    const prevStatus = lesson.status;
+    const prevAttendanceStatus = lesson.attendance_status ?? null;
+    const prevAttendanceNotes = lesson.attendance_notes ?? null;
+    const idRef = { current: lesson.id };
+    const studentName = lesson.student_name ?? '';
+    const studentIdForRedo = lesson.student_id;
+    const dateForRedo = lesson.date;
+    const markLabel = MARK_OPTIONS.find(o => o.mark === mark)?.label ?? mark;
+
     setSavingCell(cellKey);
     try {
-      if (mark === 'cancelled' || mark === 'recovered') {
-        await fetch(`/api/lessons/${lesson.id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: mark }),
-        });
-      } else if (mark === 'present') {
-        await Promise.all([
-          fetch(`/api/lessons/${lesson.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }) }),
-          fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: 'present', notes: lesson.attendance_notes ?? null }) }),
-        ]);
-      } else {
-        await fetch('/api/attendance', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lesson.id, status: mark, notes: lesson.attendance_notes ?? null }),
-        });
-      }
+      await applyMarkMutation(idRef.current, mark, prevAttendanceNotes);
       mutateLessons();
       toast('Marcaj salvat', 'success');
+      pushAction({
+        label: `${markLabel} — ${studentName}`,
+        undo: async () => {
+          if (wasNew) {
+            await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
+          } else {
+            await fetch(`/api/lessons/${idRef.current}`, {
+              method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: prevStatus }),
+            });
+            if (prevAttendanceStatus) {
+              await fetch('/api/attendance', {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lesson_id: idRef.current, status: prevAttendanceStatus, notes: prevAttendanceNotes }),
+              });
+            } else {
+              await fetch(`/api/attendance?lesson_id=${idRef.current}`, { method: 'DELETE' });
+            }
+          }
+          mutateLessons();
+        },
+        redo: async () => {
+          if (wasNew) {
+            const created = await createLessonForCell(studentIdForRedo, dateForRedo);
+            if (!created) return;
+            idRef.current = created.id;
+          }
+          await applyMarkMutation(idRef.current, mark, prevAttendanceNotes);
+          mutateLessons();
+        },
+      });
     } catch {
       toast('Eroare la salvare', 'error');
     } finally {
@@ -244,10 +304,45 @@ export default function AttendanceRegisterPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const snapshot = deleteTarget;
+    const idRef = { current: snapshot.id };
     setDeleting(true);
     try {
-      const res = await fetch(`/api/lessons/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { toast('Lecție ștearsă', 'success'); mutateLessons(); }
+      const res = await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast('Lecție ștearsă', 'success');
+        mutateLessons();
+        pushAction({
+          label: `Șterge lecție — ${snapshot.student_name ?? ''}`,
+          undo: async () => {
+            const res2 = await fetch('/api/lessons', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                student_id: snapshot.student_id, teacher_id: snapshot.teacher_id, date: snapshot.date,
+                time: snapshot.time, duration: snapshot.duration, discipline: snapshot.discipline,
+                cabinet_id: snapshot.cabinet_id ?? null, notes: snapshot.notes ?? null,
+              }),
+            });
+            if (!res2.ok) return;
+            const { lesson: recreated } = await res2.json();
+            idRef.current = recreated.id;
+            if (snapshot.status && snapshot.status !== 'scheduled') {
+              await fetch(`/api/lessons/${recreated.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: snapshot.status }) });
+            }
+            if (snapshot.replacement_teacher_id) {
+              await fetch(`/api/lessons/${recreated.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replacement_teacher_id: snapshot.replacement_teacher_id }) });
+            }
+            if (snapshot.attendance_status) {
+              await fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: recreated.id, status: snapshot.attendance_status, notes: snapshot.attendance_notes ?? null }) });
+            }
+            mutateLessons();
+          },
+          redo: async () => {
+            await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
+            mutateLessons();
+          },
+        });
+      }
       else { const d = await res.json().catch(() => ({})); toast(d.error ?? 'Eroare la ștergere', 'error'); }
     } finally {
       setDeleting(false);
@@ -292,7 +387,7 @@ export default function AttendanceRegisterPage() {
         </div>
       </div>
 
-      <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
+      <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-slate-200 dark:bg-slate-950">
         {/* ── Month nav + teacher filter ── */}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
@@ -303,9 +398,6 @@ export default function AttendanceRegisterPage() {
             <ChevronRight className="w-5 h-5 text-slate-500" />
           </button>
           <button onClick={() => setMonthRef(new Date())} className="px-4 py-2 text-sm font-bold rounded-xl bg-amber-600 text-white shadow-md hover:bg-amber-500">Luna curentă</button>
-          {role === 'admin' && (
-            <div className="w-48"><Select value={fTeacher} onChange={e => setFTeacher(e.target.value)} placeholder="Toți profesorii" options={teachers.map(t => ({ value: t.id, label: t.name }))} /></div>
-          )}
         </div>
 
         {/* ── Service / discipline picker ── */}
@@ -329,39 +421,40 @@ export default function AttendanceRegisterPage() {
           ))}
         </div>
 
-        {/* ── Excel-style register grid ── */}
-        <div className="flex-1 overflow-auto rounded-2xl border border-amber-200 dark:border-amber-900/40 bg-white dark:bg-slate-900 shadow-sm">
+        {/* ── Excel-style register grid — deliberately always white/black,
+              independent of theme, so it reads like a printed register. ── */}
+        <div className="flex-1 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
           <table className="border-collapse text-base" style={{ minWidth: 220 + days.length * 64 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 px-4 py-3 text-left align-bottom" style={{ minWidth: 220, width: 220 }}>
+                <th className="sticky left-0 top-0 z-20 bg-white border border-black px-4 py-3 text-left align-bottom" style={{ minWidth: 220, width: 220 }}>
                   {fDiscipline ? (
-                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-700 shadow-sm normal-case">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{fDiscipline}</span>
+                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white border-2 border-amber-400 shadow-sm normal-case">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
                       {role === 'admin' ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
-                          className="w-full text-sm font-semibold text-slate-700 dark:text-slate-200 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
+                          className="w-full text-sm font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
                         >
                           <option value="">— fără profesor —</option>
                           {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       ) : (
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
+                        <span className="text-sm font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
                       )}
+                      <span className="text-[9px] text-amber-500">↳ filtrează și elevii de mai jos</span>
                     </div>
                   ) : null}
-                  <span className="text-sm font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">Elev</span>
+                  <span className="text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
                 </th>
                 {days.map(d => {
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = fmtDate(d) === fmtDate(new Date());
                   return (
-                    <th key={d.getDate()} className={`sticky top-0 z-10 border border-amber-200 dark:border-amber-900/40 px-1 py-3 text-center font-semibold
-                      ${isToday ? 'bg-amber-200 dark:bg-amber-800/60' : isWeekend ? 'bg-amber-100/70 dark:bg-amber-900/30' : 'bg-amber-50 dark:bg-amber-950/40'}`} style={{ minWidth: 64, width: 64 }}>
-                      <div className="text-xs uppercase tracking-wide text-amber-700/70 dark:text-amber-400/70">{WEEKDAY_LETTERS[d.getDay()]}</div>
-                      <div className="text-base text-amber-900 dark:text-amber-200">{d.getDate()}</div>
+                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-1 py-3 text-center font-semibold bg-white" style={{ minWidth: 64, width: 64 }}>
+                      <div className={`text-xs uppercase tracking-wide ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
+                      <div className={`text-base ${isToday ? 'inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
                     </th>
                   );
                 })}
@@ -372,7 +465,7 @@ export default function AttendanceRegisterPage() {
                 <tr><td colSpan={days.length + 1} className="text-center py-10 text-slate-400">Niciun elev</td></tr>
               ) : students.map(s => (
                 <tr key={s.id}>
-                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-base font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                  <td className="sticky left-0 z-10 bg-white border border-black px-4 py-3 text-base font-medium text-slate-900 whitespace-nowrap">
                     {s.name}
                   </td>
                   {days.map(d => {
@@ -384,13 +477,13 @@ export default function AttendanceRegisterPage() {
                     const isMenu = activeCell === key;
                     const sym = primary ? symbolFor(primary) : null;
                     return (
-                      <td key={dateStr} className={`relative border border-slate-200 dark:border-slate-800 p-0 text-center ${isWeekend ? 'bg-slate-50/70 dark:bg-slate-800/30' : ''}`}>
+                      <td key={dateStr} className={`relative border border-black p-0 text-center ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}>
                         <button
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.currentTarget.getBoundingClientRect()); }}
                           data-cell-trigger
                           title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : (sym?.title ?? 'Click pentru a marca situația')}
                           className={`relative w-full h-14 flex items-center justify-center text-xl font-bold transition-colors
-                            ${sym ? sym.className : 'text-slate-200 dark:text-slate-700'} ${canEdit ? 'hover:brightness-95 hover:bg-amber-50/60 dark:hover:bg-amber-900/20 cursor-pointer' : 'cursor-default'}
+                            ${sym ? sym.className : 'text-slate-200'} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
                           {savingCell === key ? '…' : (sym?.char ?? (canEdit ? '·' : ''))}

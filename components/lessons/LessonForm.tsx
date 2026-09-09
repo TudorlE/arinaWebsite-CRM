@@ -25,6 +25,8 @@ interface Props {
   defaultDiscipline?: string;
   /** When true, the Profesor field is shown read-only (e.g. only admins may reassign the teacher here). */
   teacherLocked?: boolean;
+  /** When true, the Dată field is hidden — the caller already fixes the date via defaultDate (e.g. Program Privat, where the date comes from the selected day). */
+  hideDate?: boolean;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -33,7 +35,7 @@ const blank = {
   time: DEFAULT_TIME_SLOTS[0], duration: '45', notes: '', cabinet_id: '',
 };
 
-export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline, teacherLocked, showToast }: Props) {
+export default function LessonForm({ open, onClose, onSaved, lesson, defaultStudentId, defaultDate, defaultTime, defaultCabinetId, defaultTeacherId, defaultDiscipline, teacherLocked, hideDate, showToast }: Props) {
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -167,8 +169,8 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
             <Calendar className="w-4 h-4" />
             Programare
           </div>
-          <div className={lesson ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
-            {!lesson && <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />}
+          <div className={(lesson || hideDate) ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
+            {!lesson && !hideDate && <Input label="Dată" value={form.date} onChange={set('date')} shake={errors.date} type="date" />}
             <Select
               label="Oră"
               value={form.time}

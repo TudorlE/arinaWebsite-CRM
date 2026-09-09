@@ -44,6 +44,8 @@ export interface StudentSubscription {
   /** Each instrument can have its own teacher. */
   teacher_id?: number | null;
   teacher_name?: string | null;
+  /** Each instrument can have its own status — e.g. still active at Chitară but paused at Canto. */
+  status?: StudentStatus;
 }
 
 export interface Student {

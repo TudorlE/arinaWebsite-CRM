@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
-import { INSTRUMENTS, Student, StudentSubscription, STUDENT_STATUSES } from '@/lib/types';
+import { INSTRUMENTS, Student, StudentSubscription, StudentStatus, STUDENT_STATUSES } from '@/lib/types';
 import { PRICING, LESSON_COUNTS, subscriptionAmount, perLessonPrice, sumSubscriptions, type PlanType, type LessonCount } from '@/lib/pricing';
 import useSWR from 'swr';
 
@@ -25,16 +25,23 @@ const blank = {
   parent_name: '', parent_phone: '',
   instruments: [] as string[],
   subscriptions: [] as StudentSubscription[],
-  notes: '', status: 'active',
+  notes: '',
 };
 
-/** A brand-new default subscription for an instrument — 4 lecții, abonament nou. */
+/** A brand-new default subscription for an instrument — 4 lecții, abonament nou, activ. */
 function defaultSubscriptionFor(instrument: string): StudentSubscription | null {
   const svc = PRICING[instrument];
   if (!svc) return null;
   const lessons: LessonCount = 4;
   const plan: PlanType = 'new';
-  return { instrument, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? 0, teacher_id: null };
+  return { instrument, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? 0, teacher_id: null, status: 'active' };
+}
+
+/** students.status (legacy single field, used by lists/filters elsewhere) mirrors
+ * the "best" per-instrument status: active > paused > inactive. */
+function derivedStatus(subscriptions: StudentSubscription[]): StudentStatus {
+  const order: StudentStatus[] = ['active', 'paused', 'inactive'];
+  return order.find(st => subscriptions.some(s => (s.status ?? 'active') === st)) ?? 'active';
 }
 
 export default function StudentForm({ open, onClose, onSaved, student, showToast }: Props) {
@@ -55,7 +62,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
             const def = defaultSubscriptionFor(instr);
             if (!def) return null;
             return i === 0
-              ? { ...def, monthly_fee: Number(student.monthly_fee) || def.monthly_fee, teacher_id: student.teacher_id ?? null }
+              ? { ...def, monthly_fee: Number(student.monthly_fee) || def.monthly_fee, teacher_id: student.teacher_id ?? null, status: student.status ?? 'active' }
               : def;
           })
           .filter((s): s is StudentSubscription => s != null);
@@ -70,7 +77,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
         instruments,
         subscriptions,
         notes: student.notes ?? '',
-        status: student.status ?? 'active',
       });
     } else {
       setForm(blank);
@@ -99,12 +105,13 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     setErrors(prev => ({ ...prev, instruments: false }));
   };
 
-  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons' | 'teacher_id'>>) => {
+  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons' | 'teacher_id' | 'status'>>) => {
     setForm(prev => ({
       ...prev,
       subscriptions: prev.subscriptions.map(s => {
         if (s.instrument !== instrument) return s;
         if ('teacher_id' in patch) return { ...s, teacher_id: patch.teacher_id ?? null };
+        if ('status' in patch) return { ...s, status: patch.status ?? 'active' };
         const plan = patch.plan ?? s.plan;
         const lessons = patch.lessons ?? s.lessons;
         return { ...s, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? s.monthly_fee };
@@ -125,6 +132,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     // mirrors the first instrument's assigned teacher, since each instrument
     // can now have its own.
     const primaryTeacherId = form.subscriptions.find(s => s.teacher_id)?.teacher_id ?? null;
+    const overallStatus = derivedStatus(form.subscriptions);
 
     setLoading(true);
     try {
@@ -143,7 +151,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           instruments: form.instruments,
           subscriptions: form.subscriptions,
           monthly_fee: totalFee,
-          notes: form.notes, status: form.status,
+          notes: form.notes, status: overallStatus,
           teacher_id: primaryTeacherId,
         }),
       });
@@ -274,13 +282,21 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                         </div>
                       )}
                     </div>
-                    <Select
-                      label="Profesor"
-                      value={sub.teacher_id ?? ''}
-                      onChange={e => updateSubscription(instr, { teacher_id: e.target.value ? Number(e.target.value) : null })}
-                      placeholder="Atribuie profesor"
-                      options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Select
+                        label="Profesor"
+                        value={sub.teacher_id ?? ''}
+                        onChange={e => updateSubscription(instr, { teacher_id: e.target.value ? Number(e.target.value) : null })}
+                        placeholder="Atribuie profesor"
+                        options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
+                      />
+                      <Select
+                        label="Status"
+                        value={sub.status ?? 'active'}
+                        onChange={e => updateSubscription(instr, { status: e.target.value as StudentStatus })}
+                        options={STUDENT_STATUSES.map(st => ({ value: st.value, label: st.label }))}
+                      />
+                    </div>
                     <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/50 dark:border-brand-900/30">
                       <span>{isFlatP ? `Lecție de grup — ${svcP.flatMonthly} lei/lună` : <>Preț per lecție: <strong className="text-slate-700 dark:text-slate-200">{perLessonP} lei</strong></>}</span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">{sub.monthly_fee} lei/lună</span>
@@ -291,13 +307,6 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
             </div>
           )}
         </div>
-
-        <Select
-          label="Status"
-          value={form.status}
-          onChange={set('status')}
-          options={STUDENT_STATUSES.map(s => ({ value: s.value, label: s.label }))}
-        />
 
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Observații</label>

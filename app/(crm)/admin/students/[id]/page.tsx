@@ -193,12 +193,18 @@ export default function StudentProfilePage({ params }: PageProps) {
               <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
                 {(student.subscriptions?.length ?? 0) > 0 ? (
                   <div className="text-xs text-slate-400 space-y-0.5">
-                    <p className="text-slate-500 dark:text-slate-400 font-medium">Profesori:</p>
-                    {student.subscriptions!.map(s => (
-                      <p key={s.instrument} className="pl-2">
-                        {s.instrument}: <span className={s.teacher_name ? '' : 'italic'}>{s.teacher_name ?? 'Neatribuit'}</span>
-                      </p>
-                    ))}
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Servicii:</p>
+                    {student.subscriptions!.map(s => {
+                      const stStatus = s.status ?? 'active';
+                      const dotColor = stStatus === 'active' ? 'bg-emerald-500' : stStatus === 'paused' ? 'bg-amber-500' : 'bg-slate-400';
+                      const stLabel = STUDENT_STATUSES.find(st => st.value === stStatus)?.label ?? stStatus;
+                      return (
+                        <p key={s.instrument} className="pl-2 flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+                          <span>{s.instrument}: <span className={s.teacher_name ? '' : 'italic'}>{s.teacher_name ?? 'Neatribuit'}</span> · {stLabel}</span>
+                        </p>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400">Profesor: {student.teacher_name ?? 'Neatribuit'}</p>

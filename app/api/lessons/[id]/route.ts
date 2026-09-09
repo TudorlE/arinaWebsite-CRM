@@ -122,10 +122,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   };
 
   if (mode === 'occurrence' || current.recurring_schedule_id == null) {
-    const attended = await attendedIds([Number(id)]);
-    if (attended.has(Number(id))) {
-      return NextResponse.json({ error: 'Lecția are deja o prezență înregistrată și nu poate fi ștearsă.' }, { status: 409 });
-    }
+    // A single occurrence can always be deleted — its attendance record (if any)
+    // is cascade-deleted first. (The CRM's undo button can restore both.)
+    await supabase.from('attendance').delete().eq('lesson_id', id);
     const { error } = await supabase.from('lessons').delete().eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });

@@ -177,13 +177,18 @@ export default function StudentsPage() {
                   </Badge>
                 ))}
               </div>
-              {(student.subscriptions?.some(s => s.teacher_name)) ? (
+              {(student.subscriptions?.length ?? 0) > 0 ? (
                 <div className="flex flex-col gap-0.5">
-                  {student.subscriptions!.filter(s => s.teacher_name).map(s => (
-                    <span key={s.instrument} className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">
-                      {s.instrument}: {s.teacher_name}
-                    </span>
-                  ))}
+                  {student.subscriptions!.map(s => {
+                    const stStatus = s.status ?? 'active';
+                    const dotColor = stStatus === 'active' ? 'bg-emerald-500' : stStatus === 'paused' ? 'bg-amber-500' : 'bg-slate-400';
+                    return (
+                      <span key={s.instrument} className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotColor}`} title={STUDENT_STATUSES.find(st => st.value === stStatus)?.label} />
+                        {s.instrument}{s.teacher_name ? `: ${s.teacher_name}` : ''}
+                      </span>
+                    );
+                  })}
                 </div>
               ) : student.teacher_name && (
                 <span className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-full">{student.teacher_name}</span>
