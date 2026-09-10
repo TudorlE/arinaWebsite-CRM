@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGuard';
-import { getLessonsInMonth, aggregateByTeacher } from '@/lib/scheduleStats';
+import { computeTeacherWorkload } from '@/lib/scheduleStats';
 
 /** Live monthly per-teacher stats (Profesori Frecvență) — lesson counts + students worked with. */
 export async function GET(request: NextRequest) {
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const rows = await getLessonsInMonth(month, { teacherId, discipline: discipline ?? undefined });
-    return NextResponse.json({ stats: aggregateByTeacher(rows) });
+    const stats = await computeTeacherWorkload(month, { teacherId, discipline: discipline ?? undefined });
+    return NextResponse.json({ stats });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Internal server error' }, { status: 500 });
   }

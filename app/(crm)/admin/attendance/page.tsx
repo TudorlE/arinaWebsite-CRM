@@ -30,13 +30,16 @@ function daysInMonth(ref: Date): Date[] {
 
 type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered' | 'replacement';
 
+// 'cancelled' is deliberately not offered as a mark — a lesson's outcome is
+// always either an attendance (present/motivated/unmotivated), a recovery or
+// a replacement. symbolFor() below still renders old 'cancelled' rows for
+// historical data, it just can no longer be created going forward.
 const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string }[] = [
   { mark: 'present',           char: '✓', label: 'Prezent / Finalizată',   className: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
   { mark: 'excused_absence',   char: 'M', label: 'Absență motivată',       className: 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200' },
   { mark: 'unexcused_absence', char: 'N', label: 'Absență nemotivată',     className: 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200' },
   { mark: 'recovered',         char: 'R', label: 'Recuperare',             className: 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200' },
   { mark: 'replacement',       char: 'I', label: 'Înlocuire (alt profesor)', className: 'text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200' },
-  { mark: 'cancelled',         char: 'X', label: 'Anulată',                className: 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200' },
 ];
 
 function symbolFor(l: Lesson): { char: string; className: string; title: string } {
@@ -64,7 +67,7 @@ export default function AttendanceRegisterPage() {
   const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
-  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   const [savingCell, setSavingCell] = useState<string | null>(null);
   // When set, the popover shows a teacher picker for "who did the replacement".
   // `lessonId: 0` means "create the lesson first, then set the replacement".
@@ -377,15 +380,23 @@ export default function AttendanceRegisterPage() {
       return;
     }
     const popoverWidth = 256;
+    const desiredHeight = 340; // rough upper bound — the popover scrolls internally if it still doesn't fit
     const left = Math.min(Math.max(8, rect.left), window.innerWidth - popoverWidth - 8);
-    setPopoverPos({ top: rect.bottom + 4, left });
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    // Prefer opening below the clicked cell; flip above it when there isn't
+    // enough room below (e.g. the last row of the register) but there is above.
+    const openAbove = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(120, Math.min(desiredHeight, openAbove ? spaceAbove : spaceBelow));
+    const top = openAbove ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4;
+    setPopoverPos({ top, left, maxHeight });
     setActiveCell(key);
   };
 
   const exportUrl = `/api/attendance/export?date_from=${from}&date_to=${to}${effectiveTeacherId ? `&teacher_id=${effectiveTeacherId}` : ''}`;
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* ── Banner — warm/amber palette to stand apart from Program Privat/General ── */}
       <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
@@ -401,7 +412,7 @@ export default function AttendanceRegisterPage() {
         </div>
       </div>
 
-      <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4 bg-slate-200 dark:bg-slate-950">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 gap-4 bg-slate-200 dark:bg-slate-950">
         {/* ── Month nav + teacher filter ── */}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
@@ -437,7 +448,7 @@ export default function AttendanceRegisterPage() {
 
         {/* ── Excel-style register grid — deliberately always white/black,
               independent of theme, so it reads like a printed register. ── */}
-        <div className="flex-1 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
+        <div className="flex-1 min-h-0 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
           <table className="border-collapse text-sm" style={{ minWidth: 150 + days.length * 34 }}>
             <thead>
               <tr>
@@ -522,7 +533,7 @@ export default function AttendanceRegisterPage() {
                           <div
                             ref={popoverRef}
                             onClick={e => e.stopPropagation()}
-                            style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left }}
+                            style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left, maxHeight: popoverPos.maxHeight, overflowY: 'auto' }}
                             className="z-50 w-64 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 text-left animate-fade-in"
                           >
                             {replacingFor ? (
@@ -578,7 +589,7 @@ export default function AttendanceRegisterPage() {
                                     <button onClick={() => { setDeleteTarget(l); setActiveCell(null); }} className="p-1 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="w-3 h-3" /></button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-6 gap-1 mb-1.5">
+                                <div className="grid grid-cols-5 gap-1 mb-1.5">
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
@@ -635,7 +646,6 @@ export default function AttendanceRegisterPage() {
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-sky-50 text-sky-700 font-bold flex items-center justify-center border border-sky-200">R</span>Recuperare</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-violet-50 text-violet-700 font-bold flex items-center justify-center border border-violet-200">I</span>Înlocuire</span>
-          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-red-50 text-red-700 font-bold flex items-center justify-center border border-red-200">X</span>Anulată</span>
           {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe orice căsuță pentru a marca situația</span>}
         </div>
       </main>

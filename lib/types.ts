@@ -178,6 +178,8 @@ export interface MonthlyStats {
   present: number;
   excused_absence: number;
   unexcused_absence: number;
+  /** Per-teacher only: lessons where this teacher was covered by a substitute. */
+  replaced?: number;
   students?: string[]; // for per-teacher stats: distinct students worked with that month
 }
 

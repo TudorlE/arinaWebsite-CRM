@@ -63,26 +63,30 @@ export default function TeachersAttendancePage() {
                 <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                   <p className="font-bold text-slate-900 dark:text-slate-100">{t.teacher_name}</p>
                 </div>
-                <div className="grid grid-cols-5 gap-2 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                   <div className="text-center">
                     <p className="text-xl font-extrabold text-slate-800 dark:text-slate-100">{t.total}</p>
-                    <p className="text-[10px] text-slate-400">Total</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xl font-extrabold text-brand-600 dark:text-brand-400">{t.scheduled}</p>
-                    <p className="text-[10px] text-slate-400">Programate</p>
+                    <p className="text-[10px] text-slate-400">Total așteptat</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{t.completed}</p>
                     <p className="text-[10px] text-slate-400">Finalizate</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-extrabold text-slate-500">{t.cancelled}</p>
-                    <p className="text-[10px] text-slate-400">Anulate</p>
-                  </div>
-                  <div className="text-center">
                     <p className="text-xl font-extrabold text-accent-600 dark:text-accent-400">{t.recovered}</p>
                     <p className="text-[10px] text-slate-400">Recuperate</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{t.excused_absence}</p>
+                    <p className="text-[10px] text-slate-400">Motivate</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-extrabold text-red-600 dark:text-red-400">{t.unexcused_absence}</p>
+                    <p className="text-[10px] text-slate-400">Nemotivate</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xl font-extrabold text-violet-600 dark:text-violet-400">{t.replaced ?? 0}</p>
+                    <p className="text-[10px] text-slate-400">Înlocuite</p>
                   </div>
                 </div>
                 <div className="px-5 py-4">

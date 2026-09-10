@@ -110,11 +110,10 @@ export default function SchedulePage() {
   const extraSlots = Array.from(new Set(dayLessons.map(l => (l.time ?? '').slice(0, 5))))
     .filter(t => t && !DEFAULT_SLOTS.includes(t));
   const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
-  const hasUnassigned = dayLessons.some(l => l.cabinet_id == null);
-  const cabinetColumns: { id: number | 'none'; name: string; color?: string }[] = [
-    ...cabinets,
-    ...(hasUnassigned ? [{ id: 'none' as const, name: 'Fără cabinet' }] : []),
-  ];
+  // Only the cabinets actually configured (via Gestionare cabinete) get a
+  // column — no synthetic "Fără cabinet" bucket, even if some lesson lacks
+  // a cabinet assignment.
+  const cabinetColumns: { id: number | 'none'; name: string; color?: string }[] = cabinets;
   const selectedDow = weekDates[selectedDayIdx].getDay(); // 0=Sun..6=Sat, matches DB day_of_week
   const assignmentFor = (cabinetId: number) => assignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === selectedDow);
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
