@@ -126,9 +126,19 @@ export default function AttendanceRegisterPage() {
     s.subscriptions?.find(sub => sub.instrument === discipline)?.teacher_id ?? s.teacher_id ?? null;
   const studentTeachesWith = (s: Student, teacherId: number): boolean =>
     s.teacher_id === teacherId || (s.subscriptions ?? []).some(sub => sub.teacher_id === teacherId);
+  // Paused/inactive students drop out of the register automatically — for a
+  // specific discipline, that instrument's own subscription status decides;
+  // for "Toate serviciile", the student's overall status (active if ANY
+  // instrument is still active) decides. Flipping status back to active
+  // brings them straight back, since this is re-derived on every render.
+  const studentActiveFor = (s: Student, discipline: string): boolean => {
+    if (discipline) return (s.subscriptions?.find(sub => sub.instrument === discipline)?.status ?? s.status ?? 'active') === 'active';
+    return (s.status ?? 'active') === 'active';
+  };
 
   const students = allStudents
     .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline))
+    .filter(s => studentActiveFor(s, fDiscipline))
     .filter(s => {
       if (!effectiveTeacherId) return true;
       return fDiscipline
@@ -428,17 +438,17 @@ export default function AttendanceRegisterPage() {
         {/* ── Excel-style register grid — deliberately always white/black,
               independent of theme, so it reads like a printed register. ── */}
         <div className="flex-1 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
-          <table className="border-collapse text-base" style={{ minWidth: 220 + days.length * 64 }}>
+          <table className="border-collapse text-sm" style={{ minWidth: 150 + days.length * 34 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 bg-white border border-black px-4 py-3 text-left align-bottom" style={{ minWidth: 220, width: 220 }}>
+                <th className="sticky left-0 top-0 z-20 bg-white border border-black px-2.5 py-2 text-left align-bottom" style={{ minWidth: 150, width: 150 }}>
                   {role === 'admin' && (
-                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white border-2 border-slate-300 shadow-sm normal-case">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filtru profesor</span>
+                    <div className="flex flex-col gap-0.5 mb-1.5 p-1.5 rounded-lg bg-white border-2 border-slate-300 shadow-sm normal-case">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Filtru profesor</span>
                       <select
                         value={fTeacher}
                         onChange={e => setFTeacher(e.target.value)}
-                        className="w-full text-sm font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md -ml-0.5"
+                        className="w-full text-[11px] font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md -ml-0.5"
                       >
                         <option value="">Toți profesorii</option>
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -446,32 +456,31 @@ export default function AttendanceRegisterPage() {
                     </div>
                   )}
                   {fDiscipline ? (
-                    <div className="flex flex-col gap-1 mb-2 p-2.5 rounded-xl bg-white border-2 border-amber-400 shadow-sm normal-case">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
+                    <div className="flex flex-col gap-0.5 mb-1.5 p-1.5 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
                       {role === 'admin' ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
-                          className="w-full text-sm font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
+                          className="w-full text-[11px] font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
                         >
                           <option value="">— fără profesor —</option>
                           {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       ) : (
-                        <span className="text-sm font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
+                        <span className="text-[11px] font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
                       )}
-                      <span className="text-[9px] text-amber-500">↳ filtrează și elevii de mai jos</span>
                     </div>
                   ) : null}
-                  <span className="text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900">Elev</span>
                 </th>
                 {days.map(d => {
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = fmtDate(d) === fmtDate(new Date());
                   return (
-                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-1 py-3 text-center font-semibold bg-white" style={{ minWidth: 64, width: 64 }}>
-                      <div className={`text-xs uppercase tracking-wide ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
-                      <div className={`text-base ${isToday ? 'inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
+                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-0.5 py-1.5 text-center font-semibold bg-white" style={{ minWidth: 34, width: 34 }}>
+                      <div className={`text-[8px] uppercase tracking-wide leading-none ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
+                      <div className={`text-xs leading-tight ${isToday ? 'inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
                     </th>
                   );
                 })}
@@ -482,7 +491,7 @@ export default function AttendanceRegisterPage() {
                 <tr><td colSpan={days.length + 1} className="text-center py-10 text-slate-400">Niciun elev</td></tr>
               ) : students.map(s => (
                 <tr key={s.id}>
-                  <td className="sticky left-0 z-10 bg-white border border-black px-4 py-3 text-base font-medium text-slate-900 whitespace-nowrap">
+                  <td className="sticky left-0 z-10 bg-white border border-black px-2.5 py-1.5 text-xs font-medium text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: 150 }}>
                     {s.name}
                   </td>
                   {days.map(d => {
@@ -499,13 +508,13 @@ export default function AttendanceRegisterPage() {
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.currentTarget.getBoundingClientRect()); }}
                           data-cell-trigger
                           title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : (sym?.title ?? 'Click pentru a marca situația')}
-                          className={`relative w-full h-14 flex items-center justify-center text-xl font-bold transition-colors
+                          className={`relative w-full h-8 flex items-center justify-center text-sm font-bold transition-colors
                             ${sym ? sym.className : 'text-slate-200'} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
                           {savingCell === key ? '…' : (sym?.char ?? (canEdit ? '·' : ''))}
                           {primary?.attendance_notes && (
-                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-500" />
                           )}
                         </button>
 
