@@ -17,9 +17,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const rows = await getAllLessons({ teacherId });
-    const stats = aggregateByTeacher(rows)[0] ?? {
+    // A lesson this teacher had covered by a substitute now attributes to the
+    // substitute's own entry in the map — find this teacher's row explicitly
+    // rather than assuming it's first after the alphabetical sort.
+    const stats = aggregateByTeacher(rows).find(s => s.teacher_id === teacherId) ?? {
       teacher_id: teacherId, total: 0, scheduled: 0, completed: 0, cancelled: 0, recovered: 0,
-      present: 0, excused_absence: 0, unexcused_absence: 0, students: [],
+      present: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0, students: [],
     };
 
     // Money brought = paid payments from students currently assigned to this teacher.

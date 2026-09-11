@@ -40,7 +40,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { student_id, amount, month, year, status, payment_date, due_date, notes } = await request.json();
+    const {
+      student_id, amount, month, year, status, payment_date, due_date, notes,
+      service, plan_type, lesson_count, price_per_lesson,
+    } = await request.json();
     if (!student_id || !amount || !month || !year || !status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -62,11 +65,15 @@ export async function POST(request: NextRequest) {
       ...baseInsert,
       due_date: due_date || buildDueDate(Number(month), Number(year)),
       paid_at:  isPaid ? new Date().toISOString() : null,
+      service:           service ?? null,
+      plan_type:         plan_type ?? null,
+      lesson_count:      lesson_count ?? null,
+      price_per_lesson:  price_per_lesson ?? null,
     };
 
     let { data, error } = await supabase.from('payments').insert(fullInsert).select().single();
 
-    if (error && error.message.includes('due_date')) {
+    if (error && /due_date|paid_at|service|plan_type|lesson_count|price_per_lesson/.test(error.message)) {
       // Schema not migrated yet — retry without new columns
       ({ data, error } = await supabase.from('payments').insert(baseInsert).select().single());
     }

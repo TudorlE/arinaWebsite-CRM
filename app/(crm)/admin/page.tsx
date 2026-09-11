@@ -77,8 +77,8 @@ function PaymentStatusCard({
 
   const rows = [
     { label: 'Plătit',   count: summary?.paidCount    ?? 0, bar: 'bg-emerald-500', amt: summary?.monthRevenue ?? 0 },
-    { label: 'Neplătit', count: summary?.unpaidCount  ?? 0, bar: 'bg-amber-400',   amt: null },
-    { label: 'Parțial',  count: summary?.partialCount ?? 0, bar: 'bg-accent-400',  amt: null },
+    { label: 'Neplătit', count: summary?.unpaidCount  ?? 0, bar: 'bg-red-400',     amt: null },
+    { label: 'Parțial',  count: summary?.partialCount ?? 0, bar: 'bg-orange-400',  amt: null },
   ];
 
   void payments;

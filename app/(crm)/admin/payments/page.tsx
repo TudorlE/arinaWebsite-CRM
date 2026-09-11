@@ -9,11 +9,12 @@ import PaymentForm from '@/components/payments/PaymentForm';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Payment, MONTHS } from '@/lib/types';
+import { Payment, MONTHS, Student } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 const now = new Date();
+const YEARS = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 3 + i);
 
 interface RevenueSummary {
   total: number;
@@ -30,6 +31,8 @@ export default function PaymentsPage() {
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter]   = useState(String(now.getMonth() + 1));
+  const [yearFilter, setYearFilter]     = useState(String(now.getFullYear()));
+  const [showInactive, setShowInactive] = useState(false);
   const [showForm, setShowForm]         = useState(false);
   const [editPayment, setEditPayment]   = useState<Payment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
@@ -38,23 +41,27 @@ export default function PaymentsPage() {
 
   const params = new URLSearchParams();
   if (monthFilter)  params.set('month',  monthFilter);
-  params.set('year', String(now.getFullYear()));
+  params.set('year', yearFilter);
   if (statusFilter) params.set('status', statusFilter);
 
   const { data, mutate } = useSWR(`/api/payments?${params}`, fetcher, { keepPreviousData: true });
   const allPayments: Payment[] = data?.payments ?? [];
 
+  // Student status lookup — paused/inactive students are hidden by default (req. 11).
+  const { data: studentsData } = useSWR('/api/students', fetcher);
+  const studentStatusById = new Map<number, string>((studentsData?.students ?? []).map((s: Student) => [s.id, s.status ?? 'active']));
+
   const revenueParams = new URLSearchParams();
   if (monthFilter) revenueParams.set('month', monthFilter);
-  revenueParams.set('year', String(now.getFullYear()));
+  revenueParams.set('year', yearFilter);
   const { data: revenueData, mutate: mutateRevenue } = useSWR<{ summary: RevenueSummary }>(
     `/api/payments/revenue?${revenueParams}`, fetcher, { refreshInterval: 60_000 },
   );
   const summary = revenueData?.summary;
 
-  const payments = allPayments.filter(p =>
-    !search || p.student_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const payments = allPayments
+    .filter(p => !search || p.student_name?.toLowerCase().includes(search.toLowerCase()))
+    .filter(p => showInactive || (studentStatusById.get(p.student_id) ?? 'active') === 'active');
 
   // Derived totals (from the filtered list)
   const paidAmt    = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
@@ -135,17 +142,17 @@ export default function PaymentsPage() {
             <div className="h-4 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex">
               <div className="h-full bg-emerald-500 transition-all duration-700 ease-out" title="Plătit"
                 style={{ width: `${pct(summary.paidCount)}%` }} />
-              <div className="h-full bg-accent-400 transition-all duration-700 ease-out" title="Parțial"
+              <div className="h-full bg-orange-400 transition-all duration-700 ease-out" title="Parțial"
                 style={{ width: `${pct(summary.partialCount)}%` }} />
-              <div className="h-full bg-amber-400 transition-all duration-700 ease-out" title="Neplătit"
+              <div className="h-full bg-red-400 transition-all duration-700 ease-out" title="Neplătit"
                 style={{ width: `${pct(summary.unpaidCount)}%` }} />
             </div>
             {/* Legend */}
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
               {[
                 { label: 'Plătit',   color: 'bg-emerald-500', count: summary.paidCount,    amt: paidAmt },
-                { label: 'Parțial',  color: 'bg-accent-400',  count: summary.partialCount, amt: partialAmt },
-                { label: 'Neplătit', color: 'bg-amber-400',   count: summary.unpaidCount,  amt: unpaidAmt },
+                { label: 'Parțial',  color: 'bg-orange-400',  count: summary.partialCount, amt: partialAmt },
+                { label: 'Neplătit', color: 'bg-red-400',     count: summary.unpaidCount,  amt: unpaidAmt },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-1.5 text-xs">
                   <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
@@ -180,18 +187,18 @@ export default function PaymentsPage() {
           {/* Neplătit */}
           <div className="relative overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
             <div className="flex items-start justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-red-600 dark:text-red-400" />
               </div>
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
                 {pct(summary?.unpaidCount ?? 0)}%
               </span>
             </div>
-            <p className="text-2xl font-extrabold text-amber-500 dark:text-amber-400">{unpaidAmt.toLocaleString()}</p>
+            <p className="text-2xl font-extrabold text-red-500 dark:text-red-400">{unpaidAmt.toLocaleString()}</p>
             <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">MDL neplătit</p>
             <p className="text-xs text-slate-400 mt-1">{summary?.unpaidCount ?? 0} în așteptare</p>
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-100 dark:bg-slate-800">
-              <div className="h-full bg-amber-400 transition-all duration-700" style={{ width: `${pct(summary?.unpaidCount ?? 0)}%` }} />
+              <div className="h-full bg-red-400 transition-all duration-700" style={{ width: `${pct(summary?.unpaidCount ?? 0)}%` }} />
             </div>
           </div>
           {/* Total */}
@@ -248,6 +255,12 @@ export default function PaymentsPage() {
               className="min-w-28 text-sm"
             />
             <Select
+              value={yearFilter}
+              onChange={e => setYearFilter(e.target.value)}
+              options={YEARS.map(y => ({ value: y, label: String(y) }))}
+              className="min-w-20 text-sm"
+            />
+            <Select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
               placeholder="Toate statusurile"
@@ -266,6 +279,10 @@ export default function PaymentsPage() {
                 <X className="w-3 h-3" /> Resetează
               </button>
             )}
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
+              Arată și inactivi/pauză
+            </label>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {payments.length > 0 && (
@@ -291,8 +308,8 @@ export default function PaymentsPage() {
             const isPartial = payment.status === 'partial';
             const dotColor =
               isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
-              isPartial ? 'bg-accent-100 dark:bg-accent-900/40 text-accent-700 dark:text-accent-300' :
-                          'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300';
+              isPartial ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+                          'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
             return (
               <div key={payment.id} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
@@ -304,7 +321,7 @@ export default function PaymentsPage() {
                     <Badge variant={paymentBadge(payment.status)} className="flex-shrink-0">{paymentLabel(payment.status)}</Badge>
                   </div>
                   <p className="text-xs text-slate-400 truncate mt-0.5">
-                    {(payment.instruments ?? []).join(', ')} · {MONTHS[payment.month - 1]}
+                    {payment.service ?? (payment.instruments ?? []).join(', ')} · {MONTHS[payment.month - 1]} {payment.year}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">

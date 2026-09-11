@@ -229,6 +229,11 @@ export interface Payment {
   payment_date?: string;
   paid_at?: string | null; // ISO timestamp
   notes?: string;
+  /** Which of the student's instruments/services this specific payment covers. */
+  service?: string | null;
+  plan_type?: 'old' | 'new' | null;
+  lesson_count?: 4 | 8 | 12 | null;
+  price_per_lesson?: number | null;
   created_at: string;
 }
 

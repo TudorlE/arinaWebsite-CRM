@@ -34,6 +34,7 @@ export default function StudentsPage() {
 
   const [search, setSearch]       = useState('');
   const [instrument, setInstrument] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [showForm, setShowForm]   = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
@@ -47,7 +48,8 @@ export default function StudentsPage() {
   if (instrument) params.set('instrument', instrument);
 
   const { data, mutate } = useSWR(`/api/students?${params}`, fetcher, { keepPreviousData: true });
-  const students: Student[] = data?.students ?? [];
+  const allStudents: Student[] = data?.students ?? [];
+  const students: Student[] = showInactive ? allStudents : allStudents.filter(s => (s.status ?? 'active') === 'active');
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -127,6 +129,10 @@ export default function StudentsPage() {
                 <X className="w-3 h-3" /> Resetează
               </button>
             )}
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
+              Arată și inactivi/pauză
+            </label>
           </div>
           <span className="ml-auto text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
             {students.length} elevi

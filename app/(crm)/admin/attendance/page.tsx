@@ -367,7 +367,7 @@ export default function AttendanceRegisterPage() {
     }
   };
 
-  const openCell = (dateStr: string, cellLessons: Lesson[], studentId: number, rect: DOMRect) => {
+  const openCell = (dateStr: string, cellLessons: Lesson[], studentId: number, x: number, y: number) => {
     if (!canEdit) {
       toast(role === null ? 'Se încarcă permisiunile… mai încearcă o dată în o clipă' : 'Nu ai permisiunea de a edita registrul', 'error');
       return;
@@ -379,16 +379,18 @@ export default function AttendanceRegisterPage() {
       setPopoverPos(null);
       return;
     }
+    // Positioned right next to the mouse cursor (click point), not the cell —
+    // clamped so it always stays fully on-screen.
     const popoverWidth = 256;
     const desiredHeight = 340; // rough upper bound — the popover scrolls internally if it still doesn't fit
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - popoverWidth - 8);
-    const spaceBelow = window.innerHeight - rect.bottom - 12;
-    const spaceAbove = rect.top - 12;
-    // Prefer opening below the clicked cell; flip above it when there isn't
-    // enough room below (e.g. the last row of the register) but there is above.
+    const left = Math.min(Math.max(8, x - popoverWidth / 2), window.innerWidth - popoverWidth - 8);
+    const spaceBelow = window.innerHeight - y - 16;
+    const spaceAbove = y - 12;
+    // Prefer opening below the cursor; flip above it when there isn't enough
+    // room below (e.g. clicking near the bottom of the screen) but there is above.
     const openAbove = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
     const maxHeight = Math.max(120, Math.min(desiredHeight, openAbove ? spaceAbove : spaceBelow));
-    const top = openAbove ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4;
+    const top = openAbove ? Math.max(8, y - maxHeight - 8) : y + 12;
     setPopoverPos({ top, left, maxHeight });
     setActiveCell(key);
   };
@@ -516,7 +518,7 @@ export default function AttendanceRegisterPage() {
                     return (
                       <td key={dateStr} className={`relative border border-black p-0 text-center ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}>
                         <button
-                          onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.currentTarget.getBoundingClientRect()); }}
+                          onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.clientX, e.clientY); }}
                           data-cell-trigger
                           title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : (sym?.title ?? 'Click pentru a marca situația')}
                           className={`relative w-full h-11 flex items-center justify-center text-lg font-bold transition-colors
@@ -577,7 +579,7 @@ export default function AttendanceRegisterPage() {
                                   ))}
                                 </div>
                               </div>
-                            ) : cellLessons.map(l => (
+                            ) : <>{cellLessons.map(l => (
                               <div key={l.id} className="mb-2.5 last:mb-0">
                                 <div className="flex items-center justify-between mb-1.5 px-0.5">
                                   <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
@@ -627,6 +629,24 @@ export default function AttendanceRegisterPage() {
                                 </div>
                               </div>
                             ))}
+                            <div className="pt-1.5 mt-1 border-t border-slate-100 dark:border-slate-700">
+                              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">
+                                + Altă lecție în aceeași zi:
+                              </p>
+                              <div className="grid grid-cols-5 gap-1">
+                                {MARK_OPTIONS.map(opt => (
+                                  <button
+                                    key={opt.mark}
+                                    onClick={() => setMark({ studentId: s.id, date: dateStr }, opt.mark)}
+                                    title={opt.label}
+                                    className={`h-7 rounded-md border text-xs font-bold flex items-center justify-center transition-colors ${opt.className}`}
+                                  >
+                                    {opt.char}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            </>}
                           </div>,
                           document.body,
                         )}

@@ -122,19 +122,32 @@ export function aggregateByStudent(rows: StatsLessonRow[]): MonthlyStats[] {
   return Array.from(map.values()).sort((a, b) => (a.student_name ?? '').localeCompare(b.student_name ?? ''));
 }
 
+/**
+ * When a lesson was covered by a substitute (`replacement_teacher_id` set),
+ * it's attributed to whoever actually taught it — the substitute — not the
+ * originally-assigned teacher. The original teacher's `replaced` counter
+ * still tracks how many of their lessons got covered by someone else.
+ */
 export function aggregateByTeacher(rows: StatsLessonRow[]): MonthlyStats[] {
   const map = new Map<number, MonthlyStats & { studentSet: Set<string> }>();
-  for (const r of rows) {
-    if (!map.has(r.teacher_id)) {
-      map.set(r.teacher_id, {
-        teacher_id: r.teacher_id, teacher_name: r.teacher_name ?? undefined,
-        ...blankCounts(),
+  const ensure = (teacherId: number, teacherName: string | null) => {
+    if (!map.has(teacherId)) {
+      map.set(teacherId, {
+        teacher_id: teacherId, teacher_name: teacherName ?? undefined,
+        ...blankCounts(), replaced: 0,
         studentSet: new Set<string>(),
       });
     }
-    const entry = map.get(r.teacher_id)!;
+    return map.get(teacherId)!;
+  };
+  for (const r of rows) {
+    const effectiveId = r.replacement_teacher_id ?? r.teacher_id;
+    const entry = ensure(effectiveId, effectiveId === r.teacher_id ? r.teacher_name : null);
     tallyLesson(entry, r);
     if (r.student_name) entry.studentSet.add(r.student_name);
+    if (r.replacement_teacher_id) {
+      ensure(r.teacher_id, r.teacher_name).replaced!++;
+    }
   }
   return Array.from(map.values())
     .map(({ studentSet, ...rest }) => ({ ...rest, students: Array.from(studentSet).sort() }))
@@ -180,16 +193,26 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     }
   }
 
+  // A substituted lesson's actual delivery (completed/recovered/absence) counts
+  // toward the substitute's own workload, not the originally-assigned teacher's
+  // — that teacher only keeps a `replaced` tally of lessons someone covered.
   const tallies = new Map<number, { completed: number; recovered: number; excused_absence: number; unexcused_absence: number; replaced: number }>();
+  const ensureTally = (teacherId: number) => {
+    if (!tallies.has(teacherId)) tallies.set(teacherId, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
+    return tallies.get(teacherId)!;
+  };
   for (const r of rows) {
-    if (!tallies.has(r.teacher_id)) tallies.set(r.teacher_id, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
-    const t = tallies.get(r.teacher_id)!;
+    const effectiveId = r.replacement_teacher_id ?? r.teacher_id;
+    const t = ensureTally(effectiveId);
     if (r.status === 'completed') t.completed++;
     else if (r.status === 'recovered') t.recovered++;
     if (r.attendance_status === 'excused_absence') t.excused_absence++;
     else if (r.attendance_status === 'unexcused_absence') t.unexcused_absence++;
-    if (r.replacement_teacher_id) t.replaced++;
-    if (r.student_name) addStudent(r.teacher_id, r.student_name);
+    if (r.student_name) addStudent(effectiveId, r.student_name);
+    if (r.replacement_teacher_id) {
+      ensureTally(r.teacher_id).replaced++;
+      if (r.student_name) addStudent(r.teacher_id, r.student_name);
+    }
   }
 
   const teacherIds = new Set<number>([...expected.keys(), ...tallies.keys()]);
