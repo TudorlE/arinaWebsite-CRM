@@ -1,4 +1,4 @@
-type BadgeVariant = 'green' | 'yellow' | 'red' | 'blue' | 'purple' | 'gray' | 'indigo';
+type BadgeVariant = 'green' | 'yellow' | 'orange' | 'red' | 'blue' | 'purple' | 'gray' | 'indigo';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -9,6 +9,7 @@ interface BadgeProps {
 const styles: Record<BadgeVariant, string> = {
   green:  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   yellow: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   red:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   blue:   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   purple: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
@@ -27,8 +28,8 @@ export default function Badge({ variant = 'gray', children, className = '' }: Ba
 /** Helper: returns the Badge variant for a payment status */
 export function paymentBadge(status: string): BadgeVariant {
   if (status === 'paid')    return 'green';
-  if (status === 'partial') return 'yellow';
-  return 'yellow'; // unpaid
+  if (status === 'partial') return 'orange';
+  return 'red'; // unpaid
 }
 
 /** Localized label for a payment status */

@@ -14,8 +14,8 @@ const PAYMENT_LABEL: Record<string, string> = { paid: 'Plătit', unpaid: 'Neplă
 const PAYMENT_CLASS: Record<string, string> = {
   paid: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   unpaid: 'bg-red-50 text-red-700 border-red-200',
-  partial: 'bg-amber-50 text-amber-700 border-amber-200',
-  overdue: 'bg-rose-50 text-rose-700 border-rose-200',
+  partial: 'bg-orange-50 text-orange-700 border-orange-200',
+  overdue: 'bg-red-50 text-red-700 border-red-200',
 };
 
 export default function StudentsAttendancePage() {
@@ -23,6 +23,7 @@ export default function StudentsAttendancePage() {
   const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const ref = new Date();
@@ -44,7 +45,13 @@ export default function StudentsAttendancePage() {
 
   const { data, isLoading } = useSWR(`/api/students/stats?${params.toString()}`, fetcher);
   const statsAll: MonthlyStats[] = data?.stats ?? [];
-  const stats = statsAll.filter(s => !search.trim() || (s.student_name ?? '').toLowerCase().includes(search.trim().toLowerCase()));
+  const stats = statsAll
+    .filter(s => !search.trim() || (s.student_name ?? '').toLowerCase().includes(search.trim().toLowerCase()))
+    .filter(s => {
+      if (showInactive) return true;
+      const student = s.student_id ? studentById.get(s.student_id) : undefined;
+      return !student || (student.status ?? 'active') === 'active';
+    });
   const teachers = teachersData?.teachers ?? [];
 
   // Per (student, instrument) lesson tallies this month — the same source
@@ -95,6 +102,10 @@ export default function StudentsAttendancePage() {
           </div>
           <div className="w-40"><Select value={fTeacher} onChange={e => setFTeacher(e.target.value)} placeholder="Profesor" options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))} /></div>
           <div className="w-40"><Select value={fDiscipline} onChange={e => setFDiscipline(e.target.value)} placeholder="Disciplină" options={INSTRUMENTS.map(i => ({ value: i, label: i }))} /></div>
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
+            Arată și inactivi/pauză
+          </label>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -121,6 +132,12 @@ export default function StudentsAttendancePage() {
                   const student = s.student_id ? studentById.get(s.student_id) : undefined;
                   const subs = student?.subscriptions ?? [];
                   const isOpen = expandedId === s.student_id;
+                  // "Total" = the subscription's lesson allotment (e.g. 8 lecții/lună), not a raw
+                  // lesson-row count — falls back to the live count for legacy students with no
+                  // subscriptions configured yet.
+                  const relevantSubs = subs.filter(sub => (!fDiscipline || sub.instrument === fDiscipline) && (sub.status ?? 'active') === 'active');
+                  const subscriptionTotal = relevantSubs.reduce((sum, sub) => sum + (Number(sub.lessons) || 0), 0);
+                  const displayTotal = subs.length > 0 ? subscriptionTotal : s.total;
                   return (
                     <Fragment key={s.student_id}>
                       <tr
@@ -146,7 +163,7 @@ export default function StudentsAttendancePage() {
                         </td>
                         <td className="px-3 py-2.5 text-left">
                           {subs.length === 0 ? (
-                            <span className="font-bold text-slate-800 dark:text-slate-100">{s.total}</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-100">{displayTotal}</span>
                           ) : (
                             <div className="flex flex-col gap-0.5">
                               {subs.map(sub => {
