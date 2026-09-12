@@ -40,7 +40,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { student_id, amount, month, year, status, payment_date, due_date, notes } = await request.json();
+    const {
+      student_id, amount, month, year, status, payment_date, due_date, notes,
+      service, plan_type, lesson_count, price_per_lesson,
+    } = await request.json();
     if (!student_id || !amount || !month || !year || !status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -56,23 +59,44 @@ export async function POST(request: NextRequest) {
       payment_date: isPaid ? (payment_date || today) : (payment_date || null),
       notes:        notes || null,
     };
-
-    // Try with new columns first; fall back silently if schema not migrated yet
+    const extended = {
+      service: service || null,
+      plan_type: plan_type || null,
+      lesson_count: lesson_count ? Number(lesson_count) : null,
+      price_per_lesson: price_per_lesson ? Number(price_per_lesson) : null,
+    };
     const fullInsert = {
       ...baseInsert,
+      ...extended,
       due_date: due_date || buildDueDate(Number(month), Number(year)),
       paid_at:  isPaid ? new Date().toISOString() : null,
     };
 
-    let { data, error } = await supabase.from('payments').insert(fullInsert).select().single();
+    // A student has at most one payment per (month, year, service) — registering
+    // another one for the same period updates it instead of creating a duplicate.
+    let existingQuery = supabase.from('payments').select('id')
+      .eq('student_id', baseInsert.student_id).eq('month', baseInsert.month).eq('year', baseInsert.year);
+    existingQuery = extended.service ? existingQuery.eq('service', extended.service) : existingQuery.is('service', null);
+    const { data: existing } = await existingQuery.maybeSingle();
 
-    if (error && error.message.includes('due_date')) {
-      // Schema not migrated yet — retry without new columns
-      ({ data, error } = await supabase.from('payments').insert(baseInsert).select().single());
+    let data, error;
+    if (existing) {
+      ({ data, error } = await supabase.from('payments').update(fullInsert).eq('id', existing.id).select().single());
+    } else {
+      ({ data, error } = await supabase.from('payments').insert(fullInsert).select().single());
+    }
+
+    // Schema not migrated yet for one of the newer columns — retry without them.
+    if (error && /due_date|paid_at|service|plan_type|lesson_count|price_per_lesson/.test(error.message)) {
+      if (existing) {
+        ({ data, error } = await supabase.from('payments').update(baseInsert).eq('id', existing.id).select().single());
+      } else {
+        ({ data, error } = await supabase.from('payments').insert(baseInsert).select().single());
+      }
     }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ payment: data }, { status: 201 });
+    return NextResponse.json({ payment: data }, { status: existing ? 200 : 201 });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

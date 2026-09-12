@@ -106,6 +106,46 @@ function tallyLesson(counts: ReturnType<typeof blankCounts>, r: StatsLessonRow) 
   else if (r.attendance_status === 'unexcused_absence') counts.unexcused_absence++;
 }
 
+export interface StudentDisciplineStats {
+  student_id: number;
+  discipline: string;
+  teacher_id: number;
+  teacher_name?: string;
+  total: number;
+  /** Counts as "done" the same way the register does: completed status OR a present attendance mark. */
+  done: number;
+  recovered: number;
+  excused_absence: number;
+  unexcused_absence: number;
+}
+
+/**
+ * Elevi Frecvență needs a per-instrument breakdown, not one lump total per
+ * student — a student with Canto + Piano shouldn't show "40 lecții", they
+ * should show 8 at Canto and however many at Piano, separately.
+ */
+export function aggregateByStudentAndDiscipline(rows: StatsLessonRow[]): StudentDisciplineStats[] {
+  const map = new Map<string, StudentDisciplineStats>();
+  for (const r of rows) {
+    const discipline = r.discipline ?? '—';
+    const key = `${r.student_id}|${discipline}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        student_id: r.student_id, discipline,
+        teacher_id: r.teacher_id, teacher_name: r.teacher_name ?? undefined,
+        total: 0, done: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0,
+      });
+    }
+    const entry = map.get(key)!;
+    entry.total++;
+    if (r.status === 'completed' || r.attendance_status === 'present') entry.done++;
+    if (r.status === 'recovered') entry.recovered++;
+    if (r.attendance_status === 'excused_absence') entry.excused_absence++;
+    else if (r.attendance_status === 'unexcused_absence') entry.unexcused_absence++;
+  }
+  return Array.from(map.values());
+}
+
 export function aggregateByStudent(rows: StatsLessonRow[]): MonthlyStats[] {
   const map = new Map<number, MonthlyStats>();
   for (const r of rows) {

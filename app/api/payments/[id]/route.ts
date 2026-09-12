@@ -24,7 +24,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    const allowed = ['student_id', 'amount', 'month', 'year', 'status', 'due_date', 'payment_date', 'paid_at', 'notes'];
+    const allowed = ['student_id', 'amount', 'month', 'year', 'status', 'due_date', 'payment_date', 'paid_at', 'notes', 'service', 'plan_type', 'lesson_count', 'price_per_lesson'];
     const update: Record<string, unknown> = Object.fromEntries(
       Object.entries(body).filter(([k]) => allowed.includes(k))
     );
@@ -41,10 +41,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
     let { data, error } = await supabase.from('payments').update(update).eq('id', id).select().single();
 
     // If new columns not yet in schema, strip them and retry
-    if (error && (error.message.includes('due_date') || error.message.includes('paid_at'))) {
+    if (error && /due_date|paid_at|service|plan_type|lesson_count|price_per_lesson/.test(error.message)) {
       const safe = { ...update };
       delete safe.due_date;
       delete safe.paid_at;
+      delete safe.service;
+      delete safe.plan_type;
+      delete safe.lesson_count;
+      delete safe.price_per_lesson;
       ({ data, error } = await supabase.from('payments').update(safe).eq('id', id).select().single());
     }
 

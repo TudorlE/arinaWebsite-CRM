@@ -4,7 +4,7 @@ import { Fragment, useState } from 'react';
 import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, ClipboardList, ChevronDown, Search } from 'lucide-react';
 import Select from '@/components/ui/Select';
-import { MonthlyStats, INSTRUMENTS, Student, Lesson, Payment, STUDENT_STATUSES } from '@/lib/types';
+import { MonthlyStats, INSTRUMENTS, Student, Payment, STUDENT_STATUSES } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -31,8 +31,6 @@ export default function StudentsAttendancePage() {
   const year = ref.getFullYear();
   const monthNum = ref.getMonth() + 1;
   const month = `${year}-${pad2(monthNum)}`;
-  const monthStart = `${month}-01`;
-  const monthEnd = `${month}-${pad2(new Date(year, monthNum, 0).getDate())}`;
   const monthLabel = ref.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
 
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
@@ -49,17 +47,17 @@ export default function StudentsAttendancePage() {
   const stats = statsAll.filter(s => !search.trim() || (s.student_name ?? '').toLowerCase().includes(search.trim().toLowerCase()));
   const teachers = teachersData?.teachers ?? [];
 
-  // Lazily loaded, only for the currently expanded student.
-  const { data: expLessonsData } = useSWR(expandedId ? `/api/lessons?student_id=${expandedId}` : null, fetcher);
+  // Per (student, instrument) lesson tallies this month — the same source
+  // feeds both the collapsed row's per-instrument totals and the expanded
+  // panel, so "8 lecții la Canto" always means the same thing everywhere.
+  type DisciplineRow = { student_id: number; discipline: string; total: number; done: number; recovered: number; excused_absence: number; unexcused_absence: number };
+  const byDiscipline: DisciplineRow[] = data?.byDiscipline ?? [];
+  const doneFor = (studentId?: number, instrument?: string) =>
+    byDiscipline.find(r => r.student_id === studentId && r.discipline === instrument)?.done ?? 0;
+
   const { data: expPaymentsData } = useSWR(expandedId ? `/api/payments?student_id=${expandedId}&month=${monthNum}&year=${year}` : null, fetcher);
-  const expandedLessons: Lesson[] = expLessonsData?.lessons ?? [];
   const expandedPayment: Payment | undefined = (expPaymentsData?.payments ?? [])[0];
   const expandedStudent = expandedId ? studentById.get(expandedId) : undefined;
-
-  const doneThisMonth = (instrument: string) => expandedLessons.filter(l =>
-    l.discipline === instrument && l.date >= monthStart && l.date <= monthEnd
-    && (l.status === 'completed' || l.attendance_status === 'present'),
-  ).length;
 
   const toggleRow = (id?: number) => {
     if (!id) return;
@@ -107,7 +105,7 @@ export default function StudentsAttendancePage() {
                   <th className="px-4 py-3 w-8"></th>
                   <th className="px-4 py-3">Elev</th>
                   <th className="px-4 py-3">Profesor / Instrument</th>
-                  <th className="px-3 py-3 text-center">Total</th>
+                  <th className="px-3 py-3 text-left">Total / instrument</th>
                   <th className="px-3 py-3 text-center">Finalizate</th>
                   <th className="px-3 py-3 text-center">Recuperate</th>
                   <th className="px-3 py-3 text-center">Abs. mot.</th>
@@ -146,7 +144,26 @@ export default function StudentsAttendancePage() {
                             <span className="whitespace-nowrap">{subs[0]?.teacher_name ?? s.teacher_name ?? '—'}</span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-center font-bold text-slate-800 dark:text-slate-100">{s.total}</td>
+                        <td className="px-3 py-2.5 text-left">
+                          {subs.length === 0 ? (
+                            <span className="font-bold text-slate-800 dark:text-slate-100">{s.total}</span>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              {subs.map(sub => {
+                                const done = doneFor(s.student_id, sub.instrument);
+                                const remaining = Math.max(0, sub.lessons - done);
+                                return (
+                                  <span key={sub.instrument} className="text-xs whitespace-nowrap">
+                                    <span className="font-bold text-slate-800 dark:text-slate-100">{sub.instrument}: {sub.lessons} lecții</span>{' '}
+                                    <span className={`font-semibold ${remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
+                                      ({remaining === 0 ? 'complet' : `${remaining} rămase`})
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-center text-emerald-600 dark:text-emerald-400">{s.completed}</td>
                         <td className="px-3 py-2.5 text-center text-accent-600 dark:text-accent-400">{s.recovered}</td>
                         <td className="px-3 py-2.5 text-center text-amber-600 dark:text-amber-400">{s.excused_absence}</td>
@@ -178,7 +195,7 @@ export default function StudentsAttendancePage() {
                                   ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                       {subs.map(sub => {
-                                        const done = doneThisMonth(sub.instrument);
+                                        const done = doneFor(student.id, sub.instrument);
                                         const remaining = Math.max(0, sub.lessons - done);
                                         const stStatus = sub.status ?? 'active';
                                         const stLabel = STUDENT_STATUSES.find(st => st.value === stStatus)?.label ?? stStatus;

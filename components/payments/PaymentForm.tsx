@@ -52,6 +52,11 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       setForm({
         ...blank,
         student_id: String(payment.student_id),
+        // Preserve the original service/plan/lesson-count instead of resetting
+        // to defaults — otherwise saving an edit silently overwrites them.
+        service: payment.service ?? blank.service,
+        plan: (payment.plan_type as PlanType) ?? blank.plan,
+        lessons: (payment.lesson_count as LessonCount) ?? blank.lessons,
         amount: String(payment.amount),
         month: String(payment.month),
         status: payment.status,
