@@ -32,7 +32,7 @@ type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 
 
 // 'cancelled' is deliberately not offered as a mark — a lesson's outcome is
 // always either an attendance (present/motivated/unmotivated), a recovery or
-// a replacement. symbolFor() below still renders old 'cancelled' rows for
+// a replacement. baseSymbolFor() below still renders old 'cancelled' rows for
 // historical data, it just can no longer be created going forward.
 const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string }[] = [
   { mark: 'present',           char: '✓', label: 'Prezent / Finalizată',   className: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
@@ -42,15 +42,36 @@ const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string
   { mark: 'replacement',       char: 'I', label: 'Înlocuire (alt profesor)', className: 'text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200' },
 ];
 
-function symbolFor(l: Lesson): { char: string; className: string; title: string } {
-  if (l.replacement_teacher_id) return { char: 'I', className: 'text-violet-700 bg-violet-50', title: `Înlocuire${l.replacement_teacher_name ? ` — ${l.replacement_teacher_name}` : ''}` };
+type Sym = { char: string; className: string; title: string };
+
+/** The attendance/outcome symbol for a lesson — independent of whether it was replaced. */
+function baseSymbolFor(l: Lesson): Sym | null {
   if (l.status === 'cancelled') return { char: 'X', className: 'text-red-700 bg-red-50', title: 'Anulată' };
   if (l.status === 'recovered') return { char: 'R', className: 'text-sky-700 bg-sky-50', title: 'Recuperare' };
   if (l.attendance_status === 'unexcused_absence') return { char: 'N', className: 'text-rose-700 bg-rose-50', title: 'Absență nemotivată' };
   if (l.attendance_status === 'excused_absence') return { char: 'M', className: 'text-amber-700 bg-amber-50', title: 'Absență motivată' };
   if (l.attendance_status === 'late') return { char: 'Î', className: 'text-blue-700 bg-blue-50', title: 'Întârziere' };
   if (l.status === 'completed' || l.attendance_status === 'present') return { char: '✓', className: 'text-emerald-700 bg-emerald-50', title: 'Prezent / Finalizată' };
-  return { char: '•', className: 'text-slate-300', title: `Programată · ${l.time?.slice(0, 5)} · ${l.discipline ?? 'fără disciplină'} — click pentru a marca` };
+  return null;
+}
+
+/** One lesson can show up to two symbols — its outcome AND, separately, that it was replaced. */
+function symbolsForLesson(l: Lesson): Sym[] {
+  const out: Sym[] = [];
+  const base = baseSymbolFor(l);
+  if (base) out.push(base);
+  if (l.replacement_teacher_id) {
+    out.push({ char: 'I', className: 'text-violet-700 bg-violet-50', title: `Înlocuire${l.replacement_teacher_name ? ` — ${l.replacement_teacher_name}` : ''}` });
+  }
+  if (out.length === 0) {
+    out.push({ char: '•', className: 'text-slate-300', title: `Programată · ${l.time?.slice(0, 5)} · ${l.discipline ?? 'fără disciplină'} — click pentru a marca` });
+  }
+  return out;
+}
+
+/** All symbols for every lesson in a day's cell, e.g. two lessons -> "M/N", one replaced+absent -> "M/I". */
+function symbolsForCell(lessons: Lesson[]): Sym[] {
+  return lessons.flatMap(symbolsForLesson);
 }
 
 export default function AttendanceRegisterPage() {
@@ -152,6 +173,13 @@ export default function AttendanceRegisterPage() {
   const byCell: Record<string, Lesson[]> = {};
   for (const l of monthLessons) {
     if (fDiscipline && l.discipline !== fDiscipline) continue;
+    // A teacher filter must only surface lessons that teacher actually
+    // teaches (or substituted into) — not every lesson of a student who
+    // also happens to study a different instrument with someone else.
+    if (effectiveTeacherId) {
+      const lessonTeacherId = l.replacement_teacher_id ?? l.teacher_id;
+      if (lessonTeacherId !== effectiveTeacherId) continue;
+    }
     const key = `${l.student_id}|${l.date}`;
     (byCell[key] ??= []).push(l);
   }
@@ -511,22 +539,28 @@ export default function AttendanceRegisterPage() {
                     const dateStr = fmtDate(d);
                     const key = `${s.id}|${dateStr}`;
                     const cellLessons = byCell[key] ?? [];
-                    const primary = cellLessons[0];
                     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                     const isMenu = activeCell === key;
-                    const sym = primary ? symbolFor(primary) : null;
+                    const syms = cellLessons.length > 0 ? symbolsForCell(cellLessons) : [];
+                    const isSingle = syms.length === 1;
+                    const displayChar = syms.map(sy => sy.char).join('/');
+                    const cellClassName = isSingle ? syms[0].className : (syms.length > 1 ? 'text-slate-700 bg-slate-100' : 'text-slate-200');
+                    const combinedTitle = syms.length > 0
+                      ? syms.map(sy => sy.title).join(' · ') + (cellLessons.some(l => l.attendance_notes) ? ` — ${cellLessons.map(l => l.attendance_notes).filter(Boolean).join('; ')}` : '')
+                      : 'Click pentru a marca situația';
                     return (
                       <td key={dateStr} className={`relative border border-black p-0 text-center ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}>
                         <button
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.clientX, e.clientY); }}
                           data-cell-trigger
-                          title={primary?.attendance_notes ? `${sym?.title} — ${primary.attendance_notes}` : (sym?.title ?? 'Click pentru a marca situația')}
-                          className={`relative w-full h-11 flex items-center justify-center text-lg font-bold transition-colors
-                            ${sym ? sym.className : 'text-slate-200'} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
+                          title={combinedTitle}
+                          className={`relative w-full h-11 flex items-center justify-center font-bold transition-colors
+                            ${syms.length > 2 ? 'text-xs' : syms.length > 1 ? 'text-sm' : 'text-lg'}
+                            ${cellClassName} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
-                          {savingCell === key ? '…' : (sym?.char ?? (canEdit ? '·' : ''))}
-                          {primary?.attendance_notes && (
+                          {savingCell === key ? '…' : (displayChar || (canEdit ? '·' : ''))}
+                          {cellLessons.some(l => l.attendance_notes) && (
                             <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500" />
                           )}
                         </button>

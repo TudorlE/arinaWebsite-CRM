@@ -165,8 +165,9 @@ export function aggregateByStudent(rows: StatsLessonRow[]): MonthlyStats[] {
 /**
  * When a lesson was covered by a substitute (`replacement_teacher_id` set),
  * it's attributed to whoever actually taught it — the substitute — not the
- * originally-assigned teacher. The original teacher's `replaced` counter
- * still tracks how many of their lessons got covered by someone else.
+ * originally-assigned teacher. The substitute's `replaced` counter tracks
+ * how many lessons they covered for someone else (+1 to whoever DID the
+ * replacement, not the teacher who was replaced).
  */
 export function aggregateByTeacher(rows: StatsLessonRow[]): MonthlyStats[] {
   const map = new Map<number, MonthlyStats & { studentSet: Set<string> }>();
@@ -186,7 +187,7 @@ export function aggregateByTeacher(rows: StatsLessonRow[]): MonthlyStats[] {
     tallyLesson(entry, r);
     if (r.student_name) entry.studentSet.add(r.student_name);
     if (r.replacement_teacher_id) {
-      ensure(r.teacher_id, r.teacher_name).replaced!++;
+      entry.replaced!++;
     }
   }
   return Array.from(map.values())
@@ -235,7 +236,8 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
 
   // A substituted lesson's actual delivery (completed/recovered/absence) counts
   // toward the substitute's own workload, not the originally-assigned teacher's
-  // — that teacher only keeps a `replaced` tally of lessons someone covered.
+  // — and the substitute's `replaced` tally credits THEM for covering it
+  // (+1 to whoever did the replacement, not the teacher who was replaced).
   const tallies = new Map<number, { completed: number; recovered: number; excused_absence: number; unexcused_absence: number; replaced: number }>();
   const ensureTally = (teacherId: number) => {
     if (!tallies.has(teacherId)) tallies.set(teacherId, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
@@ -250,8 +252,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     else if (r.attendance_status === 'unexcused_absence') t.unexcused_absence++;
     if (r.student_name) addStudent(effectiveId, r.student_name);
     if (r.replacement_teacher_id) {
-      ensureTally(r.teacher_id).replaced++;
-      if (r.student_name) addStudent(r.teacher_id, r.student_name);
+      t.replaced++;
     }
   }
 
