@@ -6,7 +6,7 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: Params) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { id } = await params;
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { id } = await params;
@@ -37,7 +37,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { id } = await params;

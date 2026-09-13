@@ -5,7 +5,7 @@ import { getLessonsInMonth, aggregateByStudent, aggregateByStudentAndDiscipline 
 /** Live monthly per-student stats (Elevi General profile card + Elevi Frecvență). */
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);

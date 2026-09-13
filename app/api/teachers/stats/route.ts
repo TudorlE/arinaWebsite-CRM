@@ -5,7 +5,7 @@ import { computeTeacherWorkload } from '@/lib/scheduleStats';
 /** Live monthly per-teacher stats (Profesori Frecvență) — lesson counts + students worked with. */
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);

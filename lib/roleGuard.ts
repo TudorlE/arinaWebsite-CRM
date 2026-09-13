@@ -35,7 +35,7 @@ export function requireRole(ctx: AuthContext | null, roles: string[]): NextRespo
  * act on a `targetTeacherId` that isn't their own.
  */
 export function restrictToOwnTeacher(ctx: AuthContext, targetTeacherId?: number | null): NextResponse | null {
-  if (ctx.role === 'admin') return null;
+  if (ctx.role === 'admin' || ctx.role === 'administrator') return null;
   if (ctx.role === 'teacher') {
     if (ctx.teacherId == null) {
       return NextResponse.json({ error: 'Contul tău de profesor nu este asociat unei fișe de profesor.' }, { status: 403 });

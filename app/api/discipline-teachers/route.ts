@@ -21,7 +21,7 @@ export async function GET() {
 /** Admin-only: assign (or clear) the teacher for one service/discipline. */
 export async function PUT(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator']);
   if (forbidden) return forbidden;
 
   try {

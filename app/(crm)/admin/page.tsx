@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import {
   Banknote, Flame, ChevronLeft,
 } from 'lucide-react';
 import { DashboardStats, MONTHS, Payment } from '@/lib/types';
+import AccessDenied from '@/components/AccessDenied';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -243,6 +244,10 @@ export default function DashboardPage() {
   const [selMonth, setSelMonth] = useState(today.getMonth() + 1); // 1-12
   const [selYear, setSelYear]   = useState(today.getFullYear());
   const now = new Date(selYear, selMonth - 1, 1);
+  const [role, setRole] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => setRole(null));
+  }, []);
 
   const goMonth = (delta: number) => {
     const d = new Date(selYear, selMonth - 1 + delta, 1);
@@ -277,6 +282,8 @@ export default function DashboardPage() {
       .reduce((sum: number, p: { amount: number }) => sum + Number(p.amount), 0);
     return { name: MONTHS[m - 1].slice(0, 3), income };
   });
+
+  if (role === 'administrator') return <AccessDenied title="Dashboard" />;
 
   return (
     <div className="flex flex-col flex-1 min-w-0 max-w-full">

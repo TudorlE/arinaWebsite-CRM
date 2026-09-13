@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Key, UserCircle, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import AccessDenied from '@/components/AccessDenied';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   admin:    { label: 'Admin',    color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
@@ -51,6 +52,8 @@ export default function SettingsPage() {
       setLoading(false);
     }
   };
+
+  if (me?.role === 'administrator') return <AccessDenied title="Setări" />;
 
   return (
     <div className="flex flex-col flex-1">

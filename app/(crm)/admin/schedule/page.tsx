@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
+import AccessDenied from '@/components/AccessDenied';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#14b8a6', '#3b82f6', '#f59e0b'];
@@ -272,6 +273,8 @@ export default function SchedulePage() {
   const scheduled = lessons.filter(l => l.status === 'scheduled').length;
   const completed = lessons.filter(l => l.status === 'completed').length;
   const cancelled = lessons.filter(l => l.status === 'cancelled').length;
+
+  if (role === 'administrator') return <AccessDenied title="Program Privat" />;
 
   return (
     <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>

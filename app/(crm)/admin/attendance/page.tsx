@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useSWR from 'swr';
-import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, Download, MessageSquare, Check } from 'lucide-react';
+import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, MessageSquare, Check } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
@@ -80,7 +80,8 @@ export default function AttendanceRegisterPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); }).catch(() => {});
   }, []);
-  const canEdit = role === 'admin' || role === 'teacher';
+  const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
+  const isFullAdmin = role === 'admin' || role === 'administrator';
 
   const { toasts, toast, remove } = useToast();
   const { push: pushAction } = useActionHistory();
@@ -423,8 +424,6 @@ export default function AttendanceRegisterPage() {
     setActiveCell(key);
   };
 
-  const exportUrl = `/api/attendance/export?date_from=${from}&date_to=${to}${effectiveTeacherId ? `&teacher_id=${effectiveTeacherId}` : ''}`;
-
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* ── Banner — warm/amber palette to stand apart from Program Privat/General ── */}
@@ -436,9 +435,6 @@ export default function AttendanceRegisterPage() {
             <h1 className="text-2xl font-extrabold text-white tracking-tight">Registru Frecvență</h1>
             <p className="text-amber-100 text-sm font-medium mt-0.5">{students.length} elevi{role === 'teacher' ? ' · ai tăi' : ''}</p>
           </div>
-          <a href={exportUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="secondary"><Download className="w-4 h-4" /> Export CSV</Button>
-          </a>
         </div>
       </div>
 
@@ -479,11 +475,11 @@ export default function AttendanceRegisterPage() {
         {/* ── Excel-style register grid — deliberately always white/black,
               independent of theme, so it reads like a printed register. ── */}
         <div className="flex-1 min-h-0 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
-          <table className="border-collapse text-base" style={{ minWidth: 190 + days.length * 46 }}>
+          <table className="border-collapse text-base w-full" style={{ minWidth: 190 + days.length * 46 }}>
             <thead>
               <tr>
                 <th className="sticky left-0 top-0 z-20 bg-white border border-black px-3 py-2.5 text-left align-bottom" style={{ minWidth: 190, width: 190 }}>
-                  {role === 'admin' && (
+                  {isFullAdmin && (
                     <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-slate-300 shadow-sm normal-case">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Filtru profesor</span>
                       <select
@@ -499,7 +495,7 @@ export default function AttendanceRegisterPage() {
                   {fDiscipline ? (
                     <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
-                      {role === 'admin' ? (
+                      {isFullAdmin ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
@@ -663,23 +659,6 @@ export default function AttendanceRegisterPage() {
                                 </div>
                               </div>
                             ))}
-                            <div className="pt-1.5 mt-1 border-t border-slate-100 dark:border-slate-700">
-                              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">
-                                + Altă lecție în aceeași zi:
-                              </p>
-                              <div className="grid grid-cols-5 gap-1">
-                                {MARK_OPTIONS.map(opt => (
-                                  <button
-                                    key={opt.mark}
-                                    onClick={() => setMark({ studentId: s.id, date: dateStr }, opt.mark)}
-                                    title={opt.label}
-                                    className={`h-7 rounded-md border text-xs font-bold flex items-center justify-center transition-colors ${opt.className}`}
-                                  >
-                                    {opt.char}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
                             </>}
                           </div>,
                           document.body,
@@ -709,7 +688,7 @@ export default function AttendanceRegisterPage() {
         onClose={() => setEditLesson(null)}
         onSaved={() => mutateLessons()}
         lesson={editLesson}
-        teacherLocked={role !== 'admin'}
+        teacherLocked={!isFullAdmin}
         showToast={toast}
       />
 

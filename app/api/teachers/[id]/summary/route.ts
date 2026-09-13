@@ -6,7 +6,7 @@ import { getAllLessons, aggregateByTeacher } from '@/lib/scheduleStats';
 /** Lifetime lesson breakdown + students worked with + total money brought — the "Detalii" popup. */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { id } = await params;

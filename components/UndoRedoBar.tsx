@@ -8,25 +8,33 @@ export default function UndoRedoBar() {
   const { undo, redo, canUndo, canRedo, undoLabel, redoLabel, busy } = useActionHistory();
 
   return (
-    <div className="fixed top-3 right-3 z-40 flex items-center gap-0.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-1">
+    <div className="fixed top-3 right-3 z-40 flex items-center gap-1 bg-white dark:bg-slate-900 backdrop-blur border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5">
       <button
         onClick={undo}
         disabled={!canUndo || busy}
-        title={undoLabel ? `Anulează: ${undoLabel}` : 'Nimic de anulat'}
+        title={undoLabel ? `Click pentru a merge înapoi: ${undoLabel}` : 'Nimic de anulat'}
         aria-label="Anulează ultima acțiune"
-        className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-colors
+          ${canUndo && !busy
+            ? 'text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/50'
+            : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'}`}
       >
-        <Undo2 className="w-4 h-4" />
+        <Undo2 className="w-5 h-5" />
+        <span className="hidden sm:inline">Înapoi</span>
       </button>
-      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+      <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
       <button
         onClick={redo}
         disabled={!canRedo || busy}
-        title={redoLabel ? `Refă: ${redoLabel}` : 'Nimic de refăcut'}
+        title={redoLabel ? `Click pentru a merge înainte: ${redoLabel}` : 'Nimic de refăcut'}
         aria-label="Refă ultima acțiune anulată"
-        className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-colors
+          ${canRedo && !busy
+            ? 'text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/50'
+            : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'}`}
       >
-        <Redo2 className="w-4 h-4" />
+        <span className="hidden sm:inline">Înainte</span>
+        <Redo2 className="w-5 h-5" />
       </button>
     </div>
   );

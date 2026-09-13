@@ -4,7 +4,7 @@ import { getAuthContext, requireRole } from '@/lib/roleGuard';
 
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   try {

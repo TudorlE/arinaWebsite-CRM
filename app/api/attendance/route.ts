@@ -59,7 +59,7 @@ function toRows(data: EmbeddedLesson[] | null) {
 
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 /** Upserts a single attendance record for one lesson occurrence (Feature 6 + 7 marking). */
 export async function PUT(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   try {
@@ -117,7 +117,7 @@ export async function PUT(request: NextRequest) {
 /** Clears a lesson's attendance mark entirely — used to undo a first-ever mark on a lesson. */
 export async function DELETE(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);

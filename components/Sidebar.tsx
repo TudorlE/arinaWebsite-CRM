@@ -12,23 +12,27 @@ import {
 
 type NavItem = {
   href: string; label: string; icon: typeof LogOut;
-  adminOnly?: boolean; studentAllowed?: boolean; teacherAllowed?: boolean;
+  adminOnly?: boolean; studentAllowed?: boolean; teacherAllowed?: boolean; administratorAllowed?: boolean;
+  disabled?: boolean;
 };
 
+// 'administrator' is a limited-access admin (e.g. Arina's assistant) — sees
+// only the operational sections below, never Dashboard/Program Privat/Plăți/
+// Roluri/Setări. Only 'admin' (the founder account) sees absolutely everything.
 const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, studentAllowed: true, teacherAllowed: true },
-  { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true },
-  { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true },
-  { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true },
+  { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
-  { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true },
-  { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true },
-  { href: '/admin/students',     label: 'Elevi General', icon: Users,                              teacherAllowed: true },
-  { href: '/admin/students-attendance', label: 'Elevi Frecvență', icon: ClipboardList,             teacherAllowed: true },
+  { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/students',     label: 'Elevi General', icon: Users,                              teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/students-attendance', label: 'Elevi Frecvență', icon: ClipboardList,             teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/roles',        label: 'Roluri',      icon: ShieldCheck,    adminOnly: true },
   { href: '/admin/settings',     label: 'Setări',      icon: Settings,                            teacherAllowed: true },
-  { href: '/admin/ghid',         label: 'Ghid',        icon: BookOpen,                            teacherAllowed: true },
+  { href: '/admin/ghid',         label: 'Ghid',        icon: BookOpen,                            teacherAllowed: true, disabled: true },
 ];
 
 export default function Sidebar() {
@@ -96,9 +100,10 @@ export default function Sidebar() {
         className={`fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-200 ease-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{
-          width: 280, minWidth: 280, height: '100vh', top: 0,
+          width: 'clamp(272px, 17vw, 336px)', minWidth: 272, height: '100vh', top: 0,
           display: 'flex', flexDirection: 'column',
           background: 'var(--ink)', overflowY: 'auto',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         <button
@@ -125,10 +130,12 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <nav style={{ flex: 1, padding: 'clamp(8px, 0.6vw, 12px) clamp(12px, 0.9vw, 18px)', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {nav.filter(n => {
+          if (n.disabled) return false;
           if (role === 'student') return n.studentAllowed === true;
           if (role === 'teacher') return n.teacherAllowed === true;
+          if (role === 'administrator') return n.administratorAllowed === true;
           if (n.adminOnly) return role === 'admin';
           return true;
         }).map(({ href, label, icon: Icon }) => {
@@ -137,14 +144,31 @@ export default function Sidebar() {
           const badgeCount = href === '/admin/users' ? pendingCount : newRegistrations;
           return (
             <Link key={href} href={href} style={{
-              display: 'flex', alignItems: 'center', gap: 13,
-              padding: '13px 15px', borderRadius: 14,
-              fontSize: 15, fontWeight: active ? 600 : 500, textDecoration: 'none',
-              color: active ? '#fff' : 'rgba(255,255,255,0.52)',
-              background: active ? 'rgba(255,255,255,0.09)' : 'transparent',
-              transition: 'all 0.18s',
-            }}>
-              <Icon style={{ width: 19, height: 19, flexShrink: 0, color: active ? 'var(--gold)' : 'rgba(255,255,255,0.32)' }} />
+              position: 'relative',
+              display: 'flex', alignItems: 'center', gap: 'clamp(11px, 0.8vw, 14px)',
+              padding: 'clamp(11px, 0.85vw, 16px) clamp(13px, 1vw, 17px)',
+              borderRadius: 14,
+              fontSize: 'clamp(14px, 0.85vw + 6px, 16px)', fontWeight: active ? 700 : 500, textDecoration: 'none',
+              color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+              background: active ? 'linear-gradient(90deg, rgba(224,138,60,0.16), rgba(255,255,255,0.06))' : 'transparent',
+              transition: 'background 0.18s, color 0.18s, transform 0.12s',
+            }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.055)'; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              {active && (
+                <span style={{
+                  position: 'absolute', left: 0, top: '18%', bottom: '18%', width: 3,
+                  borderRadius: 3, background: 'var(--gold)',
+                }} />
+              )}
+              <span style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                width: 'clamp(30px, 2vw, 34px)', height: 'clamp(30px, 2vw, 34px)', borderRadius: 10,
+                background: active ? 'rgba(224,138,60,0.16)' : 'transparent',
+              }}>
+                <Icon style={{ width: 'clamp(18px, 1.1vw, 21px)', height: 'clamp(18px, 1.1vw, 21px)', color: active ? 'var(--gold)' : 'rgba(255,255,255,0.34)' }} />
+              </span>
               {label}
               {showBadge ? (
                 <span style={{

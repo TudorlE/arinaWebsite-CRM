@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Plus, Search, Pencil, Trash2, Filter, CreditCard, Clock, CheckCircle2, Activity, Target, X } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import Badge, { paymentBadge, paymentLabel } from '@/components/ui/Badge';
 import PaymentForm from '@/components/payments/PaymentForm';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
+import AccessDenied from '@/components/AccessDenied';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Payment, MONTHS, Student } from '@/lib/types';
 
@@ -28,6 +29,10 @@ interface RevenueSummary {
 }
 
 export default function PaymentsPage() {
+  const [role, setRole] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
+  }, []);
   const [search, setSearch]             = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter]   = useState(String(now.getMonth() + 1));
@@ -99,6 +104,8 @@ export default function PaymentsPage() {
   };
 
 
+
+  if (role === 'administrator') return <AccessDenied title="Plăți" />;
 
   return (
     <div className="flex flex-col flex-1">

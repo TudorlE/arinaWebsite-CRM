@@ -5,10 +5,11 @@ import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ShieldCheck } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
-  admin:    { label: 'Admin',    color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
+  admin:         { label: 'Fondator (acces total)', color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
+  administrator: { label: 'Administrator (acces limitat)', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
   profesor: { label: 'Profesor', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   elev:     { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  teacher:  { label: 'Profesor', color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
+  teacher:  { label: 'Profesor', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   student:  { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 };
 
@@ -91,7 +92,12 @@ export default function RolesPage() {
         </div>
       </div>
 
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 p-6 overflow-y-auto space-y-4">
+        <div className="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-900/15 p-4 text-sm text-violet-800 dark:text-violet-300">
+          <strong>Administrator (acces limitat)</strong> — vede doar Program General, Audiții, Registru Frecvență,
+          Profesori General, Profesori Frecvență, Elevi General și Elevi Frecvență. Restul secțiunilor
+          (Dashboard, Program Privat, Plăți, Roluri, Setări) rămân vizibile doar pentru Fondator.
+        </div>
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
           {/* Table header */}
@@ -141,7 +147,8 @@ export default function RolesPage() {
                 className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 {!u.role && <option value="" disabled>Fără rol</option>}
-                {u.role === 'admin' && <option value="admin">Admin</option>}
+                {u.role === 'admin' && <option value="admin">Fondator</option>}
+                <option value="administrator">Administrator (acces limitat)</option>
                 <option value="teacher">Profesor</option>
                 <option value="student">Elev</option>
               </select>

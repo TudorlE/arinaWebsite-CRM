@@ -10,7 +10,7 @@ function csvEscape(v: unknown): string {
 /** Feature 7: CSV export (opens correctly in Excel with a UTF-8 BOM for diacritics). */
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);

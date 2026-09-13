@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { updateUserRole, getUserById } from '@/lib/db';
 
-// Only teacher / student can be assigned via UI. 'admin' is intentionally NOT assignable
-// from the API — must be set manually in the database.
-const ASSIGNABLE_ROLES = ['teacher', 'student'];
+// Only teacher / student / administrator can be assigned via UI. 'admin' (the founder
+// account) is intentionally NOT assignable from the API — must be set manually in the database.
+const ASSIGNABLE_ROLES = ['teacher', 'student', 'administrator'];
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await getAuthUser(request);

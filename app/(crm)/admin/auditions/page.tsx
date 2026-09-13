@@ -34,7 +34,7 @@ export default function AuditionsPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
   }, []);
-  const canEdit = role === 'admin' || role === 'teacher';
+  const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
 
   const reference = new Date();
   const [showForm, setShowForm]   = useState(false);
