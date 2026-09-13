@@ -10,6 +10,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import TeacherDetailsModal from '@/components/teachers/TeacherDetailsModal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Teacher, INSTRUMENTS } from '@/lib/types';
+import PageBanner from '@/components/ui/PageBanner';
 import { formatBirthDate } from '@/lib/dateUtils';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -104,19 +105,12 @@ export default function TeachersPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-accent-600 to-accent-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <Music2 className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Profesori General</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">{teachers.length} instructori înregistrați</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={Music2}
+        title="Profesori General"
+        subtitle={`${teachers.length} instructori înregistrați`}
+        accent="#AC2A88"
+      />
 
       <main className="flex-1 p-6 space-y-4 overflow-y-auto">
         {/* Toolbar */}

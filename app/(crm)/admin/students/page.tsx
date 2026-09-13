@@ -10,6 +10,7 @@ import StudentForm from '@/components/students/StudentForm';
 import StudentDetailsModal from '@/components/students/StudentDetailsModal';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import Select from '@/components/ui/Select';
+import PageBanner from '@/components/ui/PageBanner';
 import { Student, INSTRUMENTS, STUDENT_STATUSES } from '@/lib/types';
 import { formatBirthDate } from '@/lib/dateUtils';
 import Modal from '@/components/ui/Modal';
@@ -71,19 +72,12 @@ export default function StudentsPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <GraduationCap className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Elevi General</h1>
-            <p className="text-orange-100 text-sm font-medium mt-0.5">{students.length} elevi înscriși</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={GraduationCap}
+        title="Elevi General"
+        subtitle={`${students.length} elevi înscriși`}
+        accent="#F59E0B"
+      />
 
       <main className="flex-1 p-6 space-y-4 overflow-y-auto">
         {/* Toolbar */}

@@ -7,6 +7,7 @@ import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, MessageSquare
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
+import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
@@ -426,17 +427,12 @@ export default function AttendanceRegisterPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* ── Banner — warm/amber palette to stand apart from Program Privat/General ── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="relative flex items-center gap-4 flex-wrap">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm"><ClipboardList className="w-7 h-7 text-white" /></div>
-          <div className="flex-1 min-w-48">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Registru Frecvență</h1>
-            <p className="text-amber-100 text-sm font-medium mt-0.5">{students.length} elevi{role === 'teacher' ? ' · ai tăi' : ''}</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={ClipboardList}
+        title="Registru Frecvență"
+        subtitle={`${students.length} elevi${role === 'teacher' ? ' · ai tăi' : ''}`}
+        accent="#E08A3C"
+      />
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 gap-4 bg-slate-200 dark:bg-slate-950">
         {/* ── Month nav + teacher filter ── */}

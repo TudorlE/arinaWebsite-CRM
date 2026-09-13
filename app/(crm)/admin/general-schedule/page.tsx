@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { CalendarRange } from 'lucide-react';
 import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
+import PageBanner from '@/components/ui/PageBanner';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -73,18 +74,12 @@ export default function GeneralSchedulePage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Banner ────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-accent-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <CalendarRange className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program General</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">Vizualizează programul — doar citire</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={CalendarRange}
+        title="Program General"
+        subtitle="Vizualizează programul — doar citire"
+        accent="#5934DC"
+      />
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
         <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col">

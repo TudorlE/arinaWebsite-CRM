@@ -9,6 +9,7 @@ import PaymentForm from '@/components/payments/PaymentForm';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import AccessDenied from '@/components/AccessDenied';
+import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Payment, MONTHS, Student } from '@/lib/types';
 
@@ -109,25 +110,12 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-green-500 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-              <CreditCard className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">Plăți</h1>
-              <p className="text-emerald-100 text-sm font-medium mt-0.5">
-                {MONTHS[Number(monthFilter) - 1]} — situația plăților
-                {summary && <span className="ml-2 opacity-80">· {summary.paidPercentage}% colectat</span>}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={CreditCard}
+        title="Plăți"
+        subtitle={<>{MONTHS[Number(monthFilter) - 1]} — situația plăților{summary && <span className="ml-2 opacity-80">· {summary.paidPercentage}% colectat</span>}</>}
+        accent="#10B981"
+      />
 
       <main className="flex-1 p-6 space-y-6 overflow-y-auto">
 

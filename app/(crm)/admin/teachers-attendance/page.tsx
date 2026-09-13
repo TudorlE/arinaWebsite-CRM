@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, ClipboardList, Users } from 'lucide-react';
 import Select from '@/components/ui/Select';
+import PageBanner from '@/components/ui/PageBanner';
 import { MonthlyStats, INSTRUMENTS } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -28,16 +29,12 @@ export default function TeachersAttendancePage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-accent-600 to-accent-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm"><ClipboardList className="w-7 h-7 text-white" /></div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Profesori Frecvență</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">Activitatea fiecărui profesor, calculată live din Program</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={ClipboardList}
+        title="Profesori Frecvență"
+        subtitle="Activitatea fiecărui profesor, calculată live din Program"
+        accent="#AC2A88"
+      />
 
       <main className="flex-1 p-6 space-y-4 overflow-y-auto">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">

@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react';
 import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, ClipboardList, ChevronDown, Search } from 'lucide-react';
 import Select from '@/components/ui/Select';
+import PageBanner from '@/components/ui/PageBanner';
 import { MonthlyStats, INSTRUMENTS, Student, Payment, STUDENT_STATUSES } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -73,16 +74,12 @@ export default function StudentsAttendancePage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm"><ClipboardList className="w-7 h-7 text-white" /></div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Elevi Frecvență</h1>
-            <p className="text-orange-100 text-sm font-medium mt-0.5">Frecvența tuturor elevilor, calculată live din Program</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={ClipboardList}
+        title="Elevi Frecvență"
+        subtitle="Frecvența tuturor elevilor, calculată live din Program"
+        accent="#F59E0B"
+      />
 
       <main className="flex-1 p-6 space-y-4 overflow-y-auto">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">

@@ -8,7 +8,7 @@ export default function UndoRedoBar() {
   const { undo, redo, canUndo, canRedo, undoLabel, redoLabel, busy } = useActionHistory();
 
   return (
-    <div className="fixed top-3 right-3 z-40 flex items-center gap-1 bg-white dark:bg-slate-900 backdrop-blur border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5">
+    <div className="fixed top-3 z-40 flex items-center gap-1 bg-white dark:bg-slate-900 backdrop-blur border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5" style={{ right: 'clamp(16px, 26vw, 460px)' }}>
       <button
         onClick={undo}
         disabled={!canUndo || busy}

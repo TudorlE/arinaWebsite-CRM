@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { ShieldCheck } from 'lucide-react';
+import PageBanner from '@/components/ui/PageBanner';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   admin:         { label: 'Fondator (acces total)', color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
@@ -55,19 +56,7 @@ export default function RolesPage() {
   if (me && me.role !== 'admin') {
     return (
       <div className="flex flex-col flex-1">
-        <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
-          <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-          <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="relative flex items-center gap-4">
-            <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-              <ShieldCheck className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">Roluri</h1>
-              <p className="text-brand-200 text-sm font-medium mt-0.5">Gestionare conturi și permisiuni</p>
-            </div>
-          </div>
-        </div>
+        <PageBanner icon={ShieldCheck} title="Roluri" subtitle="Gestionare conturi și permisiuni" accent="#5934DC" />
         <main className="flex-1 p-6 flex items-center justify-center">
           <p className="text-slate-400 text-sm">Acces restricționat — doar administratorii pot gestiona rolurile.</p>
         </main>
@@ -77,20 +66,7 @@ export default function RolesPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <ShieldCheck className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Roluri</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">{users.length} conturi gestionate</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner icon={ShieldCheck} title="Roluri" subtitle={`${users.length} conturi gestionate`} accent="#5934DC" />
 
       <main className="flex-1 p-6 overflow-y-auto space-y-4">
         <div className="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-900/15 p-4 text-sm text-violet-800 dark:text-violet-300">

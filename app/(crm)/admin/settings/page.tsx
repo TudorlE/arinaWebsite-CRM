@@ -6,6 +6,7 @@ import Input from '@/components/ui/Input';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Key, UserCircle, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import AccessDenied from '@/components/AccessDenied';
+import PageBanner from '@/components/ui/PageBanner';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   admin:    { label: 'Admin',    color: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
@@ -58,19 +59,12 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col flex-1">
       {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-700 via-slate-600 to-brand-700 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <SlidersHorizontal className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Setări</h1>
-            <p className="text-slate-300 text-sm font-medium mt-0.5">Gestionează contul și preferințele</p>
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={SlidersHorizontal}
+        title="Setări"
+        subtitle="Gestionează contul și preferințele"
+        accent="#8B8FA3"
+      />
 
       <main className="flex-1 p-6 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full">
 

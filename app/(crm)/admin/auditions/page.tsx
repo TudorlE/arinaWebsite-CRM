@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Audition } from '@/lib/types';
+import PageBanner from '@/components/ui/PageBanner';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -128,24 +129,17 @@ export default function AuditionsPage() {
     <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>
 
       {/* ── Animated Banner — teal/cyan, distinct from Program Privat (violet) & Registru (amber) ── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-teal-600 to-sky-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <Mic2 className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Audiții — săptămâna aceasta</h1>
-            <p className="text-cyan-100 text-sm font-medium mt-0.5">Lecții de probă, independente de elevi și profesori</p>
-          </div>
-          <div className="ml-auto hidden sm:flex gap-3">
-            <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
-            <StatBadge label="Programate" value={scheduled} color="bg-cyan-300/30 text-white" />
-            <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={Mic2}
+        title="Audiții — săptămâna aceasta"
+        subtitle="Lecții de probă, independente de elevi și profesori"
+        accent="#14B8A6"
+        right={<>
+          <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
+          <StatBadge label="Programate" value={scheduled} color="bg-cyan-300/30 text-white" />
+          <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
+        </>}
+      />
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
 

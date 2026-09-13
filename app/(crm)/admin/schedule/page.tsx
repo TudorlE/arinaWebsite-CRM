@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
 import AccessDenied from '@/components/AccessDenied';
+import PageBanner from '@/components/ui/PageBanner';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#14b8a6', '#3b82f6', '#f59e0b'];
@@ -280,25 +281,18 @@ export default function SchedulePage() {
     <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>
 
       {/* ── Animated Banner ───────────────────────────────── */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-accent-600 px-8 py-6 shadow-lg">
-        <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
-        <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-            <CalendarDays className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Program Privat — pe zile</h1>
-            <p className="text-brand-200 text-sm font-medium mt-0.5">{isStudent ? 'Vizualizează lecțiile tale din această săptămână' : 'Gestionează lecțiile din această săptămână'}</p>
-          </div>
-          <div className="ml-auto hidden sm:flex gap-3">
-            <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
-            <StatBadge label="Programate" value={scheduled} color="bg-brand-300/30 text-white" />
-            <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
-            {cancelled > 0 && <StatBadge label="Anulate" value={cancelled} color="bg-red-300/30 text-white" />}
-          </div>
-        </div>
-      </div>
+      <PageBanner
+        icon={CalendarDays}
+        title="Program Privat — pe zile"
+        subtitle={isStudent ? 'Vizualizează lecțiile tale din această săptămână' : 'Gestionează lecțiile din această săptămână'}
+        accent="#5934DC"
+        right={<>
+          <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
+          <StatBadge label="Programate" value={scheduled} color="bg-brand-300/30 text-white" />
+          <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
+          {cancelled > 0 && <StatBadge label="Anulate" value={cancelled} color="bg-red-300/30 text-white" />}
+        </>}
+      />
 
       {/* ── Mobile stats ─────────────────────────────────── */}
       <div className="flex sm:hidden gap-3 px-4 pt-4">
