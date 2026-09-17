@@ -181,6 +181,8 @@ export interface MonthlyStats {
   /** Per-teacher only: lessons where this teacher was covered by a substitute. */
   replaced?: number;
   students?: string[]; // for per-teacher stats: distinct students worked with that month
+  /** Per-teacher only: which students had an excused absence with this teacher, and how many times. */
+  excused_students?: { name: string; count: number }[];
 }
 
 export const DAYS_OF_WEEK = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];

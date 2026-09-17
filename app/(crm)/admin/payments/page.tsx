@@ -93,6 +93,27 @@ export default function PaymentsPage() {
     }
   };
 
+  const [generating, setGenerating] = useState(false);
+  const handleGenerateMissing = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/payments/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: Number(monthFilter), year: Number(yearFilter) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`${data.created} plăți adăugate (${data.skipped} existau deja)`, 'success');
+        mutate(); mutateRevenue();
+      } else {
+        toast(data.error ?? 'Eroare la generare', 'error');
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleMarkPaid = async (payment: Payment) => {
     await fetch(`/api/payments/${payment.id}`, {
       method: 'PUT',
@@ -285,6 +306,9 @@ export default function PaymentsPage() {
                 {payments.length} plăți
               </span>
             )}
+            <Button variant="secondary" onClick={handleGenerateMissing} disabled={generating} title="Adaugă o plată Neplătit pentru fiecare elev/instrument activ care nu are încă o plată în luna selectată">
+              {generating ? 'Se generează…' : 'Generează plăți lipsă'}
+            </Button>
             <Button onClick={() => { setEditPayment(null); setShowForm(true); }}>
               <Plus className="w-4 h-4" /> Înregistrează plată
             </Button>

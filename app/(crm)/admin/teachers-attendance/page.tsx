@@ -14,6 +14,7 @@ function pad2(n: number) { return String(n).padStart(2, '0'); }
 export default function TeachersAttendancePage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [fDiscipline, setFDiscipline] = useState('');
+  const [expandedExcused, setExpandedExcused] = useState<number | null>(null);
 
   const ref = new Date();
   ref.setDate(1);
@@ -73,10 +74,15 @@ export default function TeachersAttendancePage() {
                     <p className="text-xl font-extrabold text-accent-600 dark:text-accent-400">{t.recovered}</p>
                     <p className="text-[10px] text-slate-400">Recuperate</p>
                   </div>
-                  <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedExcused(id => id === t.teacher_id ? null : (t.teacher_id ?? null))}
+                    disabled={t.excused_absence === 0}
+                    className="text-center rounded-lg transition-colors disabled:cursor-default enabled:hover:bg-amber-50 dark:enabled:hover:bg-amber-900/20 enabled:cursor-pointer py-0.5"
+                  >
                     <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{t.excused_absence}</p>
                     <p className="text-[10px] text-slate-400">Motivate</p>
-                  </div>
+                  </button>
                   <div className="text-center">
                     <p className="text-xl font-extrabold text-red-600 dark:text-red-400">{t.unexcused_absence}</p>
                     <p className="text-[10px] text-slate-400">Nemotivate</p>
@@ -86,6 +92,21 @@ export default function TeachersAttendancePage() {
                     <p className="text-[10px] text-slate-400">Înlocuite</p>
                   </div>
                 </div>
+                {expandedExcused === t.teacher_id && (
+                  <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-amber-50/60 dark:bg-amber-900/10">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">
+                      Absențe motivate — {t.teacher_name}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(t.excused_students ?? []).map(s => (
+                        <span key={s.name} className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                          {s.name}{s.count > 1 ? ` ×${s.count}` : ''}
+                        </span>
+                      ))}
+                      {(t.excused_students ?? []).length === 0 && <span className="text-xs text-slate-400">Nicio absență motivată luna asta</span>}
+                    </div>
+                  </div>
+                )}
                 <div className="px-5 py-4">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                     <Users className="w-3.5 h-3.5" /> Elevi ({(t.students ?? []).length})

@@ -3,6 +3,7 @@
  * Uses Supabase (the app's shared data layer for business data).
  */
 import { supabase } from './supabase';
+import { StudentSubscription } from './types';
 
 /* ─────────────────────────────────────────────────────────────
  *  Types
@@ -12,7 +13,8 @@ export type PaymentStatus = 'paid' | 'unpaid' | 'partial' | 'overdue';
 
 interface StudentRow {
   id: number;
-  monthly_fee: number | string;
+  status?: string | null;
+  subscriptions: StudentSubscription[] | null;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -35,8 +37,12 @@ export function currentPeriod(): { month: number; year: number } {
 
 /* ─────────────────────────────────────────────────────────────
  *  1. createMonthlyPayments
- *     Generates an "unpaid" record for each student that lacks
- *     a payment in the given month. Idempotent (no duplicates).
+ *     Generates an "unpaid" record for every (active student × active
+ *     instrument/abonament) pair that lacks a payment in the given month —
+ *     matching the per-instrument payment model, not a single flat fee.
+ *     Idempotent: re-running never duplicates a (student, service) that
+ *     already has a payment that period, so it's safe to use to backfill
+ *     students whose payment row was deleted while they're still active.
  * ────────────────────────────────────────────────────────────*/
 export async function createMonthlyPayments(
   month?: number,
@@ -44,32 +50,49 @@ export async function createMonthlyPayments(
 ): Promise<{ created: number; skipped: number; error?: string }> {
   const period = (month && year) ? { month, year } : currentPeriod();
 
-  const { data: students, error: studentsErr } = await supabase.from('students').select('id, monthly_fee');
+  const { data: students, error: studentsErr } = await supabase.from('students').select('id, status, subscriptions');
   if (studentsErr) return { created: 0, skipped: 0, error: studentsErr.message };
 
   const { data: existing, error: existingErr } = await supabase
     .from('payments')
-    .select('student_id')
+    .select('student_id, service')
     .eq('month', period.month)
     .eq('year', period.year);
   if (existingErr) return { created: 0, skipped: 0, error: existingErr.message };
 
-  const existingIds = new Set((existing ?? []).map((p: { student_id: number }) => p.student_id));
-  const toInsert = ((students ?? []) as StudentRow[]).filter(s => !existingIds.has(s.id));
-  if (toInsert.length === 0) return { created: 0, skipped: existingIds.size };
+  const existingKey = (studentId: number, service: string | null) => `${studentId}|${service ?? ''}`;
+  const existingSet = new Set((existing ?? []).map((p: { student_id: number; service: string | null }) => existingKey(p.student_id, p.service)));
 
-  const { error: insertErr } = await supabase.from('payments').insert(
-    toInsert.map(s => ({
-      student_id: s.id,
-      amount: Number(s.monthly_fee) || 0,
-      month: period.month,
-      year: period.year,
-      status: 'unpaid',
-    })),
-  );
-  if (insertErr) return { created: 0, skipped: existingIds.size, error: insertErr.message };
+  const toInsert: { student_id: number; amount: number; month: number; year: number; status: string; service: string; plan_type: string; lesson_count: number }[] = [];
+  let skipped = 0;
+  for (const s of (students ?? []) as StudentRow[]) {
+    if ((s.status ?? 'active') !== 'active') continue;
+    for (const sub of s.subscriptions ?? []) {
+      if ((sub.status ?? 'active') !== 'active') continue;
+      if (existingSet.has(existingKey(s.id, sub.instrument))) { skipped++; continue; }
+      toInsert.push({
+        student_id: s.id,
+        amount: Number(sub.monthly_fee) || 0,
+        month: period.month,
+        year: period.year,
+        status: 'unpaid',
+        service: sub.instrument,
+        plan_type: sub.plan,
+        lesson_count: sub.lessons,
+      });
+    }
+  }
+  if (toInsert.length === 0) return { created: 0, skipped };
 
-  return { created: toInsert.length, skipped: existingIds.size };
+  let { error: insertErr } = await supabase.from('payments').insert(toInsert);
+  // plan_type/lesson_count columns may not be migrated yet — strip and retry.
+  if (insertErr && /plan_type|lesson_count/.test(insertErr.message)) {
+    const safe = toInsert.map(({ plan_type: _pt, lesson_count: _lc, ...rest }) => rest);
+    ({ error: insertErr } = await supabase.from('payments').insert(safe));
+  }
+  if (insertErr) return { created: 0, skipped, error: insertErr.message };
+
+  return { created: toInsert.length, skipped };
 }
 
 /* ─────────────────────────────────────────────────────────────

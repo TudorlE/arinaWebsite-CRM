@@ -48,13 +48,17 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   const [loading, setLoading] = useState(false);
   // One instrument at a time keeps a single service/status; a student with
   // several instruments gets a stacked row per instrument, each with its own
-  // status/amount, submitted together as separate payments.
-  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string }>>({});
+  // status/amount — shown both when creating AND when editing, so editing one
+  // payment still shows the full picture across all of that student's
+  // abonamente instead of hiding the others. Each row remembers the existing
+  // payment `id` for that instrument/period (if any) so saving updates it
+  // instead of creating a duplicate.
+  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number }>>({});
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
   const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
   const studentSubs: StudentSubscription[] = selectedStudent?.subscriptions ?? [];
-  const isMultiInstrument = !payment && studentSubs.length > 1;
+  const isMultiInstrument = studentSubs.length > 1;
 
   // Full payment history for the selected student — "vedea rapid situația plăților pentru fiecare lună".
   const { data: historyData } = useSWR(
@@ -94,21 +98,32 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     setErrors({});
   }, [payment, open, defaultStudentId]);
 
-  // Multi-instrument mode: seed one status/amount row per subscription
-  // whenever the selected student (or their subscriptions) changes.
+  // Multi-instrument mode: seed one status/amount row per subscription,
+  // pulling in whatever payment already exists for that instrument in the
+  // selected month/year (so editing shows real, saved statuses instead of
+  // just defaults) — falls back to the computed subscription price for any
+  // instrument that has no payment yet this period.
   useEffect(() => {
-    if (payment) return;
     if (studentSubs.length <= 1) { setPerInstrument({}); return; }
-    setPerInstrument(prev => {
-      const next: Record<string, { status: string; amount: string }> = {};
+    const monthNum = Number(form.month), yearNum = Number(form.year);
+    const periodPayments: Payment[] = (historyData?.payments ?? []).filter(
+      (p: Payment) => p.month === monthNum && p.year === yearNum,
+    );
+    setPerInstrument(() => {
+      const next: Record<string, { status: string; amount: string; id?: number }> = {};
       for (const sub of studentSubs) {
-        const computed = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
-        next[sub.instrument] = prev[sub.instrument] ?? { status: 'unpaid', amount: computed != null ? String(computed) : '' };
+        const existing = periodPayments.find((p: Payment) => p.service === sub.instrument);
+        if (existing) {
+          next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id };
+        } else {
+          const computed = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
+          next[sub.instrument] = { status: 'unpaid', amount: computed != null ? String(computed) : '' };
+        }
       }
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payment, form.student_id, studentSubs.length]);
+  }, [form.student_id, form.month, form.year, studentSubs.length, historyData]);
 
   const svc = PRICING[form.service];
   const isFlat = svc?.flatMonthly != null;
@@ -166,28 +181,29 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     setLoading(true);
     try {
       if (isMultiInstrument) {
-        // One payment per instrument, each with its own status/amount.
+        // One payment per instrument, each with its own status/amount — PUT
+        // to the existing row when this instrument already has a payment for
+        // this period, otherwise POST a new one.
         const results = await Promise.all(studentSubs.map(sub => {
           const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
           const fallbackAmount = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
-          return fetch('/api/payments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              student_id: Number(form.student_id),
-              amount: Number(row.amount) || fallbackAmount || 0,
-              month: Number(form.month),
-              year: Number(form.year),
-              status: row.status,
-              payment_date: form.payment_date || todayMoldova(),
-              due_date: null,
-              notes: form.notes || null,
-              plan_type: sub.plan,
-              lesson_count: sub.lessons,
-              price_per_lesson: perLessonPrice(sub.instrument, sub.plan),
-              service: sub.instrument,
-            }),
+          const body = JSON.stringify({
+            student_id: Number(form.student_id),
+            amount: Number(row.amount) || fallbackAmount || 0,
+            month: Number(form.month),
+            year: Number(form.year),
+            status: row.status,
+            payment_date: form.payment_date || todayMoldova(),
+            due_date: null,
+            notes: form.notes || null,
+            plan_type: sub.plan,
+            lesson_count: sub.lessons,
+            price_per_lesson: perLessonPrice(sub.instrument, sub.plan),
+            service: sub.instrument,
           });
+          return row.id
+            ? fetch(`/api/payments/${row.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
+            : fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
         }));
         if (results.every(r => r.ok)) {
           showToast('Plăți înregistrate!', 'success');

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
 import LessonForm from '@/components/lessons/LessonForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -54,7 +54,12 @@ export default function SchedulePage() {
   const isStudent = role === 'student';
   const isAdmin = role === 'admin';
 
+  // Weeks never expire — lessons stay in the database forever regardless of
+  // how much time passes; this offset just lets you navigate to see them,
+  // instead of the view being pinned to "today"'s week only.
+  const [weekOffset, setWeekOffset] = useState(0);
   const reference = new Date();
+  reference.setDate(reference.getDate() + weekOffset * 7);
   const [showForm, setShowForm]   = useState(false);
   const [addDate, setAddDate]     = useState('');
   const [addTime, setAddTime]     = useState('09:00');
@@ -284,7 +289,10 @@ export default function SchedulePage() {
       <PageBanner
         icon={CalendarDays}
         title="Program Privat — pe zile"
-        subtitle={isStudent ? 'Vizualizează lecțiile tale din această săptămână' : 'Gestionează lecțiile din această săptămână'}
+        subtitle={
+          (isStudent ? 'Vizualizează lecțiile tale' : 'Gestionează lecțiile') +
+          (weekOffset === 0 ? ' din această săptămână' : weekOffset > 0 ? ` din ${weekOffset === 1 ? 'săptămâna viitoare' : `${weekOffset} săptămâni în viitor`}` : ` din ${weekOffset === -1 ? 'săptămâna trecută' : `${-weekOffset} săptămâni în urmă`}`)
+        }
         accent="#5934DC"
         right={<>
           <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
@@ -302,6 +310,22 @@ export default function SchedulePage() {
       </div>
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
+
+        {/* ── Week nav — browse any week, past or future; nothing ever expires ── */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button onClick={() => setWeekOffset(o => o - 1)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+            <ChevronLeft className="w-5 h-5 text-slate-500" />
+          </button>
+          <span className="text-lg font-extrabold text-slate-900 dark:text-white min-w-56 text-center">
+            {weekDates[0].toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })} – {weekDates[6].toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </span>
+          <button onClick={() => setWeekOffset(o => o + 1)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+            <ChevronRight className="w-5 h-5 text-slate-500" />
+          </button>
+          {weekOffset !== 0 && (
+            <button onClick={() => setWeekOffset(0)} className="px-4 py-2 text-sm font-bold rounded-xl bg-brand-600 text-white shadow-md hover:bg-brand-500">Săptămâna curentă</button>
+          )}
+        </div>
 
         {/* ── Calendar grid ────────────────────────────────── */}
         <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col">

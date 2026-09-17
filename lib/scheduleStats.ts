@@ -243,12 +243,22 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     if (!tallies.has(teacherId)) tallies.set(teacherId, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
     return tallies.get(teacherId)!;
   };
+  // Per-teacher breakdown of WHICH students had an excused absence, and how
+  // many times — surfaced when clicking "Motivate" in Profesori Frecvență.
+  const excusedByTeacher = new Map<number, Map<string, number>>();
   for (const r of rows) {
     const effectiveId = r.replacement_teacher_id ?? r.teacher_id;
     const t = ensureTally(effectiveId);
     if (r.status === 'completed') t.completed++;
     else if (r.status === 'recovered') t.recovered++;
-    if (r.attendance_status === 'excused_absence') t.excused_absence++;
+    if (r.attendance_status === 'excused_absence') {
+      t.excused_absence++;
+      if (r.student_name) {
+        const m = excusedByTeacher.get(effectiveId) ?? new Map<string, number>();
+        m.set(r.student_name, (m.get(r.student_name) ?? 0) + 1);
+        excusedByTeacher.set(effectiveId, m);
+      }
+    }
     else if (r.attendance_status === 'unexcused_absence') t.unexcused_absence++;
     if (r.student_name) addStudent(effectiveId, r.student_name);
     if (r.replacement_teacher_id) {
@@ -260,6 +270,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   const out: MonthlyStats[] = [];
   for (const id of teacherIds) {
     const tal = tallies.get(id) ?? { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 };
+    const excusedMap = excusedByTeacher.get(id);
     out.push({
       teacher_id: id,
       teacher_name: teacherNameMap.get(id) ?? undefined,
@@ -271,6 +282,9 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       unexcused_absence: tal.unexcused_absence,
       replaced: tal.replaced,
       students: Array.from(studentsByTeacher.get(id) ?? []).sort(),
+      excused_students: excusedMap
+        ? Array.from(excusedMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        : [],
     });
   }
   return out.sort((a, b) => (a.teacher_name ?? '').localeCompare(b.teacher_name ?? ''));
