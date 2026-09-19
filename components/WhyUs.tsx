@@ -1,20 +1,26 @@
 'use client';
 import { motion } from 'framer-motion';
-import { Users, Layers, Trophy, Music2, UserRound, CalendarClock, Clock3 } from 'lucide-react';
+import { Users, Layers, Trophy, Music2, UserRound, CalendarClock, Clock3, BookOpen, Sparkles } from 'lucide-react';
 import { Reveal, CountUp, EASE } from '@/components/motionx';
 import { useLocale } from '@/lib/i18n';
 
 const statIcons = [Users, Layers, Trophy, Music2];
 const formatIcons = [UserRound, CalendarClock, Clock3];
 
-const ReasonBlock = ({ t, d, align, delay }: { t: string; d: string; align: 'left' | 'right'; delay: number }) => (
+const reasonIcons = [BookOpen, Trophy, CalendarClock, Sparkles];
+
+const ReasonBlock = ({ t, d, align, delay, icon: Icon }: { t: string; d: string; align: 'left' | 'right'; delay: number; icon: typeof BookOpen }) => (
   <motion.div
     initial={{ opacity: 0, x: align === 'right' ? 34 : -34 }}
     whileInView={{ opacity: 1, x: 0 }}
     viewport={{ once: true, amount: 0.4 }}
     transition={{ duration: 0.7, ease: EASE, delay }}
-    style={{ textAlign: align, maxWidth: 340 }}
+    whileHover={{ y: -3 }}
+    style={{ textAlign: align, maxWidth: 340, display: 'flex', flexDirection: 'column', alignItems: align === 'right' ? 'flex-end' : 'flex-start' }}
   >
+    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, border: '1px solid var(--line-strong)', color: 'var(--accent)', marginBottom: 16 }}>
+      <Icon style={{ width: 19, height: 19, strokeWidth: 1.4 }} />
+    </span>
     <p style={{ fontSize: 'clamp(20px, 2.2vw, 26px)', fontWeight: 700, color: 'var(--tx)', margin: 0, lineHeight: 1.15, whiteSpace: 'pre-line', fontFamily: 'var(--font-playfair), serif' }}>{t}</p>
     <p style={{ fontSize: 14, color: 'var(--tx-mut)', margin: '14px 0 0', lineHeight: 1.65 }}>{d}</p>
   </motion.div>
@@ -23,7 +29,7 @@ const ReasonBlock = ({ t, d, align, delay }: { t: string; d: string; align: 'lef
 export default function WhyUs() {
   const { t } = useLocale();
   const w = t.whyus;
-  const reasons = w.reasons;
+  const reasons = w.reasons.map((r, i) => ({ ...r, icon: reasonIcons[i] }));
   const stats = w.stats.map((s, i) => ({ ...s, icon: statIcons[i] }));
   const format = w.format.map((f, i) => ({ ...f, icon: formatIcons[i] }));
 
@@ -80,14 +86,17 @@ export default function WhyUs() {
         <div className="stat-grid">
           {stats.map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.6, ease: EASE, delay: i * 0.1 }}
-              style={{ position: 'relative', padding: '30px 22px 26px', height: '100%' }}>
+              whileHover={{ y: -6 }} className="stat-card"
+              style={{ position: 'relative', padding: '32px 24px 28px', height: '100%', border: '1px solid var(--line)', overflow: 'hidden' }}>
               <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: EASE, delay: i * 0.1 + 0.1 }}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'var(--sand-deep)', transformOrigin: '0%' }} />
-              <s.icon style={{ width: 24, height: 24, color: 'var(--sand)', strokeWidth: 1.3 }} />
-              <p style={{ fontSize: 'clamp(26px, 3vw, 34px)', fontWeight: 700, color: 'var(--tx)', margin: '18px 0 6px', fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.01em' }}>
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'var(--accent)', transformOrigin: '0%' }} />
+              <span className="stat-icon">
+                <s.icon style={{ width: 22, height: 22, color: 'var(--sand)', strokeWidth: 1.3 }} />
+              </span>
+              <p style={{ fontSize: 'clamp(28px, 3.2vw, 36px)', fontWeight: 700, color: 'var(--tx)', margin: '22px 0 8px', fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.01em' }}>
                 {'text' in s
                   ? s.text
-                  : <><CountUp value={s.n as number} suffix={s.suf} /> <span style={{ fontSize: '0.55em', color: 'var(--tx-mut)', fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600 }}>{s.unit}</span></>}
+                  : <><CountUp value={s.n as number} suffix={s.suf} /> <span style={{ fontSize: '0.5em', color: 'var(--tx-mut)', fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600 }}>{s.unit}</span></>}
               </p>
               <p style={{ fontSize: 13, color: 'var(--tx-mut)', margin: 0, lineHeight: 1.55 }}>{s.d}</p>
             </motion.div>
@@ -123,6 +132,9 @@ export default function WhyUs() {
         .radial-col { display: flex; flex-direction: column; gap: clamp(50px, 8vh, 90px); }
         .radial-ring { position: relative; width: clamp(300px, 40vw, 420px); height: clamp(300px, 40vw, 420px); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
         .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .stat-card { transition: border-color 0.35s ease, box-shadow 0.35s ease; }
+        .stat-card:hover { border-color: var(--sand-deep); box-shadow: 0 18px 40px rgba(0,0,0,0.12); }
+        .stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: var(--bg-alt); border: 1px solid var(--line); }
         .fmt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         @media (max-width: 920px) {
           .radial { gap: 30px; }

@@ -22,9 +22,7 @@ const ro = {
       { href: '#fondator', label: 'Arina Bădulescu' },
       { href: '#contact', label: 'Contact' },
     ],
-    crm: 'CRM',
     bookBtn: 'Programează o lecție',
-    logoSub: 'Studio · Școală de Muzică',
   },
   hero: {
     eyebrow: 'Școală de Muzică Premium · Chișinău',
@@ -74,7 +72,6 @@ const ro = {
     ],
     featuredBadge: 'Recomandat',
     planCta: 'Mă înscriu',
-    disclaimer: 'Prețurile abonamentelor sunt comunicate telefonic, în funcție de curs și profesor.',
   },
   whyus: {
     eyebrow: '04 — De ce noi',
@@ -99,7 +96,7 @@ const ro = {
     format: [
       { t: '1 la 1 cu profesorul', d: 'Atenție completă, ritm adaptat fiecărui elev.' },
       { t: 'Copii, adolescenți și adulți', d: 'De la 5 ani. Niciodată nu e prea târziu să începi.' },
-      { t: '30–60 de minute', d: 'Durata ședinței, în funcție de nivel și vârstă.' },
+      { t: '45 de minute', d: 'Durata unei ședințe standard, pentru toți elevii.' },
     ],
   },
   founder: {
@@ -147,13 +144,14 @@ const ro = {
     eyebrow: '08 — Contacte',
     title: 'Vino la studio',
     info: [
-      { label: 'Adresă', value: 'str. Mitropolit Bănulescu-Bodoni 25\nChișinău, Republica Moldova' },
+      { label: 'Adresă', value: 'str. Burebista 76\nChișinău, Republica Moldova' },
       { label: 'Telefon', value: '+373 60 081 991' },
       { label: 'Email', value: 'contact@arryproduction.md' },
       { label: 'Program', value: 'Luni–Vineri: 10:00–20:00\nSâmbătă: 10:00–16:00' },
     ],
     mapTitle: 'Hartă Arry Studio',
-    mapCaption: 'Centrul Chișinăului',
+    mapCaption: 'str. Burebista 76',
+    mapCta: 'Deschide în Google Maps',
   },
   footer: {
     desc: 'Școala unde pasiunea pentru muzică devine performanță. Cursuri de pian, tobe, canto, chitară și solfegiu, în inima Chișinăului.',
@@ -205,9 +203,7 @@ const en: Dict = {
       { href: '#fondator', label: 'Arina Bădulescu' },
       { href: '#contact', label: 'Contact' },
     ],
-    crm: 'CRM',
     bookBtn: 'Book a lesson',
-    logoSub: 'Studio · Music School',
   },
   hero: {
     eyebrow: 'Premium Music School · Chișinău',
@@ -257,7 +253,6 @@ const en: Dict = {
     ],
     featuredBadge: 'Recommended',
     planCta: 'Sign me up',
-    disclaimer: 'Subscription prices are shared by phone, depending on the course and teacher.',
   },
   whyus: {
     eyebrow: '04 — Why us',
@@ -282,7 +277,7 @@ const en: Dict = {
     format: [
       { t: 'One-on-one with the teacher', d: 'Full attention, pace adapted to each student.' },
       { t: 'Kids, teens and adults', d: 'From age 5. It is never too late to start.' },
-      { t: '30–60 minutes', d: 'Session length, depending on level and age.' },
+      { t: '45 minutes', d: 'Standard session length, for every student.' },
     ],
   },
   founder: {
@@ -330,13 +325,14 @@ const en: Dict = {
     eyebrow: '08 — Contact',
     title: 'Come to the studio',
     info: [
-      { label: 'Address', value: '25 Mitropolit Bănulescu-Bodoni St.\nChișinău, Republic of Moldova' },
+      { label: 'Address', value: '76 Burebista St.\nChișinău, Republic of Moldova' },
       { label: 'Phone', value: '+373 60 081 991' },
       { label: 'Email', value: 'contact@arryproduction.md' },
       { label: 'Hours', value: 'Mon–Fri: 10:00–20:00\nSaturday: 10:00–16:00' },
     ],
     mapTitle: 'Arry Studio map',
-    mapCaption: 'Downtown Chișinău',
+    mapCaption: '76 Burebista St.',
+    mapCta: 'Open in Google Maps',
   },
   footer: {
     desc: 'The school where a passion for music becomes performance. Piano, drums, vocals, guitar and music theory lessons, in the heart of Chișinău.',
@@ -386,9 +382,7 @@ const ru: Dict = {
       { href: '#fondator', label: 'Арина Бэдулеску' },
       { href: '#contact', label: 'Контакты' },
     ],
-    crm: 'CRM',
     bookBtn: 'Записаться на урок',
-    logoSub: 'Студия · Школа музыки',
   },
   hero: {
     eyebrow: 'Премиум школа музыки · Кишинёв',
@@ -438,7 +432,6 @@ const ru: Dict = {
     ],
     featuredBadge: 'Рекомендуем',
     planCta: 'Записаться',
-    disclaimer: 'Стоимость абонементов уточняется по телефону, в зависимости от курса и преподавателя.',
   },
   whyus: {
     eyebrow: '04 — Почему мы',
@@ -463,7 +456,7 @@ const ru: Dict = {
     format: [
       { t: 'Один на один с преподавателем', d: 'Полное внимание, темп адаптирован под каждого ученика.' },
       { t: 'Дети, подростки и взрослые', d: 'С 5 лет. Начать никогда не поздно.' },
-      { t: '30–60 минут', d: 'Длительность занятия, в зависимости от уровня и возраста.' },
+      { t: '45 минут', d: 'Стандартная длительность занятия для всех учеников.' },
     ],
   },
   founder: {
@@ -511,13 +504,14 @@ const ru: Dict = {
     eyebrow: '08 — Контакты',
     title: 'Приходите в студию',
     info: [
-      { label: 'Адрес', value: 'ул. Митрополит Бэнулеску-Бодони 25\nКишинёв, Республика Молдова' },
+      { label: 'Адрес', value: 'ул. Буребиста 76\nКишинёв, Республика Молдова' },
       { label: 'Телефон', value: '+373 60 081 991' },
       { label: 'Email', value: 'contact@arryproduction.md' },
       { label: 'Часы работы', value: 'Пн–Пт: 10:00–20:00\nСуббота: 10:00–16:00' },
     ],
     mapTitle: 'Карта Arry Studio',
-    mapCaption: 'Центр Кишинёва',
+    mapCaption: 'ул. Буребиста 76',
+    mapCta: 'Открыть в Google Maps',
   },
   footer: {
     desc: 'Школа, где увлечение музыкой становится мастерством. Уроки фортепиано, барабанов, вокала, гитары и сольфеджио в центре Кишинёва.',

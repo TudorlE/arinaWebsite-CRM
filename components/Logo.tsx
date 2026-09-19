@@ -37,20 +37,13 @@ export function LogoMark({ size = 40, withCord = true, style }: { size?: number;
   );
 }
 
-/** Horizontal lockup: compact mark + stacked wordmark. */
-export function LogoLockup({ tone = 'currentColor', sub = 'Studio · Școală de Muzică', compact = false }: { tone?: string; sub?: string; compact?: boolean }) {
+/** Horizontal lockup: compact mark + wordmark. */
+export function LogoLockup({ tone = 'currentColor', compact = false }: { tone?: string; compact?: boolean }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, color: tone }}>
       <LogoMark size={compact ? 30 : 38} withCord={false} />
-      <span style={{ textAlign: 'left', lineHeight: 1.1 }}>
-        <span style={{ display: 'block', fontFamily: 'var(--font-anton), var(--font-inter), sans-serif', fontSize: compact ? 15 : 17, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Arry Studio
-        </span>
-        {sub && (
-          <span style={{ display: 'block', fontSize: 8, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', opacity: 0.55, marginTop: 3, fontFamily: 'var(--font-inter), sans-serif' }}>
-            {sub}
-          </span>
-        )}
+      <span style={{ fontFamily: 'var(--font-anton), var(--font-inter), sans-serif', fontSize: compact ? 15 : 17, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Arry Studio
       </span>
     </span>
   );

@@ -21,7 +21,7 @@ export default function Footer() {
 
           <StaggerItem>
             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} onClick={() => go('#acasa')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 22, color: 'var(--tx)' }}>
-              <LogoLockup compact sub={t.nav.logoSub} />
+              <LogoLockup compact />
             </motion.button>
 
             <p style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--tx-mut)', margin: '0 0 26px', maxWidth: 300 }}>

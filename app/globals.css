@@ -201,7 +201,7 @@ html.dark .site-root {
 .btn-outline.solid:hover { background: transparent; color: var(--paper); border-color: var(--line-strong); }
 
 /* Continuous ticker strip */
-.tick-wrap { overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-alt); padding: 18px 0; }
+.tick-wrap { overflow: hidden; border-top: 1px solid var(--line); background: var(--bg-alt); padding: 18px 0; }
 .tick-track { display: flex; width: max-content; animation: tickScroll 30s linear infinite; }
 .tick-wrap:hover .tick-track { animation-play-state: paused; }
 .tick-row { display: flex; align-items: center; flex-shrink: 0; }
@@ -230,23 +230,12 @@ html.dark .site-root {
   .site-root .rule { max-width: none !important; }
 }
 
-/* Editorial photo treatment — warm, high contrast; softer in light mode,
-   deliberately darkened in dark mode so photos sit into the dark ground. */
+/* Editorial photo treatment — true color always; hover is a pure close-up
+   (scale), no saturation/desaturation shift. */
 .site-root .ph {
-  filter: grayscale(0.12) brightness(0.98) contrast(1.06) sepia(0.06);
-  transition: filter 0.6s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.site-root .ph-wrap:hover .ph { transform: scale(1.05); filter: grayscale(0.05) brightness(1.02) contrast(1.06) sepia(0.04); }
-.site-root .ph-red {
-  filter: grayscale(0.1) brightness(0.95) contrast(1.15) sepia(0.35) hue-rotate(-18deg) saturate(1.8);
-}
-html.dark .site-root .ph {
-  filter: grayscale(0.35) brightness(0.72) contrast(1.12) sepia(0.12);
-}
-html.dark .site-root .ph-wrap:hover .ph { filter: grayscale(0.15) brightness(0.82) contrast(1.12) sepia(0.1); }
-html.dark .site-root .ph-red {
-  filter: grayscale(0.2) brightness(0.6) contrast(1.25) sepia(0.5) hue-rotate(-18deg) saturate(2.6);
-}
+.site-root .ph-wrap:hover .ph { transform: scale(1.05); }
 
 /* Theme toggle + language switcher */
 .theme-toggle {

@@ -1,19 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
-import { Menu, X, ExternalLink, Sun, Moon } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import { LogoLockup } from '@/components/Logo';
 import { openBooking } from '@/components/Booking';
 import { useTheme } from '@/components/ThemeProvider';
 import { useLocale } from '@/lib/i18n';
 import { LOCALES } from '@/lib/translations';
 
-const PHONE = '+373 60 081 991';
-
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || '/admin';
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
   const { theme, toggleTheme } = useTheme();
@@ -73,7 +70,7 @@ export default function Navbar() {
         <div style={{ maxWidth: 1240, margin: '0 auto', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
 
           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => go('#acasa')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--tx)' }}>
-            <LogoLockup sub={t.nav.logoSub} />
+            <LogoLockup />
           </motion.button>
 
           <motion.div
@@ -92,10 +89,6 @@ export default function Navbar() {
           </motion.div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="hide-mobile">
-            <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="link-cta" style={{ fontSize: 11, color: 'var(--tx-mut)', letterSpacing: '0.06em' }}>{PHONE}</a>
-            <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="link-cta" style={{ fontSize: 11, color: 'var(--tx-faint)' }}>
-              {t.nav.crm} <ExternalLink style={{ width: 12, height: 12 }} />
-            </a>
             <LangSwitch />
             <ThemeToggle />
             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5 }}>
@@ -132,8 +125,6 @@ export default function Navbar() {
               <motion.div variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <LangSwitch style={{ alignSelf: 'center' }} />
-                <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="btn-outline" style={{ justifyContent: 'center' }}>{PHONE}</a>
-                <a href={crmUrl} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ justifyContent: 'center' }}>{t.nav.crm} <ExternalLink style={{ width: 14, height: 14 }} /></a>
                 <button onClick={book} className="btn-outline solid" style={{ justifyContent: 'center' }}>{t.nav.bookBtn}</button>
               </motion.div>
             </motion.div>
