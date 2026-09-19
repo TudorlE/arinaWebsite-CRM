@@ -34,7 +34,6 @@ const ro = {
     imgAlt: 'Pian sub lumină caldă',
     phoneNote: 'Sună-ne pentru o lecție de probă gratuită sau programează o vizită la studio.',
     photoLabel: 'Fotografii din studio',
-    scrollAria: 'Derulează în jos',
   },
   about: {
     eyebrow: '01 — Despre Arry Production',
@@ -215,7 +214,6 @@ const en: Dict = {
     imgAlt: 'Piano under warm light',
     phoneNote: 'Call us for a free trial lesson or schedule a visit to the studio.',
     photoLabel: 'Photos from the studio',
-    scrollAria: 'Scroll down',
   },
   about: {
     eyebrow: '01 — About Arry Production',
@@ -394,7 +392,6 @@ const ru: Dict = {
     imgAlt: 'Пианино в тёплом свете',
     phoneNote: 'Позвоните нам, чтобы записаться на бесплатный пробный урок или посетить студию.',
     photoLabel: 'Фото из студии',
-    scrollAria: 'Прокрутить вниз',
   },
   about: {
     eyebrow: '01 — О школе Arry Production',

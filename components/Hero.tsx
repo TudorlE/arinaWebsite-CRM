@@ -1,7 +1,6 @@
 'use client';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import { ArrowDown } from 'lucide-react';
 import { EASE, RevealLines } from '@/components/motionx';
 import { openBooking } from '@/components/Booking';
 import { useLocale } from '@/lib/i18n';
@@ -78,15 +77,6 @@ export default function Hero() {
           </span>
         </motion.div>
       </div>
-
-      <motion.button onClick={() => go('#despre')} aria-label={h.scrollAria}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}
-        style={{ position: 'absolute', left: 34, bottom: 26, width: 34, height: 34, border: '1px solid var(--line-strong)', background: 'none', color: 'var(--tx-mut)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        className="hide-mobile">
-        <motion.span animate={{ y: [0, 5, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }} style={{ display: 'inline-flex' }}>
-          <ArrowDown style={{ width: 14, height: 14 }} />
-        </motion.span>
-      </motion.button>
 
       <style>{`
         @keyframes heroCopyIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
