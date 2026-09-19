@@ -20,3 +20,4 @@ Video/
 next-env.d.ts
 *.tsbuildinfo
 /out/
+.env*

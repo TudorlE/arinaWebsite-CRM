@@ -11,7 +11,7 @@ import Select from '@/components/ui/Select';
 import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Payment, MONTHS, Student } from '@/lib/types';
+import { Payment, MONTHS, Student, StudentSubscription } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -41,7 +41,8 @@ export default function PaymentsPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [showForm, setShowForm]         = useState(false);
   const [editPayment, setEditPayment]   = useState<Payment | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [editStudentId, setEditStudentId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ ids: number[]; label: string } | null>(null);
   const [deleting, setDeleting]         = useState(false);
   const { toasts, toast, remove }       = useToast();
 
@@ -53,9 +54,24 @@ export default function PaymentsPage() {
   const { data, mutate } = useSWR(`/api/payments?${params}`, fetcher, { keepPreviousData: true });
   const allPayments: Payment[] = data?.payments ?? [];
 
+  // Unfiltered-by-status view of the same month/year, used only to compute the
+  // per-instrument paid/partial/unpaid breakdown shown next to multi-instrument
+  // students — the status filter above must never hide an instrument from that
+  // breakdown, or it'd recreate the exact "looked paid, wasn't" confusion.
+  const periodParams = new URLSearchParams();
+  if (monthFilter) periodParams.set('month', monthFilter);
+  periodParams.set('year', yearFilter);
+  const { data: periodData } = useSWR(`/api/payments?${periodParams}`, fetcher, { keepPreviousData: true });
+  const periodPayments: Payment[] = periodData?.payments ?? [];
+
   // Student status lookup — paused/inactive students are hidden by default (req. 11).
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const studentStatusById = new Map<number, string>((studentsData?.students ?? []).map((s: Student) => [s.id, s.status ?? 'active']));
+  const studentSubsById = new Map<number, StudentSubscription[]>((studentsData?.students ?? []).map((s: Student) => [s.id, s.subscriptions ?? []]));
+
+  /** Per-instrument status for a student this period — 'unpaid' when no payment row exists yet, matching PaymentForm's own fallback. */
+  const instrumentStatus = (studentId: number, instrument: string): Payment['status'] =>
+    periodPayments.find(p => p.student_id === studentId && p.service === instrument)?.status ?? 'unpaid';
 
   const revenueParams = new URLSearchParams();
   if (monthFilter) revenueParams.set('month', monthFilter);
@@ -74,8 +90,49 @@ export default function PaymentsPage() {
   const unpaidAmt  = payments.filter(p => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
   const partialAmt = payments.filter(p => p.status === 'partial').reduce((s, p) => s + p.amount, 0);
 
+  // A multi-instrument student used to appear as one row PER instrument, each
+  // with its own paid/unpaid badge — misleading (one row says "Plătit" while
+  // a sibling row for the same student says "Neplătit") and cluttered (2+
+  // rows for what's really one student's payment this month). Collapsed here
+  // into a single row per student, with one correctly-aggregated status
+  // (paid only if every instrument is paid) and the per-instrument
+  // breakdown as supporting detail underneath.
+  type DisplayRow =
+    | { kind: 'single'; payment: Payment; sortKey: string }
+    | { kind: 'group'; studentId: number; studentName: string; subs: StudentSubscription[]; ids: number[]; totalAmount: number; overallStatus: Payment['status']; sortKey: string };
+
+  const multiStudentIds = new Set(
+    payments.filter(p => (studentSubsById.get(p.student_id) ?? []).length > 1).map(p => p.student_id),
+  );
+
+  const displayRows: DisplayRow[] = [];
+  for (const p of payments) {
+    if (multiStudentIds.has(p.student_id)) continue;
+    displayRows.push({ kind: 'single', payment: p, sortKey: p.created_at });
+  }
+  for (const studentId of multiStudentIds) {
+    const subs = studentSubsById.get(studentId) ?? [];
+    const studentName = payments.find(p => p.student_id === studentId)?.student_name ?? '';
+    const ids: number[] = [];
+    let totalAmount = 0;
+    let sortKey = '';
+    let anyPaid = false, anyUnpaid = false, anyPartial = false;
+    for (const sub of subs) {
+      const match = periodPayments.find(pp => pp.student_id === studentId && pp.service === sub.instrument);
+      const st = match?.status ?? 'unpaid';
+      if (match) {
+        ids.push(match.id);
+        totalAmount += match.amount;
+        if (match.created_at > sortKey) sortKey = match.created_at;
+      }
+      if (st === 'paid') anyPaid = true; else if (st === 'partial') anyPartial = true; else anyUnpaid = true;
+    }
+    const overallStatus: Payment['status'] = anyPartial || (anyPaid && anyUnpaid) ? 'partial' : anyUnpaid ? 'unpaid' : 'paid';
+    displayRows.push({ kind: 'group', studentId, studentName, subs, ids, totalAmount, overallStatus, sortKey });
+  }
+
   // List reads bottom-up: oldest at top, most recent added at the bottom.
-  const sorted = [...payments].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const sorted = displayRows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
   const summaryTotal = (summary?.paidCount ?? 0) + (summary?.unpaidCount ?? 0) + (summary?.partialCount ?? 0);
   const pct = (n: number) => summaryTotal > 0 ? Math.round((n / summaryTotal) * 100) : 0;
@@ -84,8 +141,8 @@ export default function PaymentsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/payments/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { toast('Plată ștearsă', 'success'); mutate(); mutateRevenue(); }
+      const results = await Promise.all(deleteTarget.ids.map(id => fetch(`/api/payments/${id}`, { method: 'DELETE' })));
+      if (results.every(r => r.ok)) { toast('Plată ștearsă', 'success'); mutate(); mutateRevenue(); }
       else toast('Eroare la ștergere', 'error');
     } finally {
       setDeleting(false);
@@ -114,12 +171,12 @@ export default function PaymentsPage() {
     }
   };
 
-  const handleMarkPaid = async (payment: Payment) => {
-    await fetch(`/api/payments/${payment.id}`, {
+  const handleMarkPaid = async (ids: number[]) => {
+    await Promise.all(ids.map(id => fetch(`/api/payments/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'paid' }),
-    });
+    })));
     mutate();
     mutateRevenue();
     toast('Marcat ca plătit!', 'success');
@@ -309,7 +366,7 @@ export default function PaymentsPage() {
             <Button variant="secondary" onClick={handleGenerateMissing} disabled={generating} title="Adaugă o plată Neplătit pentru fiecare elev/instrument activ care nu are încă o plată în luna selectată">
               {generating ? 'Se generează…' : 'Generează plăți lipsă'}
             </Button>
-            <Button onClick={() => { setEditPayment(null); setShowForm(true); }}>
+            <Button onClick={() => { setEditPayment(null); setEditStudentId(null); setShowForm(true); }}>
               <Plus className="w-4 h-4" /> Înregistrează plată
             </Button>
           </div>
@@ -322,51 +379,110 @@ export default function PaymentsPage() {
               <CreditCard className="w-10 h-10 mb-3 opacity-30" />
               <p className="text-sm font-medium">Nicio plată înregistrată</p>
             </div>
-          ) : sorted.map(payment => {
-            const isPaid    = payment.status === 'paid';
-            const isPartial = payment.status === 'partial';
+          ) : sorted.map(row => {
+            if (row.kind === 'single') {
+              const payment = row.payment;
+              const isPaid    = payment.status === 'paid';
+              const isPartial = payment.status === 'partial';
+              const dotColor =
+                isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
+                isPartial ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+                            'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
+              return (
+                <div key={`p${payment.id}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
+                    {(payment.student_name ?? '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{payment.student_name}</p>
+                      <Badge variant={paymentBadge(payment.status)} className="flex-shrink-0">{paymentLabel(payment.status)}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 truncate mt-0.5">
+                      {payment.service ?? (payment.instruments ?? []).join(', ')} · {MONTHS[payment.month - 1]} {payment.year}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
+                    {payment.payment_date && (
+                      <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+                        {isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                        {payment.payment_date}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    {!isPaid && (
+                      <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([payment.id])}
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">Plătit</span>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setEditStudentId(null); setShowForm(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: [payment.id], label: payment.student_name ?? '' })}>
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+
+            // Multi-instrument student — one row, one correctly-aggregated
+            // status, with each instrument's own status as supporting detail.
+            const isPaid    = row.overallStatus === 'paid';
+            const isPartial = row.overallStatus === 'partial';
             const dotColor =
               isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
               isPartial ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
                           'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
             return (
-              <div key={payment.id} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <div key={`s${row.studentId}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
-                  {(payment.student_name ?? '?').charAt(0).toUpperCase()}
+                  {(row.studentName || '?').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{payment.student_name}</p>
-                    <Badge variant={paymentBadge(payment.status)} className="flex-shrink-0">{paymentLabel(payment.status)}</Badge>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{row.studentName}</p>
+                    <Badge variant={paymentBadge(row.overallStatus)} className="flex-shrink-0">{paymentLabel(row.overallStatus)}</Badge>
                   </div>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">
-                    {payment.service ?? (payment.instruments ?? []).join(', ')} · {MONTHS[payment.month - 1]} {payment.year}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {row.subs.map(sub => {
+                      const st = instrumentStatus(row.studentId, sub.instrument);
+                      return (
+                        <span
+                          key={sub.instrument}
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st === 'paid' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : st === 'partial' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}
+                        >
+                          {sub.instrument} · {paymentLabel(st)}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
-                  {payment.payment_date && (
-                    <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-                      {isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-                      {payment.payment_date}
-                    </div>
-                  )}
+                  <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  {!isPaid && (
-                    <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(payment)}
+                  {!isPaid && row.ids.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(row.ids)}
                       className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span className="text-xs font-bold">Plătit</span>
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setShowForm(true); }}>
+                  <Button variant="ghost" size="sm" onClick={() => { setEditPayment(null); setEditStudentId(row.studentId); setShowForm(true); }}>
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(payment)}>
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </Button>
+                  {row.ids.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: row.ids, label: row.studentName })}>
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -376,15 +492,16 @@ export default function PaymentsPage() {
 
       <PaymentForm
         open={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => { setShowForm(false); setEditStudentId(null); }}
         onSaved={() => { mutate(); mutateRevenue(); }}
         payment={editPayment}
+        defaultStudentId={editStudentId ?? undefined}
         showToast={toast}
       />
 
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge plată" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Șterge plata pentru <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>?
+          Șterge plata pentru <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.label}</strong>?
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>

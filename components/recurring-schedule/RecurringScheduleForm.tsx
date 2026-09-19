@@ -16,6 +16,9 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   schedule?: RecurringSchedule | null;
+  defaultDayOfWeek?: number;
+  defaultStartTime?: string;
+  defaultCabinetId?: number | null;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -24,7 +27,13 @@ const blank = {
   day_of_week: '1', start_time: '16:00', end_time: '16:45', notes: '',
 };
 
-export default function RecurringScheduleForm({ open, onClose, onSaved, schedule, showToast }: Props) {
+function addMinutes(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+export default function RecurringScheduleForm({ open, onClose, onSaved, schedule, defaultDayOfWeek, defaultStartTime, defaultCabinetId, showToast }: Props) {
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -46,10 +55,17 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
         notes: schedule.notes ?? '',
       });
     } else {
-      setForm(blank);
+      const start = defaultStartTime ?? blank.start_time;
+      setForm({
+        ...blank,
+        day_of_week: defaultDayOfWeek !== undefined ? String(defaultDayOfWeek) : blank.day_of_week,
+        start_time: start,
+        end_time: addMinutes(start, 45),
+        cabinet_id: defaultCabinetId ? String(defaultCabinetId) : blank.cabinet_id,
+      });
     }
     setErrors({});
-  }, [schedule, open]);
+  }, [schedule, open, defaultDayOfWeek, defaultStartTime, defaultCabinetId]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));

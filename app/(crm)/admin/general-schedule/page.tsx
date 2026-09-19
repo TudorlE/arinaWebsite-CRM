@@ -3,71 +3,55 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { CalendarRange } from 'lucide-react';
-import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
+import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
 import PageBanner from '@/components/ui/PageBanner';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 // Same day-by-day cabinet table as Program Privat, but strictly read-only —
-// this page is for staff to see the schedule, not to change it.
+// this page mirrors the fixed weekly schedule for staff to see, not to
+// change; it has no concept of week/month/year, same as Program Privat.
 const DEFAULT_SLOTS = DEFAULT_TIME_SLOTS;
 const DAY_LABELS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
 function todayDayIdx(): number {
   const d = new Date().getDay(); // Sun=0..Sat=6
-  return d === 0 ? 6 : d - 1; // Mon=0..Sun=6, matches getWeekDates()
+  return d === 0 ? 6 : d - 1; // Mon=0..Sun=6, matches DAY_LABELS
 }
 
-function getWeekDates(ref: Date): Date[] {
-  const day = ref.getDay();
-  const monday = new Date(ref);
-  monday.setDate(ref.getDate() - day + 1);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-}
-
-function fmtDate(d: Date) {
-  return d.toISOString().split('T')[0];
+/** DAY_LABELS index (Luni-first) -> DB day_of_week (0=Duminică..6=Sâmbătă). */
+function dowForIdx(idx: number): number {
+  return (idx + 1) % 7;
 }
 
 export default function GeneralSchedulePage() {
-  const reference = new Date();
-  const weekDates = getWeekDates(reference);
-  const todayStr = fmtDate(new Date());
-
   const [selectedDayIdx, setSelectedDayIdx] = useState(todayDayIdx());
+  const selectedDow = dowForIdx(selectedDayIdx);
 
-  const { data: allData } = useSWR('/api/lessons', fetcher);
-  const allLessons: Lesson[] = allData?.lessons ?? [];
+  const { data: allData } = useSWR('/api/recurring-schedules?active=true', fetcher);
+  const allSchedules: RecurringSchedule[] = allData?.schedules ?? [];
   const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
   const cabinets: Cabinet[] = cabinetsData?.cabinets ?? [];
-  const assignments: { id: number; cabinet_id: number; day_of_week: number; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.assignments ?? [];
   const dayStatuses: CabinetDayStatus[] = cabinetsData?.dayStatuses ?? [];
 
-  const selectedDate = fmtDate(weekDates[selectedDayIdx]);
-  const dayLessons = allLessons.filter(l => l.date === selectedDate);
+  const daySchedules = allSchedules.filter(s => s.day_of_week === selectedDow);
 
-  const byCabinetTime: Record<string, Lesson[]> = {};
-  for (const l of dayLessons) {
-    const cid = l.cabinet_id ?? 'none';
-    const t = (l.time ?? '').slice(0, 5);
+  const byCabinetTime: Record<string, RecurringSchedule[]> = {};
+  for (const s of daySchedules) {
+    const cid = s.cabinet_id ?? 'none';
+    const t = (s.start_time ?? '').slice(0, 5);
     const key = `${cid}|${t}`;
-    (byCabinetTime[key] ??= []).push(l);
+    (byCabinetTime[key] ??= []).push(s);
   }
-  const extraSlots = Array.from(new Set(dayLessons.map(l => (l.time ?? '').slice(0, 5))))
+  const extraSlots = Array.from(new Set(daySchedules.map(s => (s.start_time ?? '').slice(0, 5))))
     .filter(t => t && !DEFAULT_SLOTS.includes(t));
   const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
-  const hasUnassigned = dayLessons.some(l => l.cabinet_id == null);
+  const hasUnassigned = daySchedules.some(s => s.cabinet_id == null);
   const cabinetColumns: { id: number | 'none'; name: string }[] = [
     ...cabinets,
     ...(hasUnassigned ? [{ id: 'none' as const, name: 'Fără cabinet' }] : []),
   ];
-  const selectedDow = weekDates[selectedDayIdx].getDay();
-  const assignmentFor = (cabinetId: number) => assignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === selectedDow);
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
 
@@ -77,7 +61,7 @@ export default function GeneralSchedulePage() {
       <PageBanner
         icon={CalendarRange}
         title="Program General"
-        subtitle="Vizualizează programul — doar citire"
+        subtitle="Orarul fix al elevilor — doar citire"
         accent="#5934DC"
       />
 
@@ -86,8 +70,7 @@ export default function GeneralSchedulePage() {
           {/* Day tabs */}
           <div className="flex flex-wrap items-center gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
             {DAY_LABELS.map((label, i) => {
-              const d = weekDates[i];
-              const isToday = fmtDate(d) === todayStr;
+              const isToday = i === todayDayIdx();
               const isSelected = i === selectedDayIdx;
               return (
                 <button
@@ -130,18 +113,6 @@ export default function GeneralSchedulePage() {
                       );
                     })}
                   </tr>
-                  <tr className="bg-brand-50/60">
-                    <th className="border border-brand-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-brand-400 text-left">Profesor</th>
-                    {cabinetColumns.map(col => (
-                      <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal">
-                        {typeof col.id === 'number' ? (
-                          <span className="block text-sm font-semibold text-gray-700 px-2 py-1.5">
-                            {assignmentFor(col.id)?.teacher_name ?? '— fără profesor —'}
-                          </span>
-                        ) : <span className="block text-center text-xs text-gray-300">—</span>}
-                      </th>
-                    ))}
-                  </tr>
                 </thead>
                 <tbody>
                   {timeSlots.map(time => (
@@ -151,30 +122,24 @@ export default function GeneralSchedulePage() {
                       </td>
                       {cabinetColumns.map(col => {
                         const key = `${col.id}|${time}`;
-                        const cellLessons = byCabinetTime[key] ?? [];
+                        const cellSchedules = byCabinetTime[key] ?? [];
                         return (
                           <td
                             key={col.id}
                             className="relative border border-gray-200 px-2.5 py-2.5 align-top min-w-[180px] min-h-[64px]"
                           >
-                            {cellLessons.map(l => {
-                              const statusStyle =
-                                l.status === 'completed' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' :
-                                l.status === 'cancelled' ? 'bg-gray-100 border-gray-300 text-gray-400 line-through' :
-                                'bg-brand-50 border-brand-300 text-brand-800';
-                              return (
-                                <div
-                                  key={l.id}
-                                  className={`relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none ${statusStyle}`}
-                                >
-                                  <p className="font-semibold truncate">{l.student_name}</p>
-                                  <p className="truncate text-xs mt-0.5">
-                                    <span className="font-semibold" style={{ color: 'inherit' }}>{l.discipline || '—'}</span>
-                                    <span className="opacity-70"> · {l.teacher_name}</span>
-                                  </p>
-                                </div>
-                              );
-                            })}
+                            {cellSchedules.map(s => (
+                              <div
+                                key={s.id}
+                                className="relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none bg-brand-50 border-brand-300 text-brand-800"
+                              >
+                                <p className="font-semibold truncate">{s.student_name}</p>
+                                <p className="truncate text-xs mt-0.5">
+                                  <span className="font-semibold" style={{ color: 'inherit' }}>{s.discipline || '—'}</span>
+                                  <span className="opacity-70"> · {s.teacher_name}</span>
+                                </p>
+                              </div>
+                            ))}
                           </td>
                         );
                       })}
@@ -188,9 +153,7 @@ export default function GeneralSchedulePage() {
 
         {/* ── Legend ──────────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-brand-500" />Programat</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" />Finalizat</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-slate-400" />Anulat</span>
+          <span>Orar fix — se repetă în fiecare săptămână.</span>
           <span className="ml-auto text-[11px] opacity-50 italic">Mod vizualizare</span>
         </div>
       </main>

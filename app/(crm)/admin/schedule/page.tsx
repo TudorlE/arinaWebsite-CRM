@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
-import LessonForm from '@/components/lessons/LessonForm';
+import { CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
+import RecurringScheduleForm from '@/components/recurring-schedule/RecurringScheduleForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Lesson, Cabinet, CabinetDayStatus } from '@/lib/types';
+import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
 import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
@@ -17,33 +17,31 @@ const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 // Standard cabinet-table time slots (45min lessons, 13:15-20:45). Any
-// additional times already used by existing lessons on the selected day
+// additional times already used by existing schedules on the selected day
 // are appended so nothing gets hidden.
 const DEFAULT_SLOTS = DEFAULT_TIME_SLOTS;
 const DAY_LABELS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
 function todayDayIdx(): number {
   const d = new Date().getDay(); // Sun=0..Sat=6
-  return d === 0 ? 6 : d - 1; // Mon=0..Sun=6, matches getWeekDates()
+  return d === 0 ? 6 : d - 1; // Mon=0..Sun=6, matches DAY_LABELS
 }
 
-function getWeekDates(ref: Date): Date[] {
-  const day = ref.getDay();
-  const monday = new Date(ref);
-  monday.setDate(ref.getDate() - day + 1);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
+/** DAY_LABELS index (Luni-first) -> DB day_of_week (0=Duminică..6=Sâmbătă). */
+function dowForIdx(idx: number): number {
+  return (idx + 1) % 7;
 }
 
-function fmtDate(d: Date) {
-  return d.toISOString().split('T')[0];
+function addMinutes(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = ((h * 60 + m + minutes) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
+function diffMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
 }
 
 export default function SchedulePage() {
@@ -54,24 +52,17 @@ export default function SchedulePage() {
   const isStudent = role === 'student';
   const isAdmin = role === 'admin';
 
-  // Weeks never expire — lessons stay in the database forever regardless of
-  // how much time passes; this offset just lets you navigate to see them,
-  // instead of the view being pinned to "today"'s week only.
-  const [weekOffset, setWeekOffset] = useState(0);
-  const reference = new Date();
-  reference.setDate(reference.getDate() + weekOffset * 7);
-  const [showForm, setShowForm]   = useState(false);
-  const [addDate, setAddDate]     = useState('');
-  const [addTime, setAddTime]     = useState('09:00');
-  const [addCabinetId, setAddCabinetId] = useState<number | undefined>(undefined);
   const [selectedDayIdx, setSelectedDayIdx] = useState(todayDayIdx());
-  const [editLesson, setEditLesson]     = useState<Lesson | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
+  const [showForm, setShowForm]         = useState(false);
+  const [addDow, setAddDow]             = useState(0);
+  const [addTime, setAddTime]           = useState('09:00');
+  const [addCabinetId, setAddCabinetId] = useState<number | undefined>(undefined);
+  const [editSchedule, setEditSchedule] = useState<RecurringSchedule | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RecurringSchedule | null>(null);
   const [deleting, setDeleting]         = useState(false);
   const [activeMenu, setActiveMenu]     = useState<number | null>(null);
   const [draggingId, setDraggingId]     = useState<number | null>(null);
-  const [dropCell, setDropCell]         = useState<string | null>(null); // "date|hour"
-  const [savingAssignment, setSavingAssignment] = useState<number | null>(null);
+  const [dropCell, setDropCell]         = useState<string | null>(null); // "cabinetId|time"
   const [showManageCabinets, setShowManageCabinets] = useState(false);
   const [managingCabinet, setManagingCabinet] = useState<Cabinet | null>(null);
   const [cabinetForm, setCabinetForm] = useState({ name: '', color: '#6366f1' });
@@ -79,54 +70,36 @@ export default function SchedulePage() {
   const [deletingCabinetId, setDeletingCabinetId] = useState<number | null>(null);
   const [togglingStatusId, setTogglingStatusId] = useState<number | null>(null);
   const [searchStudent, setSearchStudent] = useState('');
-  const [statusFilterSched, setStatusFilterSched] = useState('');
   const { toasts, toast, remove } = useToast();
 
-  const weekDates  = getWeekDates(reference);
-  const rangeFrom  = fmtDate(weekDates[0]);
-  const rangeTo    = fmtDate(weekDates[6]);
-  // Cabinet table: one day at a time, rows = time slots, columns = cabinets.
-  const selectedDate = fmtDate(weekDates[selectedDayIdx]);
+  const selectedDow = dowForIdx(selectedDayIdx);
 
-  const { data: allData, mutate } = useSWR('/api/lessons', fetcher);
-  const allLessons: Lesson[] = allData?.lessons ?? [];
-  const { data: cabinetsData, mutate: mutateCabinets } = useSWR(`/api/cabinets?date=${selectedDate}`, fetcher);
+  const { data: allData, mutate } = useSWR('/api/recurring-schedules?active=true', fetcher);
+  const allSchedules: RecurringSchedule[] = allData?.schedules ?? [];
+  const { data: cabinetsData, mutate: mutateCabinets } = useSWR('/api/cabinets', fetcher);
   const cabinets: Cabinet[] = cabinetsData?.cabinets ?? [];
-  const assignments: { id: number; cabinet_id: number; day_of_week: number; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.assignments ?? [];
   const dayStatuses: CabinetDayStatus[] = cabinetsData?.dayStatuses ?? [];
-  const overrides: { id: number; cabinet_id: number; date: string; teacher_id: number | null; teacher_name?: string | null }[] = cabinetsData?.overrides ?? [];
-  const { data: teachersData } = useSWR('/api/teachers', fetcher);
-  const teachersList: { id: number; name: string }[] = teachersData?.teachers ?? [];
-  const lessons = allLessons
-    .filter((l: Lesson) => l.date >= rangeFrom && l.date <= rangeTo)
-    .filter((l: Lesson) => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
-    .filter((l: Lesson) => !statusFilterSched || l.status === statusFilterSched);
 
-  const dayLessons = allLessons
-    .filter(l => l.date === selectedDate)
-    .filter(l => !searchStudent || (l.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()))
-    .filter(l => !statusFilterSched || l.status === statusFilterSched);
+  const daySchedules = allSchedules
+    .filter(s => s.day_of_week === selectedDow)
+    .filter(s => !searchStudent || (s.student_name ?? '').toLowerCase().includes(searchStudent.toLowerCase()));
 
-  const byCabinetTime: Record<string, Lesson[]> = {};
-  for (const l of dayLessons) {
-    const cid = l.cabinet_id ?? 'none';
-    const t = (l.time ?? '').slice(0, 5);
+  const byCabinetTime: Record<string, RecurringSchedule[]> = {};
+  for (const s of daySchedules) {
+    const cid = s.cabinet_id ?? 'none';
+    const t = (s.start_time ?? '').slice(0, 5);
     const key = `${cid}|${t}`;
-    (byCabinetTime[key] ??= []).push(l);
+    (byCabinetTime[key] ??= []).push(s);
   }
-  const extraSlots = Array.from(new Set(dayLessons.map(l => (l.time ?? '').slice(0, 5))))
+  const extraSlots = Array.from(new Set(daySchedules.map(s => (s.start_time ?? '').slice(0, 5))))
     .filter(t => t && !DEFAULT_SLOTS.includes(t));
   const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
   // Only the cabinets actually configured (via Gestionare cabinete) get a
-  // column — no synthetic "Fără cabinet" bucket, even if some lesson lacks
+  // column — no synthetic "Fără cabinet" bucket, even if some schedule lacks
   // a cabinet assignment.
   const cabinetColumns: { id: number | 'none'; name: string; color?: string }[] = cabinets;
-  const selectedDow = weekDates[selectedDayIdx].getDay(); // 0=Sun..6=Sat, matches DB day_of_week
-  const assignmentFor = (cabinetId: number) => assignments.find(a => a.cabinet_id === cabinetId && a.day_of_week === selectedDow);
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
-  // Excepție punctuală — doar pentru data selectată, separată de șablonul săptămânal de mai sus.
-  const overrideFor = (cabinetId: number) => overrides.find(o => o.cabinet_id === cabinetId && o.date === selectedDate);
 
   const toggleDayStatus = async (cabinetId: number, current: 'liber' | 'ocupat') => {
     const next = current === 'liber' ? 'ocupat' : 'liber';
@@ -179,44 +152,10 @@ export default function SchedulePage() {
     else toast('Eroare la ștergere', 'error');
   };
 
-  const handleTeacherChange = async (cabinetId: number, teacherId: string) => {
-    setSavingAssignment(cabinetId);
-    try {
-      const res = await fetch(`/api/cabinets/${cabinetId}/assignments`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ day_of_week: selectedDow, teacher_id: teacherId || null }),
-      });
-      if (!res.ok) { toast('Eroare la schimbarea profesorului', 'error'); return; }
-      toast('Profesor actualizat', 'success');
-      mutateCabinets();
-    } finally {
-      setSavingAssignment(null);
-    }
-  };
-
-  // Excepție punctuală: alt profesor decât cel obișnuit, doar pentru ziua selectată.
-  const [openOverrideFor, setOpenOverrideFor] = useState<number | null>(null);
-  const handleOverrideChange = async (cabinetId: number, teacherId: string) => {
-    setSavingAssignment(cabinetId);
-    try {
-      const res = await fetch(`/api/cabinets/${cabinetId}/override`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: selectedDate, teacher_id: teacherId || null }),
-      });
-      if (!res.ok) { toast('Eroare la salvarea excepției', 'error'); return; }
-      toast(teacherId ? 'Excepție salvată pentru azi' : 'Excepție eliminată', 'success');
-      mutateCabinets();
-    } finally {
-      setSavingAssignment(null);
-      setOpenOverrideFor(null);
-    }
-  };
-
-  const openAddLesson = (date: string, hourOrTime: number | string, cabinetId?: number) => {
-    setAddDate(date);
-    setAddTime(typeof hourOrTime === 'number' ? `${pad2(hourOrTime)}:00` : hourOrTime);
+  const openAddSlot = (dow: number, time: string, cabinetId?: number) => {
+    setEditSchedule(null);
+    setAddDow(dow);
+    setAddTime(time);
     setAddCabinetId(cabinetId);
     setShowForm(true);
   };
@@ -227,36 +166,38 @@ export default function SchedulePage() {
     setDraggingId(null);
     setDropCell(null);
     if (!id) return;
-    const lesson = allLessons.find(l => l.id === id);
-    if (!lesson) return;
+    const schedule = allSchedules.find(s => s.id === id);
+    if (!schedule) return;
     const newCabinetId = cabinetId === 'none' ? null : cabinetId;
-    if ((lesson.cabinet_id ?? null) === newCabinetId && lesson.time?.slice(0, 5) === time) return;
+    if ((schedule.cabinet_id ?? null) === newCabinetId && schedule.start_time?.slice(0, 5) === time) return;
 
-    const conflict = allLessons.find(l =>
-      l.id !== id && l.date === lesson.date && (l.cabinet_id ?? null) === newCabinetId &&
-      l.time?.slice(0, 5) === time && l.status !== 'cancelled',
+    const conflict = daySchedules.find(s =>
+      s.id !== id && (s.cabinet_id ?? null) === newCabinetId && s.start_time?.slice(0, 5) === time,
     );
     if (conflict) {
       toast(`Conflict: cabinetul e deja ocupat la ${time} de ${conflict.student_name}`, 'error');
       return;
     }
 
+    const duration = diffMinutes(schedule.start_time.slice(0, 5), schedule.end_time.slice(0, 5));
+    const newEnd = addMinutes(time, duration);
+
     // Optimistic update
     mutate(
-      { lessons: allLessons.map(l => l.id === id ? { ...l, cabinet_id: newCabinetId, time } : l) },
+      { schedules: allSchedules.map(s => s.id === id ? { ...s, cabinet_id: newCabinetId, start_time: time, end_time: newEnd } : s) },
       false,
     );
 
-    const res = await fetch(`/api/lessons/${id}`, {
+    const res = await fetch(`/api/recurring-schedules/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cabinet_id: newCabinetId, time }),
+      body: JSON.stringify({ cabinet_id: newCabinetId, start_time: time, end_time: newEnd }),
     });
     if (!res.ok) {
       toast('Eroare la mutare', 'error');
       mutate();
     } else {
-      toast('Lecție mutată', 'success');
+      toast('Orar mutat', 'success');
       mutate();
     }
   };
@@ -265,8 +206,8 @@ export default function SchedulePage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/lessons/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { toast('Lecție ștearsă', 'success'); mutate(); }
+      const res = await fetch(`/api/recurring-schedules/${deleteTarget.id}`, { method: 'DELETE' });
+      if (res.ok) { toast('Orar eliminat din program', 'success'); mutate(); }
       else toast('Eroare la ștergere', 'error');
     } finally {
       setDeleting(false);
@@ -274,11 +215,8 @@ export default function SchedulePage() {
     }
   };
 
-  const todayStr    = fmtDate(new Date());
-  const totalWeek   = lessons.length;
-  const scheduled = lessons.filter(l => l.status === 'scheduled').length;
-  const completed = lessons.filter(l => l.status === 'completed').length;
-  const cancelled = lessons.filter(l => l.status === 'cancelled').length;
+  const totalActive = allSchedules.length;
+  const totalDay = daySchedules.length;
 
   if (role === 'administrator') return <AccessDenied title="Program Privat" />;
 
@@ -288,43 +226,34 @@ export default function SchedulePage() {
       {/* ── Animated Banner ───────────────────────────────── */}
       <PageBanner
         icon={CalendarDays}
-        title="Program Privat — pe zile"
+        title="Program Privat"
         subtitle={
-          (isStudent ? 'Vizualizează lecțiile tale' : 'Gestionează lecțiile') +
-          (weekOffset === 0 ? ' din această săptămână' : weekOffset > 0 ? ` din ${weekOffset === 1 ? 'săptămâna viitoare' : `${weekOffset} săptămâni în viitor`}` : ` din ${weekOffset === -1 ? 'săptămâna trecută' : `${-weekOffset} săptămâni în urmă`}`)
+          (isStudent ? 'Orarul tău fix' : 'Orarul fix al elevilor') +
+          ' — se repetă în fiecare săptămână, până e schimbat de aici'
         }
         accent="#5934DC"
         right={<>
-          <StatBadge label="Total"      value={totalWeek} color="bg-white/20 text-white" />
-          <StatBadge label="Programate" value={scheduled} color="bg-brand-300/30 text-white" />
-          <StatBadge label="Finalizate" value={completed} color="bg-emerald-300/30 text-white" />
-          {cancelled > 0 && <StatBadge label="Anulate" value={cancelled} color="bg-red-300/30 text-white" />}
+          <StatBadge label={DAY_LABELS[selectedDayIdx]} value={totalDay} color="bg-white/20 text-white" />
+          <StatBadge label="Total activ" value={totalActive} color="bg-brand-300/30 text-white" />
         </>}
       />
 
       {/* ── Mobile stats ─────────────────────────────────── */}
       <div className="flex sm:hidden gap-3 px-4 pt-4">
-        <MobileStat label="Total"  value={totalWeek} color="bg-slate-800 text-white" />
-        <MobileStat label="Prog."  value={scheduled} color="bg-brand-600 text-white" />
-        <MobileStat label="Fin."   value={completed}  color="bg-emerald-600 text-white" />
+        <MobileStat label={DAY_LABELS[selectedDayIdx]} value={totalDay} color="bg-slate-800 text-white" />
+        <MobileStat label="Total activ" value={totalActive} color="bg-brand-600 text-white" />
       </div>
 
       <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
 
-        {/* ── Week nav — browse any week, past or future; nothing ever expires ── */}
+        {/* ── Search ───────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => setWeekOffset(o => o - 1)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
-            <ChevronLeft className="w-5 h-5 text-slate-500" />
-          </button>
-          <span className="text-lg font-extrabold text-slate-900 dark:text-white min-w-56 text-center">
-            {weekDates[0].toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })} – {weekDates[6].toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </span>
-          <button onClick={() => setWeekOffset(o => o + 1)} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
-            <ChevronRight className="w-5 h-5 text-slate-500" />
-          </button>
-          {weekOffset !== 0 && (
-            <button onClick={() => setWeekOffset(0)} className="px-4 py-2 text-sm font-bold rounded-xl bg-brand-600 text-white shadow-md hover:bg-brand-500">Săptămâna curentă</button>
-          )}
+          <input
+            value={searchStudent}
+            onChange={e => setSearchStudent(e.target.value)}
+            placeholder="Caută elev…"
+            className="w-full max-w-xs px-3.5 py-2 text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          />
         </div>
 
         {/* ── Calendar grid ────────────────────────────────── */}
@@ -332,8 +261,7 @@ export default function SchedulePage() {
           {/* Day tabs */}
           <div className="flex flex-wrap items-center gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
             {DAY_LABELS.map((label, i) => {
-              const d = weekDates[i];
-              const isToday = fmtDate(d) === todayStr;
+              const isToday = i === todayDayIdx();
               const isSelected = i === selectedDayIdx;
               return (
                 <button
@@ -393,76 +321,6 @@ export default function SchedulePage() {
                       );
                     })}
                   </tr>
-                  {!isStudent && (
-                    <tr className="bg-brand-50/60">
-                      <th className="border border-brand-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-brand-400 text-left">Profesor</th>
-                      {cabinetColumns.map(col => {
-                        if (typeof col.id !== 'number') {
-                          return <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal"><span className="block text-center text-xs text-gray-300">—</span></th>;
-                        }
-                        const cabinetId = col.id;
-                        const override = overrideFor(cabinetId);
-                        return (
-                          <th key={col.id} className="border border-brand-100 px-2 py-2.5 font-normal align-top">
-                            {override ? (
-                              <div className="rounded-md border border-amber-300 bg-amber-50 p-1.5 space-y-1">
-                                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700">Excepție azi</p>
-                                <select
-                                  value={override.teacher_id ?? ''}
-                                  onChange={e => handleOverrideChange(cabinetId, e.target.value)}
-                                  disabled={savingAssignment === cabinetId}
-                                  className="w-full text-sm font-semibold text-amber-900 border border-amber-300 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
-                                >
-                                  <option value="">— fără profesor —</option>
-                                  {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOverrideChange(cabinetId, '')}
-                                  disabled={savingAssignment === cabinetId}
-                                  className="text-[10px] font-semibold text-amber-700 hover:underline"
-                                >
-                                  ✕ Revino la profesorul obișnuit
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <select
-                                  value={assignmentFor(cabinetId)?.teacher_id ?? ''}
-                                  onChange={e => handleTeacherChange(cabinetId, e.target.value)}
-                                  disabled={savingAssignment === cabinetId}
-                                  className="w-full text-sm font-semibold text-gray-700 border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50"
-                                >
-                                  <option value="">— fără profesor —</option>
-                                  {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                                {isAdmin && (openOverrideFor === cabinetId ? (
-                                  <select
-                                    autoFocus
-                                    value=""
-                                    onChange={e => e.target.value && handleOverrideChange(cabinetId, e.target.value)}
-                                    onBlur={() => setOpenOverrideFor(null)}
-                                    className="w-full text-xs font-semibold text-amber-700 border border-amber-300 rounded-md px-2 py-1 bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                                  >
-                                    <option value="">Excepție azi — alege profesor…</option>
-                                    {teachersList.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                  </select>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setOpenOverrideFor(cabinetId)}
-                                    className="text-[10px] font-semibold text-slate-400 hover:text-amber-600 hover:underline"
-                                  >
-                                    + Excepție pentru azi
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  )}
                 </thead>
                 <tbody>
                   {timeSlots.map(time => (
@@ -472,8 +330,8 @@ export default function SchedulePage() {
                       </td>
                       {cabinetColumns.map(col => {
                         const key = `${col.id}|${time}`;
-                        const cellLessons = byCabinetTime[key] ?? [];
-                        const cellKey = `${selectedDate}|${col.id}|${time}`;
+                        const cellSchedules = byCabinetTime[key] ?? [];
+                        const cellKey = `${col.id}|${time}`;
                         const isDropTarget = dropCell === cellKey && draggingId !== null;
                         return (
                           <td
@@ -488,37 +346,33 @@ export default function SchedulePage() {
                             className={`group relative border border-gray-200 px-2.5 py-2.5 align-top transition-colors duration-150 min-w-[180px] min-h-[64px]
                               ${isDropTarget ? 'bg-brand-50 ring-2 ring-brand-400 ring-inset' : 'hover:bg-gray-50'}`}
                           >
-                            {cellLessons.map(l => {
-                              const isDragging = draggingId === l.id;
-                              const isMenu     = activeMenu === l.id;
-                              const statusStyle =
-                                l.status === 'completed' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' :
-                                l.status === 'cancelled' ? 'bg-gray-100 border-gray-300 text-gray-400 line-through' :
-                                'bg-brand-50 border-brand-300 text-brand-800';
+                            {cellSchedules.map(s => {
+                              const isDragging = draggingId === s.id;
+                              const isMenu     = activeMenu === s.id;
                               return (
                                 <div
-                                  key={l.id}
+                                  key={s.id}
                                   draggable={!isStudent}
                                   onDragStart={isStudent ? undefined : e => {
-                                    setDraggingId(l.id);
+                                    setDraggingId(s.id);
                                     setActiveMenu(null);
                                     e.dataTransfer.effectAllowed = 'move';
-                                    try { e.dataTransfer.setData('text/plain', String(l.id)); } catch {}
+                                    try { e.dataTransfer.setData('text/plain', String(s.id)); } catch {}
                                   }}
                                   onDragEnd={isStudent ? undefined : () => { setDraggingId(null); setDropCell(null); }}
-                                  onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : l.id); }}
-                                  className={`relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
-                                    transition-all duration-150 ${statusStyle}
+                                  onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : s.id); }}
+                                  className={`relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none bg-brand-50 border-brand-300 text-brand-800 ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
+                                    transition-all duration-150
                                     ${isDragging ? 'opacity-40 scale-95' : 'hover:shadow-md'}
                                     ${isMenu ? 'ring-2 ring-brand-400 shadow-lg' : ''}`}
                                 >
                                   <div className="flex items-start gap-1.5">
                                     <GripVertical className="w-3.5 h-3.5 mt-0.5 opacity-40 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-semibold truncate">{l.student_name}</p>
+                                      <p className="font-semibold truncate">{s.student_name}</p>
                                       <p className="truncate text-xs mt-0.5">
-                                        <span className="font-semibold" style={{ color: 'inherit' }}>{l.discipline || '—'}</span>
-                                        <span className="opacity-70"> · {l.teacher_name}</span>
+                                        <span className="font-semibold" style={{ color: 'inherit' }}>{s.discipline || '—'}</span>
+                                        <span className="opacity-70"> · {s.teacher_name}</span>
                                       </p>
                                     </div>
                                   </div>
@@ -529,11 +383,11 @@ export default function SchedulePage() {
                                       className="absolute z-30 left-0 top-full mt-1 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-white border border-gray-200 shadow-2xl animate-fade-in"
                                     >
                                       <button
-                                        onClick={() => { setEditLesson(l); setActiveMenu(null); }}
+                                        onClick={() => { setEditSchedule(s); setActiveMenu(null); setShowForm(true); }}
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors"
                                       ><Pencil className="w-3 h-3" /> Editează</button>
                                       <button
-                                        onClick={() => { setDeleteTarget(l); setActiveMenu(null); }}
+                                        onClick={() => { setDeleteTarget(s); setActiveMenu(null); }}
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
                                       ><Trash2 className="w-3 h-3" /> Șterge</button>
                                     </div>
@@ -542,9 +396,9 @@ export default function SchedulePage() {
                               );
                             })}
 
-                            {!isStudent && cellLessons.length === 0 && (
+                            {!isStudent && cellSchedules.length === 0 && (
                               <button
-                                onClick={() => openAddLesson(selectedDate, time, typeof col.id === 'number' ? col.id : undefined)}
+                                onClick={() => openAddSlot(selectedDow, time, typeof col.id === 'number' ? col.id : undefined)}
                                 className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1 py-2 rounded-lg border border-dashed border-brand-300 text-brand-500 text-[11px] font-semibold hover:bg-brand-50"
                               >
                                 <Plus className="w-3.5 h-3.5" /> Adaugă
@@ -563,36 +417,26 @@ export default function SchedulePage() {
 
         {/* ── Legend ──────────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-brand-500" />Programat</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-emerald-500" />Finalizat</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-md bg-slate-400" />Anulat</span>
-          {!isStudent && <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">Trage lecția în alt cabinet/oră · Click pentru editare</span>}
+          <span>Orarul de mai sus e fix — rămâne neschimbat săptămână de săptămână, indiferent de zi/lună/an, până când îl modifici sau ștergi de aici.</span>
+          {!isStudent && <span className="ml-auto text-[11px] opacity-50 italic hidden sm:inline">Trage pentru altă oră/cabinet · Click pentru editare</span>}
         </div>
       </main>
 
-      <LessonForm
+      <RecurringScheduleForm
         open={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => { setShowForm(false); setEditSchedule(null); }}
         onSaved={() => mutate()}
-        defaultDate={addDate}
-        defaultTime={addTime}
+        schedule={editSchedule}
+        defaultDayOfWeek={addDow}
+        defaultStartTime={addTime}
         defaultCabinetId={addCabinetId}
-        hideDate
         showToast={toast}
       />
 
-      <LessonForm
-        open={!!editLesson}
-        onClose={() => setEditLesson(null)}
-        onSaved={() => mutate()}
-        lesson={editLesson}
-        showToast={toast}
-      />
-
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge lecția" size="sm">
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge orarul" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Șterge lecția cu <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
-          {deleteTarget && <> din {deleteTarget.date} la {deleteTarget.time?.slice(0, 5)}</>}?
+          Elimină din program orarul fix al lui <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
+          {deleteTarget && <> din {DAY_LABELS[(deleteTarget.day_of_week + 6) % 7]} la {deleteTarget.start_time?.slice(0, 5)}</>}?
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>

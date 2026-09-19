@@ -75,6 +75,17 @@ function symbolsForCell(lessons: Lesson[]): Sym[] {
   return lessons.flatMap(symbolsForLesson);
 }
 
+/** Which MARK_OPTIONS button is currently active for this lesson — used to
+ * accent it in the popover so a multi-lesson cell (grey/ambiguous at a
+ * glance in the grid) is unambiguous once opened. */
+function markForLesson(l: Lesson): Mark | null {
+  if (l.status === 'recovered') return 'recovered';
+  if (l.attendance_status === 'unexcused_absence') return 'unexcused_absence';
+  if (l.attendance_status === 'excused_absence') return 'excused_absence';
+  if (l.status === 'completed' || l.attendance_status === 'present') return 'present';
+  return null;
+}
+
 export default function AttendanceRegisterPage() {
   const [role, setRole] = useState<string | null>(null);
   const [myTeacherId, setMyTeacherId] = useState<number | null>(null);
@@ -97,6 +108,10 @@ export default function AttendanceRegisterPage() {
   const [replacingFor, setReplacingFor] = useState<{ lessonId: number; studentId: number; date: string } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNoteId, setSavingNoteId] = useState<number | null>(null);
+  // Cell already has ≥1 lesson marked, but the popover shows "add another
+  // lesson" (e.g. a second instrument that day) instead of just re-marking
+  // the existing one(s).
+  const [addingAnother, setAddingAnother] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close the popover on any click/touch outside it — the popover is portaled
@@ -111,6 +126,7 @@ export default function AttendanceRegisterPage() {
       setActiveCell(null);
       setPopoverPos(null);
       setReplacingFor(null);
+      setAddingAnother(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -404,6 +420,7 @@ export default function AttendanceRegisterPage() {
     }
     const key = `${studentId}|${dateStr}`;
     setReplacingFor(null);
+    setAddingAnother(false);
     if (activeCell === key) {
       setActiveCell(null);
       setPopoverPos(null);
@@ -618,16 +635,20 @@ export default function AttendanceRegisterPage() {
                                   </div>
                                 </div>
                                 <div className="grid grid-cols-5 gap-1 mb-1.5">
-                                  {MARK_OPTIONS.map(opt => (
-                                    <button
-                                      key={opt.mark}
-                                      onClick={() => setMark(l, opt.mark)}
-                                      title={opt.label}
-                                      className={`h-7 rounded-md border text-xs font-bold flex items-center justify-center transition-colors ${opt.className}`}
-                                    >
-                                      {opt.char}
-                                    </button>
-                                  ))}
+                                  {MARK_OPTIONS.map(opt => {
+                                    const isActive = opt.mark === 'replacement' ? !!l.replacement_teacher_id : opt.mark === markForLesson(l);
+                                    return (
+                                      <button
+                                        key={opt.mark}
+                                        onClick={() => setMark(l, opt.mark)}
+                                        title={opt.label}
+                                        className={`h-7 rounded-md border text-xs font-bold flex items-center justify-center transition-all ${opt.className}
+                                          ${isActive ? 'ring-2 ring-current ring-offset-1 scale-110 shadow-md font-extrabold' : 'opacity-60 hover:opacity-100'}`}
+                                      >
+                                        {opt.char}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                                 {l.replacement_teacher_id && (
                                   <button onClick={() => fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replacement_teacher_id: null }) }).then(() => { mutateLessons(); toast('Înlocuire eliminată', 'success'); })}
@@ -655,6 +676,33 @@ export default function AttendanceRegisterPage() {
                                 </div>
                               </div>
                             ))}
+                            {addingAnother ? (
+                              <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700">
+                                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2 px-0.5">
+                                  Altă lecție — alege situația:
+                                </p>
+                                <div className="grid grid-cols-3 gap-1">
+                                  {MARK_OPTIONS.map(opt => (
+                                    <button
+                                      key={opt.mark}
+                                      onClick={() => { setAddingAnother(false); setMark({ studentId: s.id, date: dateStr }, opt.mark); }}
+                                      title={opt.label}
+                                      className={`h-9 rounded-md border text-xs font-bold flex flex-col items-center justify-center leading-none gap-0.5 transition-colors ${opt.className}`}
+                                    >
+                                      <span className="text-sm">{opt.char}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                                <button onClick={() => setAddingAnother(false)} className="mt-1.5 text-[11px] text-slate-400 hover:text-slate-600 px-2">← înapoi</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setAddingAnother(true)}
+                                className="w-full mt-1 flex items-center justify-center gap-1 py-1.5 rounded-md border border-dashed border-amber-300 text-amber-600 text-[11px] font-semibold hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                              >
+                                + Adaugă altă lecție
+                              </button>
+                            )}
                             </>}
                           </div>,
                           document.body,
