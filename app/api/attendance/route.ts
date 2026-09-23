@@ -1,3 +1,4 @@
+import { todayChisinau } from '@/lib/dates';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGuard';
@@ -24,7 +25,7 @@ export function buildAttendanceQuery(request: NextRequest, statusFilter: string 
   let query = supabase
     .from('lessons')
     .select(`id, date, time, discipline, student_id, teacher_id, students(name), teachers!lessons_teacher_id_fkey(name), ${embed}`, { count: 'exact' })
-    .lte('date', new Date().toISOString().split('T')[0])
+    .lte('date', todayChisinau())
     .order('date', { ascending: false })
     .order('time', { ascending: false });
 

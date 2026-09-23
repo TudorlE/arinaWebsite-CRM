@@ -12,6 +12,7 @@ import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import { useActionHistory } from '@/lib/actionHistory';
+import { localDateStr } from '@/lib/dates';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
@@ -19,7 +20,7 @@ const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
 const WEEKDAY_LETTERS = ['D', 'L', 'Ma', 'Mi', 'J', 'V', 'S']; // 0=Sun..6=Sat
 
 function fmtDate(d: Date) {
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 
 function daysInMonth(ref: Date): Date[] {

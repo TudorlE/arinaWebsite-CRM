@@ -1,5 +1,6 @@
 'use client';
 
+import { localDateStr } from '@/lib/dates';
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { Mic2, Plus, Pencil, Trash2, GripVertical, Check, X } from 'lucide-react';
@@ -27,7 +28,7 @@ function getWeekDates(ref: Date): Date[] {
 }
 
 function fmtDate(d: Date) {
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 
 export default function AuditionsPage() {

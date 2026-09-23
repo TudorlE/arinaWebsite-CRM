@@ -2,5 +2,8 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    { "path": "/api/cron/monthly-payments", "schedule": "0 3 1 * *" }
+  ]
 }

@@ -20,6 +20,9 @@ interface Props {
   onSaved: () => void;
   payment?: Payment | null;
   defaultStudentId?: number;
+  /** Month/year the page is currently showing — new payments default to it (e.g. paying a month ahead). */
+  defaultMonth?: number;
+  defaultYear?: number;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -42,7 +45,7 @@ const PAYMENT_DOT: Record<string, string> = {
   paid: 'bg-emerald-500', partial: 'bg-orange-500', unpaid: 'bg-red-500', overdue: 'bg-red-500',
 };
 
-export default function PaymentForm({ open, onClose, onSaved, payment, defaultStudentId, showToast }: Props) {
+export default function PaymentForm({ open, onClose, onSaved, payment, defaultStudentId, defaultMonth, defaultYear, showToast }: Props) {
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -91,11 +94,14 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         ...blank,
         payment_date: todayMoldova(),
         student_id: defaultStudentId ? String(defaultStudentId) : '',
+        month: String(defaultMonth ?? now.getMonth() + 1),
+        year: String(defaultYear ?? now.getFullYear()),
         amount: initialAmount != null ? String(initialAmount) : '',
         notes: planSummary(blank.service, blank.plan, blank.lessons),
       });
     }
     setErrors({});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment, open, defaultStudentId]);
 
   // Multi-instrument mode: seed one status/amount row per subscription,

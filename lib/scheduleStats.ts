@@ -212,11 +212,11 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
 
   const [{ data: teachersData }, { data: studentsData }] = await Promise.all([
     supabase.from('teachers').select('id, name'),
-    supabase.from('students').select('id, name, subscriptions'),
+    supabase.from('students').select('id, name, status, subscriptions'),
   ]);
   const teacherNameMap = new Map<number, string>((teachersData ?? []).map((t: { id: number; name: string }) => [t.id, t.name]));
 
-  type StudentRow = { id: number; name: string; subscriptions: StudentSubscription[] | null };
+  type StudentRow = { id: number; name: string; status: string | null; subscriptions: StudentSubscription[] | null };
   const expected = new Map<number, number>();
   const studentsByTeacher = new Map<number, Set<string>>();
   const addStudent = (teacherId: number, name: string) => {
@@ -224,6 +224,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     studentsByTeacher.get(teacherId)!.add(name);
   };
   for (const s of (studentsData ?? []) as StudentRow[]) {
+    if ((s.status ?? 'active') !== 'active') continue; // paused/inactive students aren't expected to attend
     for (const sub of s.subscriptions ?? []) {
       if (!sub.teacher_id) continue;
       if (filters.teacherId && sub.teacher_id !== filters.teacherId) continue;

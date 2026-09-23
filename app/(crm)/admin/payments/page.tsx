@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
-import { Plus, Search, Pencil, Trash2, Filter, CreditCard, Clock, CheckCircle2, Activity, Target, X } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Filter, CreditCard, Clock, CheckCircle2, Activity, Target, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Badge, { paymentBadge, paymentLabel } from '@/components/ui/Badge';
 import PaymentForm from '@/components/payments/PaymentForm';
@@ -38,7 +38,6 @@ export default function PaymentsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [monthFilter, setMonthFilter]   = useState(String(now.getMonth() + 1));
   const [yearFilter, setYearFilter]     = useState(String(now.getFullYear()));
-  const [showInactive, setShowInactive] = useState(false);
   const [showForm, setShowForm]         = useState(false);
   const [editPayment, setEditPayment]   = useState<Payment | null>(null);
   const [editStudentId, setEditStudentId] = useState<number | null>(null);
@@ -61,7 +60,7 @@ export default function PaymentsPage() {
   const periodParams = new URLSearchParams();
   if (monthFilter) periodParams.set('month', monthFilter);
   periodParams.set('year', yearFilter);
-  const { data: periodData } = useSWR(`/api/payments?${periodParams}`, fetcher, { keepPreviousData: true });
+  const { data: periodData, mutate: mutatePeriod } = useSWR(`/api/payments?${periodParams}`, fetcher, { keepPreviousData: true });
   const periodPayments: Payment[] = periodData?.payments ?? [];
 
   // Student status lookup — paused/inactive students are hidden by default (req. 11).
@@ -83,7 +82,8 @@ export default function PaymentsPage() {
 
   const payments = allPayments
     .filter(p => !search || p.student_name?.toLowerCase().includes(search.toLowerCase()))
-    .filter(p => showInactive || (studentStatusById.get(p.student_id) ?? 'active') === 'active');
+    // Paused/inactive students don't appear (unless they have real money recorded).
+    .filter(p => (studentStatusById.get(p.student_id) ?? 'active') === 'active' || p.status !== 'unpaid');
 
   // Derived totals (from the filtered list)
   const paidAmt    = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
@@ -142,12 +142,38 @@ export default function PaymentsPage() {
     setDeleting(true);
     try {
       const results = await Promise.all(deleteTarget.ids.map(id => fetch(`/api/payments/${id}`, { method: 'DELETE' })));
-      if (results.every(r => r.ok)) { toast('Plată ștearsă', 'success'); mutate(); mutateRevenue(); }
+      if (results.every(r => r.ok)) { toast('Plată ștearsă', 'success'); mutate(); mutateRevenue(); mutatePeriod(); }
       else toast('Eroare la ștergere', 'error');
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
     }
+  };
+
+  // A month needs no manual setup: whenever the current month — or a future one
+  // (paying ahead) — is on screen, make sure every active student/instrument has
+  // its "Neplătit" row there (and fold away leftovers). Past months are never
+  // auto-filled, so history stays exactly as it was recorded.
+  const syncedPeriods = useRef(new Set<string>());
+  useEffect(() => {
+    const m = Number(monthFilter), y = Number(yearFilter);
+    const monthsAhead = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
+    const key = `${y}-${m}`;
+    if (monthsAhead < 0 || monthsAhead > 12 || syncedPeriods.current.has(key)) return;
+    syncedPeriods.current.add(key);
+    fetch('/api/payments/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month: m, year: y }),
+    }).then(r => r.json()).then(d => {
+      if ((d.created ?? 0) + (d.removed ?? 0) + (d.fixed ?? 0) > 0) { mutate(); mutateRevenue(); mutatePeriod(); }
+    }).catch(() => { syncedPeriods.current.delete(key); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthFilter, yearFilter]);
+
+  const shiftMonth = (delta: number) => {
+    const d = new Date(Number(yearFilter), Number(monthFilter) - 1 + delta, 1);
+    setMonthFilter(String(d.getMonth() + 1));
+    setYearFilter(String(d.getFullYear()));
   };
 
   const [generating, setGenerating] = useState(false);
@@ -161,8 +187,8 @@ export default function PaymentsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast(`${data.created} plăți adăugate (${data.skipped} existau deja)`, 'success');
-        mutate(); mutateRevenue();
+        toast(`${data.created} plăți adăugate${data.removed ? `, ${data.removed} duplicate/inactivi eliminate` : ''}`, 'success');
+        mutate(); mutateRevenue(); mutatePeriod();
       } else {
         toast(data.error ?? 'Eroare la generare', 'error');
       }
@@ -179,6 +205,7 @@ export default function PaymentsPage() {
     })));
     mutate();
     mutateRevenue();
+    mutatePeriod();
     toast('Marcat ca plătit!', 'success');
   };
 
@@ -321,6 +348,9 @@ export default function PaymentsPage() {
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-xs text-slate-400 font-medium">Filtre</span>
             </div>
+            <button onClick={() => shiftMonth(-1)} aria-label="Luna anterioară" className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
             <Select
               value={monthFilter}
               onChange={e => setMonthFilter(e.target.value)}
@@ -333,6 +363,9 @@ export default function PaymentsPage() {
               options={YEARS.map(y => ({ value: y, label: String(y) }))}
               className="min-w-20 text-sm"
             />
+            <button onClick={() => shiftMonth(1)} aria-label="Luna următoare" className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
             <Select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
@@ -352,10 +385,6 @@ export default function PaymentsPage() {
                 <X className="w-3 h-3" /> Resetează
               </button>
             )}
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
-              Arată și inactivi/pauză
-            </label>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {payments.length > 0 && (
@@ -493,8 +522,10 @@ export default function PaymentsPage() {
       <PaymentForm
         open={showForm}
         onClose={() => { setShowForm(false); setEditStudentId(null); }}
-        onSaved={() => { mutate(); mutateRevenue(); }}
+        onSaved={() => { mutate(); mutateRevenue(); mutatePeriod(); }}
         payment={editPayment}
+        defaultMonth={Number(monthFilter)}
+        defaultYear={Number(yearFilter)}
         defaultStudentId={editStudentId ?? undefined}
         showToast={toast}
       />

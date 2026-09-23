@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { todayChisinau } from '@/lib/dates';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     // Automation: paid status → set paid_at + payment_date if missing
     if (update.status === 'paid') {
       if (!update.paid_at)      update.paid_at      = new Date().toISOString();
-      if (!update.payment_date) update.payment_date = new Date().toISOString().split('T')[0];
+      if (!update.payment_date) update.payment_date = todayChisinau();
     }
     // Reverting away from paid → clear paid_at
     if (update.status && update.status !== 'paid' && body.status !== undefined) {

@@ -1,3 +1,4 @@
+import { todayChisinau } from '@/lib/dates';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGuard';
@@ -66,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (Object.keys(lessonUpdate).length > 0) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayChisinau();
       await supabase
         .from('lessons')
         .update(lessonUpdate)
@@ -87,7 +88,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   if (forbidden) return forbidden;
 
   const { id } = await params;
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayChisinau();
 
   const { data: futureLessons, error: fetchErr } = await supabase
     .from('lessons')

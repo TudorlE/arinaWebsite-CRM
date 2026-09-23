@@ -4,6 +4,7 @@
  */
 import { supabase } from './supabase';
 import { StudentSubscription } from './types';
+import { todayChisinau, currentPeriodChisinau } from './dates';
 
 /* ─────────────────────────────────────────────────────────────
  *  Types
@@ -31,45 +32,111 @@ export function buildDueDate(month: number, year: number, day = DUE_DAY): string
 
 /** Returns the {month, year} for the current month. */
 export function currentPeriod(): { month: number; year: number } {
-  const now = new Date();
-  return { month: now.getMonth() + 1, year: now.getFullYear() };
+  return currentPeriodChisinau();
 }
 
 /* ─────────────────────────────────────────────────────────────
  *  1. createMonthlyPayments
- *     Generates an "unpaid" record for every (active student × active
- *     instrument/abonament) pair that lacks a payment in the given month —
- *     matching the per-instrument payment model, not a single flat fee.
- *     Idempotent: re-running never duplicates a (student, service) that
- *     already has a payment that period, so it's safe to use to backfill
- *     students whose payment row was deleted while they're still active.
+ *     Brings a month's payments into the canonical shape, idempotently:
+ *       • one "unpaid" row per (active student × active instrument) that
+ *         lacks one — so a new month only needs statuses flipped to paid;
+ *       • duplicate rows for the same student+instrument collapse into one
+ *         (the most-paid one is kept, so no paid record is ever lost);
+ *       • old single-amount rows with no instrument are folded into the
+ *         per-instrument rows (converted when the student has one
+ *         instrument, dropped when unpaid and the student has several);
+ *       • unpaid rows of paused/inactive students, or for an instrument the
+ *         student no longer has, are removed.
+ *     Safe to run any number of times.
  * ────────────────────────────────────────────────────────────*/
+const STATUS_RANK: Record<string, number> = { paid: 3, partial: 2, unpaid: 1, overdue: 1 };
+
 export async function createMonthlyPayments(
   month?: number,
   year?: number,
-): Promise<{ created: number; skipped: number; error?: string }> {
+): Promise<{ created: number; skipped: number; removed: number; fixed: number; error?: string }> {
   const period = (month && year) ? { month, year } : currentPeriod();
+  const fail = (error: string) => ({ created: 0, skipped: 0, removed: 0, fixed: 0, error });
 
   const { data: students, error: studentsErr } = await supabase.from('students').select('id, status, subscriptions');
-  if (studentsErr) return { created: 0, skipped: 0, error: studentsErr.message };
+  if (studentsErr) return fail(studentsErr.message);
 
-  const { data: existing, error: existingErr } = await supabase
+  type PRow = { id: number; student_id: number; service: string | null; status: string; amount: number };
+  const { data: rowsData, error: rowsErr } = await supabase
     .from('payments')
-    .select('student_id, service')
+    .select('id, student_id, service, status, amount')
     .eq('month', period.month)
     .eq('year', period.year);
-  if (existingErr) return { created: 0, skipped: 0, error: existingErr.message };
+  if (rowsErr) return fail(rowsErr.message);
+  let rows = (rowsData ?? []) as PRow[];
 
-  const existingKey = (studentId: number, service: string | null) => `${studentId}|${service ?? ''}`;
-  const existingSet = new Set((existing ?? []).map((p: { student_id: number; service: string | null }) => existingKey(p.student_id, p.service)));
+  const studentById = new Map((students ?? []).map((s: StudentRow) => [s.id, s]));
+  const isActive = (s?: StudentRow) => (s?.status ?? 'active') === 'active';
+  const activeSubs = (s?: StudentRow) => (s?.subscriptions ?? []).filter(sub => (sub.status ?? 'active') === 'active');
 
+  const toDelete = new Set<number>();
+  let fixed = 0;
+
+  // 1) collapse duplicates of the same (student, instrument)
+  const groups = new Map<string, PRow[]>();
+  for (const r of rows) {
+    const k = `${r.student_id}|${r.service ?? ''}`;
+    (groups.get(k) ?? groups.set(k, []).get(k)!).push(r);
+  }
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const keep = g.reduce((a, b) => {
+      const ra = STATUS_RANK[a.status] ?? 1, rb = STATUS_RANK[b.status] ?? 1;
+      return rb > ra || (rb === ra && b.id > a.id) ? b : a;
+    });
+    for (const r of g) if (r.id !== keep.id) toDelete.add(r.id);
+  }
+  rows = rows.filter(r => !toDelete.has(r.id));
+
+  // 2) old rows with no instrument
+  const covered = new Set<number>(); // students whose paid/partial legacy row still stands in for their instruments
+  for (const r of rows.filter(x => !x.service)) {
+    const subs = activeSubs(studentById.get(r.student_id));
+    const alreadyPerInstrument = rows.some(x => x.student_id === r.student_id && x.service);
+    if (subs.length === 1 && !alreadyPerInstrument) {
+      const sub = subs[0];
+      const { error } = await supabase.from('payments').update({ service: sub.instrument, plan_type: sub.plan, lesson_count: sub.lessons }).eq('id', r.id);
+      if (!error) { r.service = sub.instrument; fixed++; continue; }
+    }
+    if ((STATUS_RANK[r.status] ?? 1) === 1) toDelete.add(r.id);
+    else covered.add(r.student_id);
+  }
+  rows = rows.filter(r => !toDelete.has(r.id));
+
+  // 3) unpaid rows of paused/inactive students
+  for (const r of rows) {
+    if (!isActive(studentById.get(r.student_id)) && (STATUS_RANK[r.status] ?? 1) === 1) toDelete.add(r.id);
+  }
+  rows = rows.filter(r => !toDelete.has(r.id));
+
+  // 3b) unpaid rows for an instrument the (active) student no longer has
+  for (const r of rows) {
+    const st = studentById.get(r.student_id);
+    const subs = activeSubs(st);
+    if (r.service && isActive(st) && subs.length > 0 && (STATUS_RANK[r.status] ?? 1) === 1
+        && !subs.some(sub => sub.instrument === r.service)) toDelete.add(r.id);
+  }
+  rows = rows.filter(r => !toDelete.has(r.id));
+
+  if (toDelete.size > 0) {
+    const { error } = await supabase.from('payments').delete().in('id', Array.from(toDelete));
+    if (error) return fail(error.message);
+  }
+
+  // 4) create whatever is still missing
+  const have = new Set(rows.map(r => `${r.student_id}|${r.service ?? ''}`));
   const toInsert: { student_id: number; amount: number; month: number; year: number; status: string; service: string; plan_type: string; lesson_count: number }[] = [];
   let skipped = 0;
   for (const s of (students ?? []) as StudentRow[]) {
-    if ((s.status ?? 'active') !== 'active') continue;
-    for (const sub of s.subscriptions ?? []) {
-      if ((sub.status ?? 'active') !== 'active') continue;
-      if (existingSet.has(existingKey(s.id, sub.instrument))) { skipped++; continue; }
+    if (!isActive(s) || covered.has(s.id)) continue;
+    for (const sub of activeSubs(s)) {
+      if (have.has(`${s.id}|${sub.instrument}`)) { skipped++; continue; }
+      have.add(`${s.id}|${sub.instrument}`);
       toInsert.push({
         student_id: s.id,
         amount: Number(sub.monthly_fee) || 0,
@@ -82,43 +149,17 @@ export async function createMonthlyPayments(
       });
     }
   }
-  if (toInsert.length === 0) return { created: 0, skipped };
-
-  let { error: insertErr } = await supabase.from('payments').insert(toInsert);
-  // plan_type/lesson_count columns may not be migrated yet — strip and retry.
-  if (insertErr && /plan_type|lesson_count/.test(insertErr.message)) {
-    const safe = toInsert.map(({ plan_type: _pt, lesson_count: _lc, ...rest }) => rest);
-    ({ error: insertErr } = await supabase.from('payments').insert(safe));
+  if (toInsert.length > 0) {
+    let { error: insertErr } = await supabase.from('payments').insert(toInsert);
+    // plan_type/lesson_count columns may not be migrated yet — strip and retry.
+    if (insertErr && /plan_type|lesson_count/.test(insertErr.message)) {
+      const safe = toInsert.map(({ plan_type: _pt, lesson_count: _lc, ...rest }) => rest);
+      ({ error: insertErr } = await supabase.from('payments').insert(safe));
+    }
+    if (insertErr) return fail(insertErr.message);
   }
-  if (insertErr) return { created: 0, skipped, error: insertErr.message };
 
-  return { created: toInsert.length, skipped };
-}
-
-/* ─────────────────────────────────────────────────────────────
- *  2. createPaymentForStudent
- *     Auto-generates the current month payment for a single
- *     student (used when a new student is added).
- * ────────────────────────────────────────────────────────────*/
-export async function createPaymentForStudent(
-  studentId: number,
-  monthlyFee: number,
-): Promise<void> {
-  const { month, year } = currentPeriod();
-  const { data: existing } = await supabase
-    .from('payments')
-    .select('id')
-    .eq('student_id', studentId)
-    .eq('month', month)
-    .eq('year', year)
-    .maybeSingle();
-  if (existing) return;
-  await supabase.from('payments').insert({
-    student_id: studentId,
-    amount: Number(monthlyFee) || 0,
-    month, year,
-    status: 'unpaid',
-  });
+  return { created: toInsert.length, skipped, removed: toDelete.size, fixed };
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -135,7 +176,7 @@ export async function updateOverduePayments(): Promise<{ updated: number; error?
  *     Sets status=paid + paid_at=now() (and payment_date today).
  * ────────────────────────────────────────────────────────────*/
 export async function markPaymentAsPaid(paymentId: number): Promise<{ error?: string }> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayChisinau();
   const { error } = await supabase
     .from('payments')
     .update({ status: 'paid', payment_date: today })

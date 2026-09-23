@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, friendlyDbError } from '@/lib/supabase';
-import { createPaymentForStudent } from '@/lib/payments';
+import { createMonthlyPayments } from '@/lib/payments';
 import { withTeacherNames } from '@/lib/pricing';
 import type { StudentSubscription } from '@/lib/types';
 
@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
     }
     if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
 
-    // Automation: auto-create the current month "unpaid" payment for the new student.
-    if (student?.id && baseInsert.monthly_fee > 0) {
-      try { await createPaymentForStudent(Number(student.id), baseInsert.monthly_fee); } catch { /* non-fatal */ }
+    // Automation: create the current month's "unpaid" payment per instrument for the new student.
+    if (student?.id) {
+      try { await createMonthlyPayments(); } catch { /* non-fatal */ }
     }
     return NextResponse.json({ student }, { status: 201 });
   } catch {

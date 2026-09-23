@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { buildDueDate, updateOverduePayments } from '@/lib/payments';
+import { todayChisinau } from '@/lib/dates';
 
 export async function GET(request: NextRequest) {
   // opportunistic overdue sweep before listing
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const isPaid = status === 'paid';
-    const today  = new Date().toISOString().split('T')[0];
+    const today  = todayChisinau();
 
     const baseInsert = {
       student_id:   Number(student_id),

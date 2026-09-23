@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { todayChisinau, currentPeriodChisinau, monthEnd as lastDayOfMonth } from '@/lib/dates';
 
 /**
  * GET /api/stats?month=1-12&year=YYYY
@@ -12,14 +13,14 @@ export async function GET(request: NextRequest) {
     const monthParam = searchParams.get('month');
     const yearParam  = searchParams.get('year');
 
-    const today = new Date().toISOString().split('T')[0];
-    const cm    = monthParam ? Number(monthParam) : new Date().getMonth() + 1;
-    const cy    = yearParam  ? Number(yearParam)  : new Date().getFullYear();
+    const today = todayChisinau();
+    const period = currentPeriodChisinau();
+    const cm    = monthParam ? Number(monthParam) : period.month;
+    const cy    = yearParam  ? Number(yearParam)  : period.year;
     const monthStart = `${cy}-${String(cm).padStart(2, '0')}-01`;
-    const monthEnd   = `${cy}-${String(cm).padStart(2, '0')}-31`;
+    const monthEnd   = lastDayOfMonth(cy, cm);
 
     const [
-      { count: totalStudents },
       { count: totalTeachers },
       { data: students },
       { count: upcomingLessonsToday },
@@ -28,9 +29,8 @@ export async function GET(request: NextRequest) {
       { data: paidPayments },
       { count: unpaidCount },
     ] = await Promise.all([
-      supabase.from('students').select('*', { count: 'exact', head: true }),
       supabase.from('teachers').select('*', { count: 'exact', head: true }),
-      supabase.from('students').select('monthly_fee'),
+      supabase.from('students').select('status, monthly_fee, subscriptions'),
       supabase.from('lessons').select('*', { count: 'exact', head: true })
         .eq('date', today).eq('status', 'scheduled'),
       supabase.from('payments').select('*', { count: 'exact', head: true })
@@ -43,16 +43,20 @@ export async function GET(request: NextRequest) {
         .eq('month', cm).eq('year', cy).eq('status', 'unpaid'),
     ]);
 
-    const totalMonthlyIncome = (students ?? []).reduce(
-      (s: number, r: { monthly_fee: number }) => s + Number(r.monthly_fee), 0
-    );
+    // Only active students count; income is the sum of their active per-instrument fees.
+    type SRow = { status: string | null; monthly_fee: number; subscriptions: { status?: string; monthly_fee: number }[] | null };
+    const activeStudents = ((students ?? []) as SRow[]).filter(r => (r.status ?? 'active') === 'active');
+    const totalMonthlyIncome = activeStudents.reduce((sum, r) => {
+      const subs = (r.subscriptions ?? []).filter(x => (x.status ?? 'active') === 'active');
+      return sum + (subs.length > 0 ? subs.reduce((a, x) => a + Number(x.monthly_fee || 0), 0) : Number(r.monthly_fee || 0));
+    }, 0);
     const paidThisMonth = (paidPayments ?? []).reduce(
       (s: number, r: { amount: number }) => s + Number(r.amount), 0
     );
 
     return NextResponse.json({
       stats: {
-        totalStudents:             totalStudents             ?? 0,
+        totalStudents:             activeStudents.length,
         totalMonthlyIncome,
         upcomingLessonsToday:      upcomingLessonsToday      ?? 0,
         pendingPayments:           pendingPayments           ?? 0,

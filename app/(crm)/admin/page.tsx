@@ -1,5 +1,6 @@
 'use client';
 
+import { localDateStr } from '@/lib/dates';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
@@ -188,8 +189,8 @@ function UpcomingLessonRow({ lesson, index }: {
   lesson: { id: number; student_name: string; teacher_name: string; date: string; time: string; duration: number; status: string; instrument?: string };
   index: number;
 }) {
-  const today    = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const today    = localDateStr(new Date());
+  const tomorrow = localDateStr(new Date(Date.now() + 86400000));
   const isToday    = lesson.date === today;
   const isTomorrow = lesson.date === tomorrow;
 
