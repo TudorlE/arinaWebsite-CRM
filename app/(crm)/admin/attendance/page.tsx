@@ -637,8 +637,8 @@ export default function AttendanceRegisterPage() {
         {/* ── Legend ── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-emerald-50 text-emerald-700 font-bold flex items-center justify-center border border-emerald-200">✓</span>Prezent / Finalizată</span>
-          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-amber-50 text-amber-700 font-bold flex items-center justify-center border border-amber-200">M</span>Absență motivată</span>
-          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-amber-50 text-amber-700 font-bold flex items-center justify-center border border-amber-200">M</span>Absență motivată (nefinalizată · credit luna următoare)</span>
+          <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-rose-50 text-rose-700 font-bold flex items-center justify-center border border-rose-200">N</span>Absență nemotivată (finalizată)</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-sky-50 text-sky-700 font-bold flex items-center justify-center border border-sky-200">R</span>Recuperare</span>
           <span className="flex items-center gap-1.5"><span className="w-5 h-5 rounded-md bg-violet-50 text-violet-700 font-bold flex items-center justify-center border border-violet-200">I</span>Înlocuire</span>
           {canEdit && <span className="ml-auto text-[11px] opacity-60 italic hidden sm:inline">Click pe orice căsuță pentru a marca situația</span>}

@@ -77,14 +77,18 @@ export interface LessonState {
  * The lesson's stored state after pressing a register button — the single
  * definition used by both the server (what gets saved) and the browser (what is
  * shown instantly), so the two can never disagree. Each button makes ITS letter
- * the lesson's outcome: an absence is not "completed", a replaced lesson is
- * done automatically (only "I" shows), and a letter replaces an earlier "I".
+ * the lesson's outcome, and:
+ *   - an UNexcused absence (N) counts as a finished lesson (the student pays for it);
+ *   - an EXcused absence (M) is NOT finished — it is carried to next month as a
+ *     price credit (see lib/credits.ts), never as an extra lesson;
+ *   - a replaced lesson is done automatically (only "I" shows);
+ *   - a letter replaces an earlier "I".
  */
 export function nextState(cur: LessonState, action: MarkAction, replacementTeacherId?: number | null): LessonState {
   switch (action) {
     case 'present':           return { status: 'completed', attendance_status: 'present', replacement_teacher_id: null };
     case 'excused_absence':   return { status: 'scheduled', attendance_status: 'excused_absence', replacement_teacher_id: null };
-    case 'unexcused_absence': return { status: 'scheduled', attendance_status: 'unexcused_absence', replacement_teacher_id: null };
+    case 'unexcused_absence': return { status: 'completed', attendance_status: 'unexcused_absence', replacement_teacher_id: null };
     case 'recovered':         return { status: 'recovered', attendance_status: 'present', replacement_teacher_id: null };
     case 'cancelled':         return { status: 'cancelled', attendance_status: cur.attendance_status, replacement_teacher_id: null };
     case 'replacement':       return { status: 'completed', attendance_status: 'present', replacement_teacher_id: replacementTeacherId ?? null };
