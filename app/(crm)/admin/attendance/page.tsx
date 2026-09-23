@@ -201,16 +201,46 @@ export default function AttendanceRegisterPage() {
     const key = `${l.student_id}|${l.date}`;
     (byCell[key] ??= []).push(l);
   }
+  // Safety net: two rows for the same student/day/instrument/time are the same
+  // lesson (left over from a double-click) — show one, preferring the marked
+  // and newest, so a single marking never renders as "M/M".
+  for (const key of Object.keys(byCell)) {
+    const best = new Map<string, Lesson>();
+    for (const l of byCell[key]) {
+      const k = `${l.discipline ?? ''}|${(l.time ?? '').slice(0, 5)}`;
+      const cur = best.get(k);
+      const marked = (x: Lesson) => (markForLesson(x) || x.replacement_teacher_id ? 1 : 0);
+      if (!cur || marked(l) > marked(cur) || (marked(l) === marked(cur) && l.id > cur.id)) best.set(k, l);
+    }
+    byCell[key] = Array.from(best.values());
+  }
 
   const monthLabel = (() => {
     const s = monthRef.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' });
     return s.charAt(0).toUpperCase() + s.slice(1);
   })();
 
-  /** Creates a lesson for an empty register cell so it can be marked. */
-  const createLessonForCell = async (studentId: number, dateStr: string): Promise<Lesson | null> => {
+  /** Creates a lesson for an empty register cell so it can be marked.
+   *  Checks the database first: an existing lesson for the same student/day/
+   *  instrument is reused instead of duplicated. `extra` adds a genuinely
+   *  different lesson (another instrument, or a free time slot). */
+  const createLessonForCell = async (studentId: number, dateStr: string, extra = false): Promise<Lesson | null> => {
     const student = allStudents.find(s => s.id === studentId);
-    const discipline = fDiscipline || (student?.instruments?.[0] ?? null);
+    const existingRes = await fetch(`/api/lessons?student_id=${studentId}&date=${dateStr}`).catch(() => null);
+    const existing: Lesson[] = existingRes?.ok ? ((await existingRes.json()).lessons ?? []) : [];
+
+    let discipline: string | null = fDiscipline || (student?.instruments?.[0] ?? null);
+    if (extra && !fDiscipline) {
+      const used = new Set(existing.map(l => l.discipline));
+      discipline = (student?.instruments ?? []).find(i => !used.has(i)) ?? discipline;
+    }
+    if (!extra) {
+      const same = existing.find(l => (l.discipline ?? null) === discipline);
+      if (same) return same;
+    }
+    const usedTimes = new Set(existing.filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
+    const time = DEFAULT_TIME_SLOTS.find(t => !usedTimes.has(t)) ?? DEFAULT_SLOT;
+
     const teacherId = (student && discipline ? studentDisciplineTeacherId(student, discipline) : null)
       ?? student?.teacher_id ?? effectiveTeacherId ?? null;
     if (!teacherId) {
@@ -221,7 +251,7 @@ export default function AttendanceRegisterPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         student_id: studentId, teacher_id: teacherId, date: dateStr,
-        time: DEFAULT_SLOT, duration: 45, discipline,
+        time, duration: 45, discipline,
       }),
     });
     if (!res.ok) { toast('Nu s-a putut crea lecția', 'error'); return null; }
@@ -271,14 +301,30 @@ export default function AttendanceRegisterPage() {
     }
   };
 
-  const setMark = async (lessonArg: Lesson | { studentId: number; date: string }, mark: Mark) => {
+  // Synchronous lock: state updates are async, so a fast double-click would
+  // otherwise run two creations before the first one finished.
+  const markLock = useRef(new Set<string>());
+
+  const setMark = async (lessonArg: Lesson | { studentId: number; date: string; extra?: boolean }, mark: Mark) => {
+    const lockKey = 'id' in lessonArg ? `L${lessonArg.id}` : `${lessonArg.studentId}|${lessonArg.date}`;
+    if (markLock.current.has(lockKey)) return;
+    markLock.current.add(lockKey);
+    try {
+      await setMarkInner(lessonArg, mark);
+    } finally {
+      markLock.current.delete(lockKey);
+    }
+  };
+
+  const setMarkInner = async (lessonArg: Lesson | { studentId: number; date: string; extra?: boolean }, mark: Mark) => {
     // Empty cell → create the lesson first.
     const wasNew = !('id' in lessonArg);
+    const extra = !('id' in lessonArg) && !!lessonArg.extra;
     let lesson: Lesson;
     if (!wasNew) {
       lesson = lessonArg as Lesson;
     } else {
-      const created = await createLessonForCell((lessonArg as { studentId: number; date: string }).studentId, (lessonArg as { studentId: number; date: string }).date);
+      const created = await createLessonForCell((lessonArg as { studentId: number; date: string }).studentId, (lessonArg as { studentId: number; date: string }).date, extra);
       if (!created) return;
       lesson = created;
     }
@@ -325,7 +371,7 @@ export default function AttendanceRegisterPage() {
         },
         redo: async () => {
           if (wasNew) {
-            const created = await createLessonForCell(studentIdForRedo, dateForRedo);
+            const created = await createLessonForCell(studentIdForRedo, dateForRedo, extra);
             if (!created) return;
             idRef.current = created.id;
           }
@@ -685,7 +731,7 @@ export default function AttendanceRegisterPage() {
                                   {MARK_OPTIONS.map(opt => (
                                     <button
                                       key={opt.mark}
-                                      onClick={() => { setAddingAnother(false); setMark({ studentId: s.id, date: dateStr }, opt.mark); }}
+                                      onClick={() => { setAddingAnother(false); setMark({ studentId: s.id, date: dateStr, extra: true }, opt.mark); }}
                                       title={opt.label}
                                       className={`h-9 rounded-md border text-xs font-bold flex flex-col items-center justify-center leading-none gap-0.5 transition-colors ${opt.className}`}
                                     >
