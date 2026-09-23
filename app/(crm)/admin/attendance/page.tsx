@@ -13,7 +13,7 @@ import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import { localDateStr } from '@/lib/dates';
 import { symbolsForLesson, markForLesson, nextState, type Mark, type MarkAction, type Sym } from '@/lib/attendanceMarks';
-import { inRegister } from '@/lib/rosters';
+import { inRegister, pickInstrument } from '@/lib/rosters';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
@@ -174,9 +174,10 @@ export default function AttendanceRegisterPage() {
     // A teacher filter must only surface lessons that teacher actually
     // teaches (or substituted into) — not every lesson of a student who
     // also happens to study a different instrument with someone else.
+    // A replaced lesson stays visible for the student's own teacher (it's their
+    // student's row) as well as for the teacher who covered it.
     if (effectiveTeacherId) {
-      const lessonTeacherId = l.replacement_teacher_id ?? l.teacher_id;
-      if (lessonTeacherId !== effectiveTeacherId) continue;
+      if (l.teacher_id !== effectiveTeacherId && l.replacement_teacher_id !== effectiveTeacherId) continue;
     }
     const key = `${l.student_id}|${l.date}`;
     (byCell[key] ??= []).push(l);
@@ -245,15 +246,19 @@ export default function AttendanceRegisterPage() {
 
     // 1) instantly on screen
     let shownId: number;
+    let chosenDiscipline: string | null = null;
     if (existing) {
       shownId = existing.id;
       patchLessons(ls => ls.map(l => l.id === existing.id ? applyLocal(l, action, replacementId) : l));
     } else {
       const student = allStudents.find(x => x.id === studentId);
       const subs = (student?.subscriptions ?? []).filter(x => (x.status ?? 'active') === 'active');
-      const instruments = subs.length > 0 ? subs.map(x => x.instrument) : (student?.instruments ?? []);
-      const usedHere = new Set((byCell[cellKey] ?? []).map(l => l.discipline));
-      const discipline = fDiscipline || (extra ? instruments.find(i => !usedHere.has(i)) : undefined) || instruments[0] || null;
+      const usedHere = (byCell[cellKey] ?? []).map(l => l.discipline ?? null);
+      // The instrument THIS teacher teaches the student (not just their first instrument).
+      const discipline = student
+        ? pickInstrument(student, { discipline: fDiscipline, teacherId: effectiveTeacherId, taken: usedHere, extra })
+        : null;
+      chosenDiscipline = discipline;
       const sub = subs.find(x => x.instrument === discipline);
       const takenTimes = new Set((byCell[cellKey] ?? []).filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
       const slot = DEFAULT_TIME_SLOTS.find(t => !takenTimes.has(t)) ?? DEFAULT_SLOT;
@@ -275,7 +280,7 @@ export default function AttendanceRegisterPage() {
         const knownId = shownId > 0 ? shownId : tempToReal.current.get(shownId);
         const body = knownId
           ? { action, lesson_id: knownId, replacement_teacher_id: replacementId ?? undefined }
-          : { action, student_id: studentId, date, extra, discipline: fDiscipline || undefined, replacement_teacher_id: replacementId ?? undefined };
+          : { action, student_id: studentId, date, extra, discipline: chosenDiscipline ?? undefined, replacement_teacher_id: replacementId ?? undefined };
         const res = await fetch('/api/register/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || !json.lesson) throw new Error(json.error ?? 'Eroare la salvare');

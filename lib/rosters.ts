@@ -35,3 +35,25 @@ export function inRegister(s: RosterStudent, discipline: string, teacherId: numb
   if (!teacherId) return true;
   return relevant.some(e => e.teacherId === teacherId);
 }
+
+/**
+ * Which instrument a NEW lesson from the register is for. With a teacher chosen
+ * it must be the instrument THAT teacher teaches this student (not simply the
+ * student's first instrument, which may belong to someone else and would make
+ * the lesson vanish from the chosen teacher's view). `extra` = another lesson
+ * the same day: prefer an instrument that has none yet.
+ */
+export function pickInstrument(
+  s: RosterStudent,
+  opts: { discipline?: string; teacherId?: number | null; taken?: (string | null)[]; extra?: boolean },
+): string | null {
+  let cands = enrollments(s);
+  if (opts.discipline) cands = cands.filter(e => e.instrument === opts.discipline);
+  if (opts.teacherId) {
+    const mine = cands.filter(e => e.teacherId === opts.teacherId);
+    if (mine.length > 0) cands = mine;
+  }
+  const names = cands.map(e => e.instrument);
+  if (opts.extra) return names.find(i => !(opts.taken ?? []).includes(i)) ?? names[0] ?? null;
+  return names[0] ?? null;
+}
