@@ -11,8 +11,9 @@ import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
-import { useActionHistory } from '@/lib/actionHistory';
 import { localDateStr } from '@/lib/dates';
+import { symbolsForLesson, markForLesson, nextState, type Mark, type MarkAction, type Sym } from '@/lib/attendanceMarks';
+import { inRegister } from '@/lib/rosters';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 const DEFAULT_SLOT = DEFAULT_TIME_SLOTS[0];
@@ -30,8 +31,6 @@ function daysInMonth(ref: Date): Date[] {
   return Array.from({ length: count }, (_, i) => new Date(year, month, i + 1));
 }
 
-type Mark = 'present' | 'excused_absence' | 'unexcused_absence' | 'cancelled' | 'recovered' | 'replacement';
-
 // 'cancelled' is deliberately not offered as a mark — a lesson's outcome is
 // always either an attendance (present/motivated/unmotivated), a recovery or
 // a replacement. baseSymbolFor() below still renders old 'cancelled' rows for
@@ -44,69 +43,42 @@ const MARK_OPTIONS: { mark: Mark; char: string; label: string; className: string
   { mark: 'replacement',       char: 'I', label: 'Înlocuire (alt profesor)', className: 'text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200' },
 ];
 
-type Sym = { char: string; className: string; title: string };
-
-/** The attendance/outcome symbol for a lesson — independent of whether it was replaced. */
-function baseSymbolFor(l: Lesson): Sym | null {
-  if (l.status === 'cancelled') return { char: 'X', className: 'text-red-700 bg-red-50', title: 'Anulată' };
-  if (l.status === 'recovered') return { char: 'R', className: 'text-sky-700 bg-sky-50', title: 'Recuperare' };
-  if (l.attendance_status === 'unexcused_absence') return { char: 'N', className: 'text-rose-700 bg-rose-50', title: 'Absență nemotivată' };
-  if (l.attendance_status === 'excused_absence') return { char: 'M', className: 'text-amber-700 bg-amber-50', title: 'Absență motivată' };
-  if (l.attendance_status === 'late') return { char: 'Î', className: 'text-blue-700 bg-blue-50', title: 'Întârziere' };
-  if (l.status === 'completed' || l.attendance_status === 'present') return { char: '✓', className: 'text-emerald-700 bg-emerald-50', title: 'Prezent / Finalizată' };
-  return null;
-}
-
-/** One lesson can show up to two symbols — its outcome AND, separately, that it was replaced. */
-function symbolsForLesson(l: Lesson): Sym[] {
-  const out: Sym[] = [];
-  const base = baseSymbolFor(l);
-  if (base) out.push(base);
-  if (l.replacement_teacher_id) {
-    out.push({ char: 'I', className: 'text-violet-700 bg-violet-50', title: `Înlocuire${l.replacement_teacher_name ? ` — ${l.replacement_teacher_name}` : ''}` });
-  }
-  if (out.length === 0) {
-    out.push({ char: '•', className: 'text-slate-300', title: `Programată · ${l.time?.slice(0, 5)} · ${l.discipline ?? 'fără disciplină'} — click pentru a marca` });
-  }
-  return out;
-}
-
 /** All symbols for every lesson in a day's cell, e.g. two lessons -> "M/N", one replaced+absent -> "M/I". */
 function symbolsForCell(lessons: Lesson[]): Sym[] {
   return lessons.flatMap(symbolsForLesson);
 }
 
-/** Which MARK_OPTIONS button is currently active for this lesson — used to
- * accent it in the popover so a multi-lesson cell (grey/ambiguous at a
- * glance in the grid) is unambiguous once opened. */
-function markForLesson(l: Lesson): Mark | null {
-  if (l.status === 'recovered') return 'recovered';
-  if (l.attendance_status === 'unexcused_absence') return 'unexcused_absence';
-  if (l.attendance_status === 'excused_absence') return 'excused_absence';
-  if (l.status === 'completed' || l.attendance_status === 'present') return 'present';
-  return null;
-}
+/** A lesson that exists, or an empty cell (student + day) whose lesson gets created by the first mark. */
+type MarkTarget = Lesson | { studentId: number; date: string; extra?: boolean };
+
+let tempIdCounter = 0;
+const nowMs = () => Date.now();
 
 export default function AttendanceRegisterPage() {
   const [role, setRole] = useState<string | null>(null);
   const [myTeacherId, setMyTeacherId] = useState<number | null>(null);
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); }).catch(() => {});
+    // Last known role first (so buttons work right after a refresh), then the real answer.
+    try {
+      const cached = JSON.parse(localStorage.getItem('arry-register-role') ?? 'null');
+      if (cached) { setRole(cached.role ?? null); setMyTeacherId(cached.teacherId ?? null); }
+    } catch { /* no cache */ }
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
+      setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null);
+      try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null })); } catch { /* ignore */ }
+    }).catch(() => {});
   }, []);
   const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
   const isFullAdmin = role === 'admin' || role === 'administrator';
 
   const { toasts, toast, remove } = useToast();
-  const { push: pushAction } = useActionHistory();
   const [monthRef, setMonthRef] = useState(new Date());
   const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
-  const [savingCell, setSavingCell] = useState<string | null>(null);
   // When set, the popover shows a teacher picker for "who did the replacement".
-  // `lessonId: 0` means "create the lesson first, then set the replacement".
-  const [replacingFor, setReplacingFor] = useState<{ lessonId: number; studentId: number; date: string } | null>(null);
+  const [replacingFor, setReplacingFor] = useState<MarkTarget | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [savingNoteId, setSavingNoteId] = useState<number | null>(null);
   // Cell already has ≥1 lesson marked, but the popover shows "add another
@@ -135,24 +107,51 @@ export default function AttendanceRegisterPage() {
 
   const [editLesson, setEditLesson] = useState<Lesson | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
-  const { data: studentsData } = useSWR('/api/students', fetcher);
-  const { data: teachersData } = useSWR('/api/teachers', fetcher);
-  const { data: lessonsData, mutate: mutateLessons } = useSWR('/api/lessons', fetcher);
-  const { data: disciplineTeachersData, mutate: mutateDisciplineTeachers } = useSWR('/api/discipline-teachers', fetcher);
+  const days = daysInMonth(monthRef);
+  const from = fmtDate(days[0]);
+  const to = fmtDate(days[days.length - 1]);
+  const monthKey = (d: Date) => {
+    const ds = daysInMonth(d);
+    return `/api/lessons?from=${fmtDate(ds[0])}&to=${fmtDate(ds[ds.length - 1])}`;
+  };
+  const lessonsKey = monthKey(monthRef);
+
+  // Instant paint after a refresh: show what was on screen last time straight away
+  // (from this browser), while the fresh data loads and replaces it.
+  const [seed, setSeed] = useState<Record<string, unknown>>({});
+  useEffect(() => {
+    try { setSeed(JSON.parse(localStorage.getItem('arry-register-cache') ?? '{}')); } catch { /* no cache yet */ }
+  }, []);
+
+  const { data: studentsData } = useSWR('/api/students', fetcher, { fallbackData: seed['/api/students'] as never });
+  const { data: teachersData } = useSWR('/api/teachers', fetcher, { fallbackData: seed['/api/teachers'] as never });
+  const { data: lessonsData, mutate: mutateLessons } = useSWR(lessonsKey, fetcher, { fallbackData: seed[lessonsKey] as never, keepPreviousData: false });
+  const { data: disciplineTeachersData, mutate: mutateDisciplineTeachers } = useSWR('/api/discipline-teachers', fetcher, { fallbackData: seed['/api/discipline-teachers'] as never });
+  // Warm the neighbouring months so switching month is instant too.
+  useSWR(monthKey(new Date(monthRef.getFullYear(), monthRef.getMonth() - 1, 1)), fetcher);
+  useSWR(monthKey(new Date(monthRef.getFullYear(), monthRef.getMonth() + 1, 1)), fetcher);
+
+  useEffect(() => {
+    if (!studentsData || !teachersData || !lessonsData) return;
+    try {
+      const prev = JSON.parse(localStorage.getItem('arry-register-cache') ?? '{}');
+      const lessonKeys = Object.keys(prev).filter(k => k.startsWith('/api/lessons')).filter(k => k !== lessonsKey).slice(-2);
+      const next: Record<string, unknown> = { '/api/students': studentsData, '/api/teachers': teachersData, '/api/discipline-teachers': disciplineTeachersData, [lessonsKey]: lessonsData };
+      for (const k of lessonKeys) next[k] = prev[k];
+      localStorage.setItem('arry-register-cache', JSON.stringify(next));
+    } catch { /* storage full or unavailable — the cache is only a speed-up */ }
+  }, [studentsData, teachersData, lessonsData, disciplineTeachersData, lessonsKey]);
+
   const allStudents: Student[] = studentsData?.students ?? [];
   const teachers: Teacher[] = teachersData?.teachers ?? [];
   const teacherName = (tid: number | null | undefined) => teachers.find(t => t.id === tid)?.name ?? null;
   const allLessons: Lesson[] = ((lessonsData?.lessons ?? []) as Lesson[]).map(l => ({
     ...l,
-    replacement_teacher_name: l.replacement_teacher_id ? teacherName(l.replacement_teacher_id) : null,
+    replacement_teacher_name: l.replacement_teacher_id ? (l.replacement_teacher_name ?? teacherName(l.replacement_teacher_id)) : null,
   }));
   const disciplineTeachers: { discipline: string; teacher_id: number | null; teacher_name: string | null }[] = disciplineTeachersData?.assignments ?? [];
 
-  const days = daysInMonth(monthRef);
-  const from = fmtDate(days[0]);
-  const to = fmtDate(days[days.length - 1]);
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
   const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
@@ -165,29 +164,9 @@ export default function AttendanceRegisterPage() {
     ? myTeacherId
     : (fTeacher ? Number(fTeacher) : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null));
 
-  const studentDisciplineTeacherId = (s: Student, discipline: string): number | null =>
-    s.subscriptions?.find(sub => sub.instrument === discipline)?.teacher_id ?? s.teacher_id ?? null;
-  const studentTeachesWith = (s: Student, teacherId: number): boolean =>
-    s.teacher_id === teacherId || (s.subscriptions ?? []).some(sub => sub.teacher_id === teacherId);
-  // Paused/inactive students drop out of the register automatically — for a
-  // specific discipline, that instrument's own subscription status decides;
-  // for "Toate serviciile", the student's overall status (active if ANY
-  // instrument is still active) decides. Flipping status back to active
-  // brings them straight back, since this is re-derived on every render.
-  const studentActiveFor = (s: Student, discipline: string): boolean => {
-    if (discipline) return (s.subscriptions?.find(sub => sub.instrument === discipline)?.status ?? s.status ?? 'active') === 'active';
-    return (s.status ?? 'active') === 'active';
-  };
-
-  const students = allStudents
-    .filter(s => !fDiscipline || (s.instruments ?? []).includes(fDiscipline))
-    .filter(s => studentActiveFor(s, fDiscipline))
-    .filter(s => {
-      if (!effectiveTeacherId) return true;
-      return fDiscipline
-        ? studentDisciplineTeacherId(s, fDiscipline) === effectiveTeacherId
-        : studentTeachesWith(s, effectiveTeacherId);
-    });
+  // Strict roster: only students actually enrolled (per-instrument subscription
+  // and its teacher), active, and never paused/inactive ones — see lib/rosters.ts.
+  const students = allStudents.filter(s => inRegister(s, fDiscipline, effectiveTeacherId));
 
   const byCell: Record<string, Lesson[]> = {};
   for (const l of monthLessons) {
@@ -202,6 +181,9 @@ export default function AttendanceRegisterPage() {
     const key = `${l.student_id}|${l.date}`;
     (byCell[key] ??= []).push(l);
   }
+  // Same order on screen and after every save: by time, then instrument, then id.
+  const cellOrder = (a: Lesson, b: Lesson) =>
+    (a.time ?? '').slice(0, 5).localeCompare((b.time ?? '').slice(0, 5)) || (a.discipline ?? '').localeCompare(b.discipline ?? '') || a.id - b.id;
   // Safety net: two rows for the same student/day/instrument/time are the same
   // lesson (left over from a double-click) — show one, preferring the marked
   // and newest, so a single marking never renders as "M/M".
@@ -213,7 +195,7 @@ export default function AttendanceRegisterPage() {
       const marked = (x: Lesson) => (markForLesson(x) || x.replacement_teacher_id ? 1 : 0);
       if (!cur || marked(l) > marked(cur) || (marked(l) === marked(cur) && l.id > cur.id)) best.set(k, l);
     }
-    byCell[key] = Array.from(best.values());
+    byCell[key] = Array.from(best.values()).sort(cellOrder);
   }
 
   const monthLabel = (() => {
@@ -221,171 +203,104 @@ export default function AttendanceRegisterPage() {
     return s.charAt(0).toUpperCase() + s.slice(1);
   })();
 
-  /** Creates a lesson for an empty register cell so it can be marked.
-   *  Checks the database first: an existing lesson for the same student/day/
-   *  instrument is reused instead of duplicated. `extra` adds a genuinely
-   *  different lesson (another instrument, or a free time slot). */
-  const createLessonForCell = async (studentId: number, dateStr: string, extra = false): Promise<Lesson | null> => {
-    const student = allStudents.find(s => s.id === studentId);
-    const existingRes = await fetch(`/api/lessons?student_id=${studentId}&date=${dateStr}`).catch(() => null);
-    const existing: Lesson[] = existingRes?.ok ? ((await existingRes.json()).lessons ?? []) : [];
+  // ── Marking: instant on screen, one atomic call to the server ──────────────
+  // The mark is applied to the lesson list in the browser immediately; the server
+  // call (/api/register/mark: find-or-create the lesson + save the mark) runs in
+  // the background, one at a time per cell so quick clicks stay in order and a
+  // lesson can never be created twice. If the server refuses, the screen goes
+  // back to the saved truth and the error is shown.
+  const patchLessons = (fn: (ls: Lesson[]) => Lesson[]) =>
+    mutateLessons((cur: { lessons: Lesson[] } | undefined) => ({ lessons: fn(cur?.lessons ?? []) }), { revalidate: false });
 
-    let discipline: string | null = fDiscipline || (student?.instruments?.[0] ?? null);
-    if (extra && !fDiscipline) {
-      const used = new Set(existing.map(l => l.discipline));
-      discipline = (student?.instruments ?? []).find(i => !used.has(i)) ?? discipline;
-    }
-    if (!extra) {
-      const same = existing.find(l => (l.discipline ?? null) === discipline);
-      if (same) return same;
-    }
-    const usedTimes = new Set(existing.filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
-    const time = DEFAULT_TIME_SLOTS.find(t => !usedTimes.has(t)) ?? DEFAULT_SLOT;
-
-    const teacherId = (student && discipline ? studentDisciplineTeacherId(student, discipline) : null)
-      ?? student?.teacher_id ?? effectiveTeacherId ?? null;
-    if (!teacherId) {
-      toast('Elevul nu are un profesor atribuit — atribuie-l mai întâi din Elevi', 'error');
-      return null;
-    }
-    const res = await fetch('/api/lessons', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        student_id: studentId, teacher_id: teacherId, date: dateStr,
-        time, duration: 45, discipline,
-      }),
-    });
-    if (!res.ok) { toast('Nu s-a putut crea lecția', 'error'); return null; }
-    const { lesson } = await res.json();
-    return lesson as Lesson;
+  const applyLocal = (l: Lesson, action: MarkAction, replacementId?: number | null): Lesson => {
+    const st = nextState({ status: l.status, attendance_status: l.attendance_status ?? null, replacement_teacher_id: l.replacement_teacher_id ?? null }, action, replacementId);
+    return {
+      ...l,
+      status: st.status as Lesson['status'],
+      attendance_status: st.attendance_status as Lesson['attendance_status'],
+      replacement_teacher_id: st.replacement_teacher_id,
+      replacement_teacher_name: st.replacement_teacher_id ? teacherName(st.replacement_teacher_id) : null,
+    };
   };
 
-  const applyReplacement = async (lessonId: number, replacementTeacherId: number) => {
-    setSavingCell('repl');
-    try {
-      await Promise.all([
-        fetch(`/api/lessons/${lessonId}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ replacement_teacher_id: replacementTeacherId, status: 'completed' }),
-        }),
-        fetch('/api/attendance', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lesson_id: lessonId, status: 'present' }),
-        }),
-      ]);
-      mutateLessons();
-      toast('Înlocuire salvată', 'success');
-    } catch {
-      toast('Eroare la salvare', 'error');
-    } finally {
-      setSavingCell(null);
-      setReplacingFor(null);
-      setActiveCell(null);
-    }
-  };
+  const cellQueues = useRef(new Map<string, Promise<void>>());
+  const cellPending = useRef(new Map<string, number>());
+  const tempToReal = useRef(new Map<number, number>());
+  const lastExtra = useRef(new Map<string, number>());
 
-  /** The core mutation behind every mark — reused directly by redo. */
-  const applyMarkMutation = async (lessonId: number, mark: Exclude<Mark, 'replacement'>, notes: string | null) => {
-    if (mark === 'cancelled' || mark === 'recovered') {
-      await fetch(`/api/lessons/${lessonId}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: mark }),
-      });
-    } else if (mark === 'present') {
-      await Promise.all([
-        fetch(`/api/lessons/${lessonId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'completed' }) }),
-        fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lessonId, status: 'present', notes }) }),
-      ]);
+  const runMark = (target: MarkTarget, action: MarkAction, replacementId?: number | null) => {
+    if (!canEdit) return;
+    const existing = 'id' in target ? target : null;
+    const studentId = existing ? existing.student_id : (target as { studentId: number }).studentId;
+    const date = existing ? existing.date : (target as { date: string }).date;
+    const extra = !existing && !!(target as { extra?: boolean }).extra;
+    const cellKey = `${studentId}|${date}`;
+
+    // A double click on "another lesson" must not create two.
+    if (extra) {
+      const now = nowMs();
+      if (now - (lastExtra.current.get(cellKey) ?? 0) < 1500) return;
+      lastExtra.current.set(cellKey, now);
+    }
+
+    // 1) instantly on screen
+    let shownId: number;
+    if (existing) {
+      shownId = existing.id;
+      patchLessons(ls => ls.map(l => l.id === existing.id ? applyLocal(l, action, replacementId) : l));
     } else {
-      await fetch('/api/attendance', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: lessonId, status: mark, notes }),
-      });
+      const student = allStudents.find(x => x.id === studentId);
+      const subs = (student?.subscriptions ?? []).filter(x => (x.status ?? 'active') === 'active');
+      const instruments = subs.length > 0 ? subs.map(x => x.instrument) : (student?.instruments ?? []);
+      const usedHere = new Set((byCell[cellKey] ?? []).map(l => l.discipline));
+      const discipline = fDiscipline || (extra ? instruments.find(i => !usedHere.has(i)) : undefined) || instruments[0] || null;
+      const sub = subs.find(x => x.instrument === discipline);
+      const takenTimes = new Set((byCell[cellKey] ?? []).filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
+      const slot = DEFAULT_TIME_SLOTS.find(t => !takenTimes.has(t)) ?? DEFAULT_SLOT;
+      shownId = -(++tempIdCounter);
+      const placeholder: Lesson = {
+        id: shownId, student_id: studentId, student_name: student?.name, teacher_id: sub?.teacher_id ?? student?.teacher_id ?? 0,
+        teacher_name: sub?.teacher_name ?? student?.teacher_name ?? undefined, date, time: slot, duration: 45,
+        status: 'scheduled', discipline,
+      } as Lesson;
+      patchLessons(ls => [...ls, applyLocal(placeholder, action, replacementId)]);
     }
+    setActiveCell(null); setPopoverPos(null); setReplacingFor(null); setAddingAnother(false);
+
+    // 2) in the background, in order for this cell
+    cellPending.current.set(cellKey, (cellPending.current.get(cellKey) ?? 0) + 1);
+    const task = async () => {
+      let ok = false;
+      try {
+        const knownId = shownId > 0 ? shownId : tempToReal.current.get(shownId);
+        const body = knownId
+          ? { action, lesson_id: knownId, replacement_teacher_id: replacementId ?? undefined }
+          : { action, student_id: studentId, date, extra, discipline: fDiscipline || undefined, replacement_teacher_id: replacementId ?? undefined };
+        const res = await fetch('/api/register/mark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.lesson) throw new Error(json.error ?? 'Eroare la salvare');
+        const real = json.lesson as Lesson;
+        if (shownId < 0) tempToReal.current.set(shownId, real.id);
+        const stillPending = (cellPending.current.get(cellKey) ?? 1) > 1;
+        // While more clicks on this cell are still queued, only fix the id — their
+        // instant changes stay on screen; the last one brings the saved truth.
+        patchLessons(ls => ls.map(l => l.id === shownId ? (stillPending ? { ...l, id: real.id } : { ...real, replacement_teacher_name: real.replacement_teacher_name ?? (real.replacement_teacher_id ? teacherName(real.replacement_teacher_id) : null) } as Lesson) : l));
+        ok = true;
+      } catch (e) {
+        toast(e instanceof Error ? e.message : 'Eroare la salvare', 'error');
+      } finally {
+        cellPending.current.set(cellKey, (cellPending.current.get(cellKey) ?? 1) - 1);
+        if (!ok || (cellPending.current.get(cellKey) ?? 0) === 0) mutateLessons();
+      }
+    };
+    const prev = cellQueues.current.get(cellKey) ?? Promise.resolve();
+    cellQueues.current.set(cellKey, prev.then(task));
   };
 
-  // Synchronous lock: state updates are async, so a fast double-click would
-  // otherwise run two creations before the first one finished.
-  const markLock = useRef(new Set<string>());
-
-  const setMark = async (lessonArg: Lesson | { studentId: number; date: string; extra?: boolean }, mark: Mark) => {
-    const lockKey = 'id' in lessonArg ? `L${lessonArg.id}` : `${lessonArg.studentId}|${lessonArg.date}`;
-    if (markLock.current.has(lockKey)) return;
-    markLock.current.add(lockKey);
-    try {
-      await setMarkInner(lessonArg, mark);
-    } finally {
-      markLock.current.delete(lockKey);
-    }
-  };
-
-  const setMarkInner = async (lessonArg: Lesson | { studentId: number; date: string; extra?: boolean }, mark: Mark) => {
-    // Empty cell → create the lesson first.
-    const wasNew = !('id' in lessonArg);
-    const extra = !('id' in lessonArg) && !!lessonArg.extra;
-    let lesson: Lesson;
-    if (!wasNew) {
-      lesson = lessonArg as Lesson;
-    } else {
-      const created = await createLessonForCell((lessonArg as { studentId: number; date: string }).studentId, (lessonArg as { studentId: number; date: string }).date, extra);
-      if (!created) return;
-      lesson = created;
-    }
-
-    if (mark === 'replacement') {
-      setReplacingFor({ lessonId: lesson.id, studentId: lesson.student_id, date: lesson.date });
-      return;
-    }
-
-    const cellKey = `${lesson.student_id}|${lesson.date}`;
-    const prevStatus = lesson.status;
-    const prevAttendanceStatus = lesson.attendance_status ?? null;
-    const prevAttendanceNotes = lesson.attendance_notes ?? null;
-    const idRef = { current: lesson.id };
-    const studentName = lesson.student_name ?? '';
-    const studentIdForRedo = lesson.student_id;
-    const dateForRedo = lesson.date;
-    const markLabel = MARK_OPTIONS.find(o => o.mark === mark)?.label ?? mark;
-
-    setSavingCell(cellKey);
-    try {
-      await applyMarkMutation(idRef.current, mark, prevAttendanceNotes);
-      mutateLessons();
-      toast('Marcaj salvat', 'success');
-      pushAction({
-        label: `${markLabel} — ${studentName}`,
-        undo: async () => {
-          if (wasNew) {
-            await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
-          } else {
-            await fetch(`/api/lessons/${idRef.current}`, {
-              method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: prevStatus }),
-            });
-            if (prevAttendanceStatus) {
-              await fetch('/api/attendance', {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lesson_id: idRef.current, status: prevAttendanceStatus, notes: prevAttendanceNotes }),
-              });
-            } else {
-              await fetch(`/api/attendance?lesson_id=${idRef.current}`, { method: 'DELETE' });
-            }
-          }
-          mutateLessons();
-        },
-        redo: async () => {
-          if (wasNew) {
-            const created = await createLessonForCell(studentIdForRedo, dateForRedo, extra);
-            if (!created) return;
-            idRef.current = created.id;
-          }
-          await applyMarkMutation(idRef.current, mark, prevAttendanceNotes);
-          mutateLessons();
-        },
-      });
-    } catch {
-      toast('Eroare la salvare', 'error');
-    } finally {
-      setSavingCell(null);
-      setActiveCell(null);
-    }
+  /** Pressing a button: "I" first asks who replaced; every other letter applies right away. */
+  const setMark = (target: MarkTarget, mark: Mark) => {
+    if (mark === 'replacement') { setReplacingFor(target); return; }
+    runMark(target, mark);
   };
 
   const saveNote = async (lesson: Lesson) => {
@@ -414,50 +329,13 @@ export default function AttendanceRegisterPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const snapshot = deleteTarget;
-    const idRef = { current: snapshot.id };
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast('Lecție ștearsă', 'success');
-        mutateLessons();
-        pushAction({
-          label: `Șterge lecție — ${snapshot.student_name ?? ''}`,
-          undo: async () => {
-            const res2 = await fetch('/api/lessons', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                student_id: snapshot.student_id, teacher_id: snapshot.teacher_id, date: snapshot.date,
-                time: snapshot.time, duration: snapshot.duration, discipline: snapshot.discipline,
-                cabinet_id: snapshot.cabinet_id ?? null, notes: snapshot.notes ?? null,
-              }),
-            });
-            if (!res2.ok) return;
-            const { lesson: recreated } = await res2.json();
-            idRef.current = recreated.id;
-            if (snapshot.status && snapshot.status !== 'scheduled') {
-              await fetch(`/api/lessons/${recreated.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: snapshot.status }) });
-            }
-            if (snapshot.replacement_teacher_id) {
-              await fetch(`/api/lessons/${recreated.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replacement_teacher_id: snapshot.replacement_teacher_id }) });
-            }
-            if (snapshot.attendance_status) {
-              await fetch('/api/attendance', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lesson_id: recreated.id, status: snapshot.attendance_status, notes: snapshot.attendance_notes ?? null }) });
-            }
-            mutateLessons();
-          },
-          redo: async () => {
-            await fetch(`/api/lessons/${idRef.current}`, { method: 'DELETE' });
-            mutateLessons();
-          },
-        });
-      }
-      else { const d = await res.json().catch(() => ({})); toast(d.error ?? 'Eroare la ștergere', 'error'); }
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
-    }
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    patchLessons(ls => ls.filter(l => l.id !== target.id));
+    const res = await fetch(`/api/lessons/${target.id}`, { method: 'DELETE' }).catch(() => null);
+    if (res?.ok) toast('Lecție ștearsă', 'success');
+    else { const d = await res?.json().catch(() => ({})); toast(d?.error ?? 'Eroare la ștergere', 'error'); }
+    mutateLessons();
   };
 
   const openCell = (dateStr: string, cellLessons: Lesson[], studentId: number, x: number, y: number) => {
@@ -615,7 +493,7 @@ export default function AttendanceRegisterPage() {
                             ${cellClassName} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >
-                          {savingCell === key ? '…' : (displayChar || (canEdit ? '·' : ''))}
+                          {displayChar || (canEdit ? '·' : '')}
                           {cellLessons.some(l => l.attendance_notes) && (
                             <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-500" />
                           )}
@@ -634,15 +512,7 @@ export default function AttendanceRegisterPage() {
                                 <div className="max-h-52 overflow-auto flex flex-col gap-1">
                                   {teachers.map(tt => (
                                     <button key={tt.id}
-                                      onClick={async () => {
-                                        let lid = replacingFor.lessonId;
-                                        if (lid === 0) {
-                                          const created = await createLessonForCell(replacingFor.studentId, replacingFor.date);
-                                          if (!created) return;
-                                          lid = created.id;
-                                        }
-                                        applyReplacement(lid, tt.id);
-                                      }}
+                                      onClick={() => runMark(replacingFor, 'replacement', tt.id)}
                                       className="text-left px-2.5 py-1.5 rounded-md text-sm text-slate-700 dark:text-slate-200 hover:bg-violet-50 dark:hover:bg-violet-900/30"
                                     >
                                       {tt.name}
@@ -698,7 +568,7 @@ export default function AttendanceRegisterPage() {
                                   })}
                                 </div>
                                 {l.replacement_teacher_id && (
-                                  <button onClick={() => fetch(`/api/lessons/${l.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replacement_teacher_id: null }) }).then(() => { mutateLessons(); toast('Înlocuire eliminată', 'success'); })}
+                                  <button onClick={() => runMark(l, 'clear_replacement')}
                                     className="w-full mb-1.5 text-[11px] text-violet-600 dark:text-violet-400 hover:underline">
                                     Elimină înlocuirea ({l.replacement_teacher_name})
                                   </button>
@@ -709,7 +579,8 @@ export default function AttendanceRegisterPage() {
                                     value={noteDrafts[l.id] ?? l.attendance_notes ?? ''}
                                     onChange={e => setNoteDrafts(prev => ({ ...prev, [l.id]: e.target.value }))}
                                     onKeyDown={e => { if (e.key === 'Enter') saveNote(l); }}
-                                    placeholder="Comentariu…"
+                                    disabled={!l.attendance_status}
+                                    placeholder={l.attendance_status ? 'Comentariu…' : 'Marchează întâi lecția'}
                                     className="flex-1 min-w-0 px-2 py-1 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                                   />
                                   <button
@@ -790,7 +661,7 @@ export default function AttendanceRegisterPage() {
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
-          <Button variant="danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Se șterge…' : 'Șterge'}</Button>
+          <Button variant="danger" onClick={handleDelete}>Șterge</Button>
         </div>
       </Modal>
 

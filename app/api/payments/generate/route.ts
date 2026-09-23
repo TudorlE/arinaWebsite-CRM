@@ -3,7 +3,7 @@ import { createMonthlyPayments, updateOverduePayments } from '@/lib/payments';
 
 /**
  * POST /api/payments/generate
- * Body (optional): { month: 1-12, year: YYYY }
+ * Body (optional): { month: 1-12, year: YYYY, student_id?: only sync this student }
  * Generates "unpaid" payments for every student that lacks one for the period,
  * then flips any past-due unpaid records to "overdue".
  */
@@ -11,10 +11,12 @@ export async function POST(request: NextRequest) {
   try {
     let month: number | undefined;
     let year:  number | undefined;
+    let studentId: number | undefined;
     try {
       const body = await request.json();
       if (body?.month) month = Number(body.month);
       if (body?.year)  year  = Number(body.year);
+      if (body?.student_id) studentId = Number(body.student_id);
     } catch {
       // empty body is fine — defaults to current month
     }
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
       if (!valid) return NextResponse.json({ error: 'Lună sau an invalid' }, { status: 400 });
     }
 
-    const generated = await createMonthlyPayments(month, year);
+    const generated = await createMonthlyPayments(month, year, { studentId });
     if (generated.error) {
       return NextResponse.json({ error: generated.error }, { status: 500 });
     }
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest) {
       skipped:        generated.skipped,
       removed:        generated.removed,
       fixed:          generated.fixed,
+      adjusted:       generated.adjusted,
       overdueUpdated: overdue.updated,
     });
   } catch {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { LESSON_SELECT, shapeLesson } from '@/lib/lessonShape';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,14 +10,19 @@ export async function GET(request: NextRequest) {
   const teacherId = searchParams.get('teacher_id');
   const cabinetId = searchParams.get('cabinet_id');
 
+  const from      = searchParams.get('from');
+  const to        = searchParams.get('to');
+
   let query = supabase
     .from('lessons')
-    .select('*, students(name), teachers!lessons_teacher_id_fkey(name), replacement:teachers!lessons_replacement_teacher_id_fkey(name), cabinets(name, color), attendance(status, notes)')
+    .select(LESSON_SELECT)
     .order('date', { ascending: false })
     .order('time', { ascending: true });
 
   if (studentId) query = query.eq('student_id', Number(studentId));
   if (date)      query = query.eq('date', date);
+  if (from)      query = query.gte('date', from);
+  if (to)        query = query.lte('date', to);
   if (status)    query = query.eq('status', status);
   if (teacherId) query = query.eq('teacher_id', Number(teacherId));
   if (cabinetId) query = query.eq('cabinet_id', Number(cabinetId));
@@ -24,26 +30,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  type Att = { status: string; notes: string | null };
-  type Named = { name: string } | { name: string }[] | null;
-  type Row = { students: Named; teachers: Named; replacement: Named; cabinets: { name: string; color: string } | { name: string; color: string }[] | null; attendance: Att | Att[] | null; [key: string]: unknown };
-  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
-  const lessons = (data ?? []).map(({ students, teachers, replacement, cabinets, attendance, ...l }: Row) => {
-    const att = Array.isArray(attendance) ? attendance[0] : attendance;
-    const cab = one(cabinets);
-    return {
-      ...l,
-      student_name: one(students)?.name ?? null,
-      teacher_name: one(teachers)?.name ?? null,
-      replacement_teacher_name: one(replacement)?.name ?? null,
-      cabinet_name: cab?.name ?? null,
-      cabinet_color: cab?.color ?? null,
-      attendance_status: att?.status ?? null,
-      attendance_notes: att?.notes ?? null,
-    };
-  });
-
-  return NextResponse.json({ lessons });
+  return NextResponse.json({ lessons: (data ?? []).map(l => shapeLesson(l as never)) });
 }
 
 export async function POST(request: NextRequest) {

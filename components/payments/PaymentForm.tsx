@@ -56,7 +56,9 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   // abonamente instead of hiding the others. Each row remembers the existing
   // payment `id` for that instrument/period (if any) so saving updates it
   // instead of creating a duplicate.
-  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number }>>({});
+  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number; notes?: string }>>({});
+  // Only overwrite the per-instrument notes if the user actually typed a note.
+  const [noteEdited, setNoteEdited] = useState(false);
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
   const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
@@ -101,6 +103,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       });
     }
     setErrors({});
+    setNoteEdited(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment, open, defaultStudentId]);
 
@@ -116,14 +119,14 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       (p: Payment) => p.month === monthNum && p.year === yearNum,
     );
     setPerInstrument(() => {
-      const next: Record<string, { status: string; amount: string; id?: number }> = {};
+      const next: Record<string, { status: string; amount: string; id?: number; notes?: string }> = {};
       for (const sub of studentSubs) {
         const existing = periodPayments.find((p: Payment) => p.service === sub.instrument);
         if (existing) {
-          next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id };
+          next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id, notes: existing.notes ?? '' };
         } else {
           const computed = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
-          next[sub.instrument] = { status: 'unpaid', amount: computed != null ? String(computed) : '' };
+          next[sub.instrument] = { status: 'unpaid', amount: computed != null ? String(computed) : '', notes: planSummary(sub.instrument, sub.plan, sub.lessons) };
         }
       }
       return next;
@@ -156,6 +159,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   }, [computedAmount, form.service, form.plan, form.lessons, payment]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    if (field === 'notes') setNoteEdited(true);
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     setErrors(prev => ({ ...prev, [field]: false }));
   };
@@ -201,7 +205,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
             status: row.status,
             payment_date: form.payment_date || todayMoldova(),
             due_date: null,
-            notes: form.notes || null,
+            notes: (noteEdited ? form.notes : row.notes) || null,
             plan_type: sub.plan,
             lesson_count: sub.lessons,
             price_per_lesson: perLessonPrice(sub.instrument, sub.plan),

@@ -12,6 +12,7 @@ import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Payment, MONTHS, Student, StudentSubscription } from '@/lib/types';
+import { parseCredit } from '@/lib/credits';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -27,6 +28,26 @@ interface RevenueSummary {
   unpaidCount: number;
   partialCount: number;
   paidPercentage: number;
+}
+
+interface CreditRow {
+  student_id: number;
+  service: string;
+  credit_lessons: number;
+  credit_amount: number;
+  from_label: string;
+}
+
+/** Lecții pierdute din motive serioase luna trecută — scăzute din abonamentul acesta. */
+function CreditNote({ credit, applied }: { credit: CreditRow; applied: boolean }) {
+  return (
+    <p
+      className={`text-[11px] font-semibold mt-1 ${applied ? 'text-sky-600 dark:text-sky-400' : 'text-orange-600 dark:text-orange-400'}`}
+      title={applied ? undefined : 'Suma acestei plăți nu include creditul (a fost deja plătită sau modificată manual). Scade manual dacă e cazul.'}
+    >
+      ↩ {credit.service !== '' ? `${credit.service}: ` : ''}credit {credit.credit_lessons} {credit.credit_lessons === 1 ? 'lecție' : 'lecții'} din {credit.from_label} · −{credit.credit_amount.toLocaleString()} MDL{applied ? '' : ' · neaplicat'}
+    </p>
+  );
 }
 
 export default function PaymentsPage() {
@@ -62,6 +83,19 @@ export default function PaymentsPage() {
   periodParams.set('year', yearFilter);
   const { data: periodData, mutate: mutatePeriod } = useSWR(`/api/payments?${periodParams}`, fetcher, { keepPreviousData: true });
   const periodPayments: Payment[] = periodData?.payments ?? [];
+
+  // Lesson credits owed this month (serious-reason absences from last month).
+  const { data: creditsData, mutate: mutateCredits } = useSWR<{ credits: CreditRow[] }>(
+    `/api/payments/credits?month=${monthFilter}&year=${yearFilter}`, fetcher, { keepPreviousData: true },
+  );
+  const creditOf = (studentId: number, service?: string | null) =>
+    (creditsData?.credits ?? []).find(c => c.student_id === studentId && c.service === service);
+  /** Is the credit really reflected in this payment (notes say so AND the amount was reduced by it)? */
+  const creditApplied = (p: Payment, credit: CreditRow, studentId: number) => {
+    const fee = (studentSubsById.get(studentId) ?? []).find(x => x.instrument === credit.service)?.monthly_fee ?? 0;
+    if (p.status === 'unpaid' && !periodSettled) return true; // the automatic sync is still applying it
+    return parseCredit(p.notes) === credit.credit_lessons && Math.round(p.amount) === Math.max(0, Math.round(fee) - credit.credit_amount);
+  };
 
   // Student status lookup — paused/inactive students are hidden by default (req. 11).
   const { data: studentsData } = useSWR('/api/students', fetcher);
@@ -155,6 +189,11 @@ export default function PaymentsPage() {
   // its "Neplătit" row there (and fold away leftovers). Past months are never
   // auto-filled, so history stays exactly as it was recorded.
   const syncedPeriods = useRef(new Set<string>());
+  const [syncDone, setSyncDone] = useState<Record<string, boolean>>({});
+  const periodKey = `${yearFilter}-${monthFilter}`;
+  const monthsAheadNow = (Number(yearFilter) - now.getFullYear()) * 12 + (Number(monthFilter) - (now.getMonth() + 1));
+  // Rows of a month that will be synced are not judged "credit not applied" until that sync has finished.
+  const periodSettled = monthsAheadNow < 0 || monthsAheadNow > 12 || !!syncDone[periodKey];
   useEffect(() => {
     const m = Number(monthFilter), y = Number(yearFilter);
     const monthsAhead = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
@@ -165,8 +204,9 @@ export default function PaymentsPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month: m, year: y }),
     }).then(r => r.json()).then(d => {
-      if ((d.created ?? 0) + (d.removed ?? 0) + (d.fixed ?? 0) > 0) { mutate(); mutateRevenue(); mutatePeriod(); }
-    }).catch(() => { syncedPeriods.current.delete(key); });
+      if ((d.created ?? 0) + (d.removed ?? 0) + (d.fixed ?? 0) + (d.adjusted ?? 0) > 0) { mutate(); mutateRevenue(); mutatePeriod(); mutateCredits(); }
+      setSyncDone(prev => ({ ...prev, [key]: true }));
+    }).catch(() => { syncedPeriods.current.delete(key); setSyncDone(prev => ({ ...prev, [key]: true })); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthFilter, yearFilter]);
 
@@ -187,7 +227,7 @@ export default function PaymentsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast(`${data.created} plăți adăugate${data.removed ? `, ${data.removed} duplicate/inactivi eliminate` : ''}`, 'success');
+        toast(`${data.created} plăți adăugate${data.removed ? `, ${data.removed} duplicate/inactivi eliminate` : ''}${data.adjusted ? `, ${data.adjusted} sume ajustate cu credit` : ''}`, 'success');
         mutate(); mutateRevenue(); mutatePeriod();
       } else {
         toast(data.error ?? 'Eroare la generare', 'error');
@@ -430,6 +470,10 @@ export default function PaymentsPage() {
                     <p className="text-xs text-slate-400 truncate mt-0.5">
                       {payment.service ?? (payment.instruments ?? []).join(', ')} · {MONTHS[payment.month - 1]} {payment.year}
                     </p>
+                    {(() => {
+                      const c = creditOf(payment.student_id, payment.service);
+                      return c ? <CreditNote credit={{ ...c, service: '' }} applied={creditApplied(payment, c, payment.student_id)} /> : null;
+                    })()}
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
@@ -491,6 +535,11 @@ export default function PaymentsPage() {
                       );
                     })}
                   </div>
+                  {row.subs.map(sub => {
+                    const c = creditOf(row.studentId, sub.instrument);
+                    const match = periodPayments.find(pp => pp.student_id === row.studentId && pp.service === sub.instrument);
+                    return c ? <CreditNote key={sub.instrument} credit={c} applied={!!match && creditApplied(match, c, row.studentId)} /> : null;
+                  })}
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
