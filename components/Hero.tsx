@@ -51,9 +51,9 @@ export default function Hero() {
         >
           <motion.img
             style={{ y: imgY, scale: imgScale, position: 'absolute', inset: '-10% 0', width: '100%', height: '120%', objectFit: 'cover' }}
-            src="https://images.unsplash.com/photo-1520166012956-add9ba0835cb?w=1100&q=80&auto=format&fit=crop"
+            src="/hero-arry.jpg"
             alt={h.imgAlt}
-            className="ph ph-red"
+            className="ph"
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--bg) 0%, rgba(16,13,11,0.1) 22%, rgba(16,13,11,0) 45%)' }} />
 

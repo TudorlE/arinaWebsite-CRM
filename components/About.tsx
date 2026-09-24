@@ -51,7 +51,7 @@ export default function About() {
 
           <StaggerItem style={{ gridArea: 'b' }} className="ph-wrap">
             <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
-              <img src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&q=80&auto=format&fit=crop" alt={a.imgAltB} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src="/about-guitar.jpg" alt={a.imgAltB} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </Parallax>
           </StaggerItem>
 
