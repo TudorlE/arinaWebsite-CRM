@@ -8,8 +8,7 @@ import { useLocale } from '@/lib/i18n';
 export default function Hero() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '16%']);
-  const imgScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
+  const imgScale = useTransform(scrollYProgress, [0, 1], [1, 1.05]);
   const copyY = useTransform(scrollYProgress, [0, 1], [0, 64]);
   const { t } = useLocale();
   const h = t.hero;
@@ -17,10 +16,22 @@ export default function Hero() {
   const go = (href: string) => document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <section ref={ref} id="acasa" style={{ position: 'relative', background: 'var(--bg)', paddingTop: 96 }}>
-      <div style={{ maxWidth: 1240, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)', alignItems: 'stretch', minHeight: 'min(calc(100vh - 96px), 900px)' }} className="hero-grid">
+    <section ref={ref} id="acasa" className="hero-section" style={{ position: 'relative', background: 'var(--bg)', paddingTop: 96, overflow: 'hidden', minHeight: 'min(calc(100vh), 900px)', display: 'flex', flexDirection: 'column' }}>
 
-        <motion.div className="hero-copy hero-copy-in" style={{ y: copyY, padding: '72px 44px 72px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* Full-bleed background photo — spans the entire hero section, not just a side column */}
+      <motion.div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} className="hero-img">
+        <motion.img
+          style={{ scale: imgScale, position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}
+          src="/hero-arry.jpg"
+          alt={h.imgAlt}
+          className="ph"
+        />
+        <div className="hero-scrim" style={{ position: 'absolute', inset: 0 }} />
+      </motion.div>
+
+      <div style={{ position: 'relative', maxWidth: 1240, margin: '0 auto', width: '100%', flex: 1, display: 'flex' }} className="hero-grid">
+
+        <motion.div className="hero-copy hero-copy-in" style={{ y: copyY, padding: '72px 44px 72px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 640 }}>
           <span className="eyebrow" style={{ marginBottom: 30 }}>
             {h.eyebrow}
           </span>
@@ -39,46 +50,36 @@ export default function Hero() {
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-            <button onClick={openBooking} className="btn-outline solid">{h.ctaBook}</button>
-            <button onClick={() => go('#cursuri')} className="btn-outline">{h.ctaCourses}</button>
+            <button onClick={openBooking} className="btn-outline solid" style={{ minWidth: 'min(340px, 100%)' }}>{h.ctaBook}</button>
+            <button onClick={() => go('#cursuri')} className="btn-outline" style={{ minWidth: 'min(216px, 100%)' }}>{h.ctaCourses}</button>
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ clipPath: 'inset(0 0 100% 0)' }} animate={{ clipPath: 'inset(0 0 0% 0)' }} transition={{ duration: 1.1, ease: EASE, delay: 0.1 }}
-          className="ph-wrap hero-img"
-          style={{ position: 'relative', overflow: 'hidden', borderLeft: '1px solid var(--line)', minHeight: 420 }}
-        >
-          <motion.img
-            style={{ y: imgY, scale: imgScale, position: 'absolute', inset: '-10% 0', width: '100%', height: '120%', objectFit: 'cover' }}
-            src="/hero-arry.jpg"
-            alt={h.imgAlt}
-            className="ph"
-          />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, var(--bg) 0%, rgba(16,13,11,0.1) 22%, rgba(16,13,11,0) 45%)' }} />
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.9 }}
-            style={{
-              position: 'absolute', left: 28, bottom: 28, padding: '18px 22px',
-              background: 'rgba(16,13,11,0.62)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid var(--line-strong)', maxWidth: 280,
-            }}>
-            <p style={{ fontSize: 19, fontWeight: 800, color: '#F2EDE6', margin: 0, letterSpacing: '0.02em' }}>+373 60 081 991</p>
-            <p style={{ fontSize: 11.5, color: 'rgba(242,237,230,0.72)', margin: '6px 0 0', lineHeight: 1.5 }}>
-              {h.phoneNote}
-            </p>
-          </motion.div>
-
-          <span style={{
-            position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'right center',
-            fontSize: 9.5, fontWeight: 700, letterSpacing: '0.34em', textTransform: 'uppercase', color: 'rgba(242,237,230,0.55)',
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.9 }}
+          className="hero-phone"
+          style={{
+            position: 'absolute', right: 32, bottom: 40, padding: '18px 22px',
+            background: 'rgba(16,13,11,0.62)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid var(--line-strong)', maxWidth: 280,
           }}>
-            {h.photoLabel}
-          </span>
+          <p style={{ fontSize: 19, fontWeight: 800, color: '#F2EDE6', margin: 0, letterSpacing: '0.02em' }}>+373 60 081 991</p>
+          <p style={{ fontSize: 11.5, color: 'rgba(242,237,230,0.72)', margin: '6px 0 0', lineHeight: 1.5 }}>
+            {h.phoneNote}
+          </p>
         </motion.div>
+
+        <span className="hero-photo-label" style={{
+          position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'right center',
+          fontSize: 9.5, fontWeight: 700, letterSpacing: '0.34em', textTransform: 'uppercase', color: 'rgba(242,237,230,0.55)',
+        }}>
+          {h.photoLabel}
+        </span>
       </div>
 
       <style>{`
+        .hero-scrim {
+          background: linear-gradient(90deg, var(--bg) 0%, var(--bg) 8%, rgba(16,13,11,0.55) 32%, rgba(16,13,11,0.08) 58%, rgba(16,13,11,0) 75%);
+        }
         @keyframes heroCopyIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .hero-copy-in > :not(h1) { animation: heroCopyIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s backwards; }
         .hero-copy-in > :nth-child(3) { animation-delay: 0.12s; }
@@ -86,9 +87,12 @@ export default function Hero() {
         .hero-copy-in > :nth-child(5) { animation-delay: 0.24s; }
         @media (prefers-reduced-motion: reduce) { .hero-copy-in > * { animation: none !important; } }
         @media (max-width: 900px) {
-          .hero-grid { grid-template-columns: 1fr !important; min-height: 0 !important; }
-          .hero-copy { order: 2; padding: 40px 22px 60px !important; }
-          .hero-img { order: 1; min-height: 300px !important; border-left: 0 !important; border-bottom: 1px solid var(--line) !important; }
+          .hero-section { min-height: 0 !important; }
+          .hero-grid { display: block !important; padding-bottom: 40px; }
+          .hero-copy { max-width: none !important; padding: 40px 22px 30px !important; }
+          .hero-scrim { background: linear-gradient(180deg, var(--bg) 0%, var(--bg) 34%, rgba(16,13,11,0.5) 55%, rgba(16,13,11,0.15) 75%, rgba(16,13,11,0) 100%) !important; }
+          .hero-phone { position: static !important; margin: 0 22px 24px !important; max-width: none !important; }
+          .hero-photo-label { display: none; }
         }
         @media (max-width: 380px) {
           .hero-copy h1 { font-size: 40px !important; }

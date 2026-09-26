@@ -91,7 +91,7 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} className="hide-mobile">
             <LangSwitch />
             <ThemeToggle />
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5 }}>
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={book} className="btn-outline solid" style={{ padding: '12px 22px', fontSize: 10.5, minWidth: 214 }}>
               {t.nav.bookBtn}
             </motion.button>
           </div>

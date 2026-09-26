@@ -114,7 +114,7 @@ export default function Courses() {
 
         <Reveal delay={0.1}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', margin: '44px 0 56px' }}>
-            <button onClick={openBooking} className="btn-outline solid">{c.ctaBtn}</button>
+            <button onClick={openBooking} className="btn-outline solid" style={{ minWidth: 'min(347px, 100%)' }}>{c.ctaBtn}</button>
             <span style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--tx-faint)' }}>{c.ctaNote}</span>
           </div>
         </Reveal>

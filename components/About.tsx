@@ -42,11 +42,10 @@ export default function About() {
         </div>
 
         <Stagger className="mosaic">
-          <StaggerItem style={{ gridArea: 'a' }}>
-            <SandCard style={{ minHeight: 300, height: '100%' }}>
-              <span style={kicker}>{a.cardA.kicker}</span>
-              <p style={{ ...cardTitle, fontSize: 21 }}>{a.cardA.title}</p>
-            </SandCard>
+          <StaggerItem style={{ gridArea: 'a' }} className="ph-wrap">
+            <Parallax distance={22} style={{ height: '100%', minHeight: 300 }}>
+              <img src="/about-direction.jpg" alt={a.imgAltA} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </Parallax>
           </StaggerItem>
 
           <StaggerItem style={{ gridArea: 'b' }} className="ph-wrap">
@@ -62,26 +61,16 @@ export default function About() {
             </SandCard>
           </StaggerItem>
 
-          <StaggerItem style={{ gridArea: 'd' }}>
-            <SandCard style={{ height: '100%' }}>
-              <span style={kicker}>{a.cardD.kicker}</span>
-              <p style={{ ...cardTitle, fontSize: 17 }}>{a.cardD.title}</p>
-            </SandCard>
+          <StaggerItem style={{ gridArea: 'd' }} className="ph-wrap">
+            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
+              <img src="/about-guitar-girl.jpg" alt={a.imgAltD} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </Parallax>
           </StaggerItem>
 
           <StaggerItem style={{ gridArea: 'e' }} className="ph-wrap">
             <Parallax distance={26} style={{ height: '100%', minHeight: 220 }}>
-              <img src="https://images.unsplash.com/photo-1501612780327-45045538702b?w=800&q=80&auto=format&fit=crop" alt={a.imgAltE} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src="/about-stage.jpg" alt={a.imgAltE} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </Parallax>
-          </StaggerItem>
-
-          <StaggerItem style={{ gridArea: 'f' }}>
-            <SandCard style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 28, flexWrap: 'wrap', height: '100%' }}>
-              <p style={{ ...cardTitle, fontSize: 22, margin: 0, flex: '1 1 240px' }}>{a.cardF.title}</p>
-              <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, opacity: 0.75, flex: '1 1 240px' }}>
-                {a.cardF.desc}
-              </p>
-            </SandCard>
           </StaggerItem>
         </Stagger>
       </div>
@@ -91,15 +80,15 @@ export default function About() {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           grid-auto-rows: minmax(190px, auto);
-          grid-template-areas: "a b c" "a d e" "f f f";
+          grid-template-areas: "a b c" "a d e";
           gap: 14px;
         }
         @media (max-width: 860px) {
           .about-head { grid-template-columns: 1fr !important; }
-          .mosaic { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(170px, auto); grid-template-areas: "a a" "b c" "d e" "f f"; }
+          .mosaic { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(170px, auto); grid-template-areas: "a a" "b c" "d e"; }
         }
         @media (max-width: 520px) {
-          .mosaic { grid-template-columns: 1fr; grid-auto-rows: auto; grid-template-areas: "a" "b" "c" "d" "e" "f"; }
+          .mosaic { grid-template-columns: 1fr; grid-auto-rows: auto; grid-template-areas: "a" "b" "c" "d" "e"; }
         }
       `}</style>
     </section>
