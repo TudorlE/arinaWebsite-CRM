@@ -1,20 +1,6 @@
 'use client';
-import { motion } from 'framer-motion';
-import { Reveal, RevealLines, Stagger, StaggerItem, Parallax, EASE } from '@/components/motionx';
+import { Reveal, RevealLines, Stagger, StaggerItem, Parallax } from '@/components/motionx';
 import { useLocale } from '@/lib/i18n';
-
-const SandCard = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <motion.div whileHover={{ y: -6, scale: 1.015 }} transition={{ duration: 0.35, ease: EASE }} style={{
-    background: 'linear-gradient(160deg, var(--sand) 0%, var(--sand-deep) 100%)',
-    color: 'var(--sand-ink)', padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-    ...style,
-  }}>
-    {children}
-  </motion.div>
-);
-
-const kicker: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.55 };
-const cardTitle: React.CSSProperties = { fontFamily: 'var(--font-playfair), serif', fontWeight: 700, lineHeight: 1.28, margin: '14px 0 0' };
 
 export default function About() {
   const { t } = useLocale();
@@ -54,11 +40,10 @@ export default function About() {
             </Parallax>
           </StaggerItem>
 
-          <StaggerItem style={{ gridArea: 'c' }}>
-            <SandCard style={{ height: '100%' }}>
-              <span style={kicker}>{a.cardC.kicker}</span>
-              <p style={{ ...cardTitle, fontSize: 17 }}>{a.cardC.title}</p>
-            </SandCard>
+          <StaggerItem style={{ gridArea: 'c' }} className="ph-wrap">
+            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
+              <img src="/about-scena.jpg" alt={a.imgAltC} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </Parallax>
           </StaggerItem>
 
           <StaggerItem style={{ gridArea: 'd' }} className="ph-wrap">
