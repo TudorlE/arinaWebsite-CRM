@@ -30,6 +30,7 @@ export default function Navbar() {
   const book = () => { setOpen(false); openBooking(); };
 
   const navBg = theme === 'dark' ? 'rgba(16, 13, 11, 0.88)' : 'rgba(250, 247, 242, 0.88)';
+  const navBgTop = theme === 'dark' ? 'rgba(16, 13, 11, 0.4)' : 'rgba(250, 247, 242, 0.4)';
   const mobileBg = theme === 'dark' ? 'rgba(16,13,11,0.98)' : 'rgba(250,247,242,0.98)';
 
   const LangSwitch = ({ style }: { style?: React.CSSProperties }) => (
@@ -60,9 +61,9 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-          background: scrolled ? navBg : 'transparent',
-          backdropFilter: scrolled ? 'blur(18px)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'blur(18px)' : 'none',
+          background: scrolled ? navBg : navBgTop,
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
           borderBottom: `1px solid ${scrolled ? 'var(--line)' : 'transparent'}`,
           transition: 'background-color 0.3s ease, border-color 0.3s ease',
         }}

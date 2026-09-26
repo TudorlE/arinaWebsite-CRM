@@ -33,7 +33,6 @@ const ro = {
     ctaCourses: 'Vezi cursurile',
     imgAlt: 'Elevii Arry Studio la o sesiune foto/video, cu clacheta studioului',
     phoneNote: 'Sună-ne pentru o lecție de probă gratuită sau programează o vizită la studio.',
-    photoLabel: 'Fotografii din studio',
   },
   about: {
     eyebrow: '01 — Despre Arry Production',
@@ -212,7 +211,6 @@ const en: Dict = {
     ctaCourses: 'See our courses',
     imgAlt: 'Arry Studio students at a photo/video shoot, with the studio clapperboard',
     phoneNote: 'Call us for a free trial lesson or schedule a visit to the studio.',
-    photoLabel: 'Photos from the studio',
   },
   about: {
     eyebrow: '01 — About Arry Production',
@@ -389,7 +387,6 @@ const ru: Dict = {
     ctaCourses: 'Смотреть курсы',
     imgAlt: 'Ученики Arry Studio на фото- и видеосъёмке, с хлопушкой студии',
     phoneNote: 'Позвоните нам, чтобы записаться на бесплатный пробный урок или посетить студию.',
-    photoLabel: 'Фото из студии',
   },
   about: {
     eyebrow: '01 — О школе Arry Production',
