@@ -13,7 +13,7 @@ export interface CreditLesson extends MarkLesson {
   time: string;
 }
 
-export interface Absence { excused: number; recovered: number }
+export interface Absence { excused: number; recovered: number; consumed: number }
 
 /** When the same student/instrument/day/time appears twice, keep the outcome that yields the LEAST credit. */
 const RANK: Record<string, number> = { replaced: 6, present: 5, late: 5, recovered: 3, unexcused: 2, excused: 1, cancelled: 0 };
@@ -43,21 +43,31 @@ export function countAbsences(
   }
   const out = new Map<string, Absence>();
   for (const [key, outcome] of slots) {
-    if (outcome !== 'excused' && outcome !== 'recovered') continue;
+    if (outcome === 'cancelled') continue; // never happened — doesn't count either way
     const [studentId, instrument] = key.split('|');
     const k = `${studentId}|${instrument}`;
-    const a = out.get(k) ?? { excused: 0, recovered: 0 };
-    if (outcome === 'excused') a.excused++; else a.recovered++;
+    const a = out.get(k) ?? { excused: 0, recovered: 0, consumed: 0 };
+    if (outcome === 'excused') a.excused++;
+    else if (outcome === 'recovered') a.recovered++;
+    else a.consumed++; // present, unexcused, replaced, late — a slot was actually delivered
     out.set(k, a);
   }
   return out;
 }
 
-/** Lessons to credit: excused absences net of make-ups, never negative, never more than the subscription has. */
+/**
+ * Lessons to credit: excused absences net of make-ups, but capped to the
+ * portion that actually left the student short of their subscription's
+ * lesson count that month. A student who still hit (or exceeded) their
+ * quota through other sessions — e.g. extra slots scheduled the same month —
+ * owes nothing for the excused ones, even though some were marked "M".
+ */
 export function creditLessons(abs: Absence | undefined, subscriptionLessons: number): number {
   if (!abs) return 0;
   const lessons = Number(subscriptionLessons) || 0;
-  return Math.max(0, Math.min(lessons, abs.excused - abs.recovered));
+  const netExcused = Math.max(0, abs.excused - abs.recovered);
+  const shortfall = Math.max(0, lessons - abs.consumed - abs.recovered);
+  return Math.max(0, Math.min(netExcused, shortfall));
 }
 
 /** Money for that many lessons at the plan's per-lesson price. No per-lesson price (e.g. flat group lesson) → no credit. */

@@ -5,14 +5,13 @@ import useSWR from 'swr';
 import { CalendarRange } from 'lucide-react';
 import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
 import PageBanner from '@/components/ui/PageBanner';
-import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+import { timeSlotsForDay } from '@/lib/timeSlots';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 // Same day-by-day cabinet table as Program Privat, but strictly read-only —
 // this page mirrors the fixed weekly schedule for staff to see, not to
 // change; it has no concept of week/month/year, same as Program Privat.
-const DEFAULT_SLOTS = DEFAULT_TIME_SLOTS;
 const DAY_LABELS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
 function todayDayIdx(): number {
@@ -44,9 +43,10 @@ export default function GeneralSchedulePage() {
     const key = `${cid}|${t}`;
     (byCabinetTime[key] ??= []).push(s);
   }
+  const daySlots = timeSlotsForDay(selectedDow);
   const extraSlots = Array.from(new Set(daySchedules.map(s => (s.start_time ?? '').slice(0, 5))))
-    .filter(t => t && !DEFAULT_SLOTS.includes(t));
-  const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
+    .filter(t => t && !daySlots.includes(t));
+  const timeSlots = [...daySlots, ...extraSlots].sort();
   const hasUnassigned = daySchedules.some(s => s.cabinet_id == null);
   const cabinetColumns: { id: number | 'none'; name: string }[] = [
     ...cabinets,

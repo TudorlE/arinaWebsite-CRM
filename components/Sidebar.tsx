@@ -21,10 +21,10 @@ type NavItem = {
 // Roluri/Setări. Only 'admin' (the founder account) sees absolutely everything.
 const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, studentAllowed: true, teacherAllowed: true },
-  { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, teacherAllowed: true },
+  { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, studentAllowed: true, teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true, administratorAllowed: true },
-  { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, studentAllowed: true, teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
   { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true, administratorAllowed: true },

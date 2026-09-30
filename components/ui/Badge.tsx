@@ -29,6 +29,7 @@ export default function Badge({ variant = 'gray', children, className = '' }: Ba
 export function paymentBadge(status: string): BadgeVariant {
   if (status === 'paid')    return 'green';
   if (status === 'partial') return 'orange';
+  if (status === 'paused')  return 'gray';
   return 'red'; // unpaid
 }
 
@@ -37,6 +38,7 @@ export function paymentLabel(status: string): string {
   switch (status) {
     case 'paid':    return 'Plătit';
     case 'partial': return 'Parțial';
+    case 'paused':  return 'Pauză';
     default:        return 'Neplătit';
   }
 }

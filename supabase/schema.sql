@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS payments (
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS due_date date;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at timestamptz;
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check;
-ALTER TABLE payments ADD CONSTRAINT payments_status_check CHECK (status IN ('paid', 'unpaid', 'partial', 'overdue'));
+ALTER TABLE payments ADD CONSTRAINT payments_status_check CHECK (status IN ('paid', 'unpaid', 'partial', 'overdue', 'paused'));
 
 -- ── Student Notes ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS student_notes (

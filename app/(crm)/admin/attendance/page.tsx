@@ -9,7 +9,9 @@ import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
 import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { Lesson, Student, Teacher, INSTRUMENTS } from '@/lib/types';
+import { Lesson, Student, Teacher, INSTRUMENTS, SOLFEGIU_GROUPS } from '@/lib/types';
+
+const SOLFEGIU = 'Solfegiu și teoria muzicii';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
 import { localDateStr } from '@/lib/dates';
 import { symbolsForLesson, markForLesson, nextState, type Mark, type MarkAction, type Sym } from '@/lib/attendanceMarks';
@@ -57,15 +59,16 @@ const nowMs = () => Date.now();
 export default function AttendanceRegisterPage() {
   const [role, setRole] = useState<string | null>(null);
   const [myTeacherId, setMyTeacherId] = useState<number | null>(null);
+  const [myStudentId, setMyStudentId] = useState<number | null>(null);
   useEffect(() => {
     // Last known role first (so buttons work right after a refresh), then the real answer.
     try {
       const cached = JSON.parse(localStorage.getItem('arry-register-role') ?? 'null');
-      if (cached) { setRole(cached.role ?? null); setMyTeacherId(cached.teacherId ?? null); }
+      if (cached) { setRole(cached.role ?? null); setMyTeacherId(cached.teacherId ?? null); setMyStudentId(cached.studentId ?? null); }
     } catch { /* no cache */ }
     fetch('/api/auth/me').then(r => r.json()).then(d => {
-      setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null);
-      try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null })); } catch { /* ignore */ }
+      setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); setMyStudentId(d.user?.student_id ?? null);
+      try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null, studentId: d.user?.student_id ?? null })); } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
   const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
@@ -73,8 +76,9 @@ export default function AttendanceRegisterPage() {
 
   const { toasts, toast, remove } = useToast();
   const [monthRef, setMonthRef] = useState(new Date());
-  const [fTeacher, setFTeacher] = useState('');
   const [fDiscipline, setFDiscipline] = useState('');
+  const [fGroup, setFGroup] = useState('');
+  const chooseDiscipline = (d: string) => { setFDiscipline(d); setFGroup(''); };
   const [activeCell, setActiveCell] = useState<string | null>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
   // When set, the popover shows a teacher picker for "who did the replacement".
@@ -155,18 +159,22 @@ export default function AttendanceRegisterPage() {
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
   const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
-  // Admin filtering: an explicit pick from "Toți profesorii" (in the table
-  // header, above Elev) wins; otherwise, when a discipline tab is selected,
-  // fall back to that discipline's assigned teacher. Either way, matching
-  // resolves each student's teacher for the SPECIFIC instrument (from their
-  // per-instrument subscription) rather than just their primary teacher_id.
+  // Admin filtering: pick an instrument tab first — a teacher can only be
+  // chosen (via the header dropdown) once a discipline is selected, and that
+  // choice resolves each student's teacher for the SPECIFIC instrument (from
+  // their per-instrument subscription) rather than just their primary teacher_id.
   const effectiveTeacherId = role === 'teacher'
     ? myTeacherId
-    : (fTeacher ? Number(fTeacher) : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null));
+    : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null);
 
   // Strict roster: only students actually enrolled (per-instrument subscription
   // and its teacher), active, and never paused/inactive ones — see lib/rosters.ts.
-  const students = allStudents.filter(s => inRegister(s, fDiscipline, effectiveTeacherId));
+  // At Solfegiu, an extra group filter (mică/medie/mare) narrows it further.
+  // A logged-in student only ever sees their own row, never their classmates'.
+  const students = allStudents
+    .filter(s => role !== 'student' || s.id === myStudentId)
+    .filter(s => inRegister(s, fDiscipline, effectiveTeacherId))
+    .filter(s => fDiscipline !== SOLFEGIU || !fGroup || s.subscriptions?.find(x => x.instrument === SOLFEGIU)?.group === fGroup);
 
   const byCell: Record<string, Lesson[]> = {};
   for (const l of monthLessons) {
@@ -377,7 +385,7 @@ export default function AttendanceRegisterPage() {
       <PageBanner
         icon={ClipboardList}
         title="Registru Frecvență"
-        subtitle={`${students.length} elevi${role === 'teacher' ? ' · ai tăi' : ''}`}
+        subtitle={role === 'student' ? 'Frecvența ta' : `${students.length} elevi${role === 'teacher' ? ' · ai tăi' : ''}`}
         accent="#E08A3C"
       />
 
@@ -397,7 +405,7 @@ export default function AttendanceRegisterPage() {
         {/* ── Service / discipline picker ── */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
-            onClick={() => setFDiscipline('')}
+            onClick={() => chooseDiscipline('')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors
               ${fDiscipline === '' ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300'}`}
           >
@@ -406,7 +414,7 @@ export default function AttendanceRegisterPage() {
           {INSTRUMENTS.map(i => (
             <button
               key={i}
-              onClick={() => setFDiscipline(i)}
+              onClick={() => chooseDiscipline(i)}
               className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors
                 ${fDiscipline === i ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300'}`}
             >
@@ -415,6 +423,29 @@ export default function AttendanceRegisterPage() {
           ))}
         </div>
 
+        {/* ── Group filter — Solfegiu only (grupa mică/medie/mare) ── */}
+        {fDiscipline === SOLFEGIU && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => setFGroup('')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                ${fGroup === '' ? 'bg-slate-700 text-white border-slate-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}
+            >
+              Toate grupele
+            </button>
+            {SOLFEGIU_GROUPS.map(g => (
+              <button
+                key={g.value}
+                onClick={() => setFGroup(g.value)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                  ${fGroup === g.value ? 'bg-slate-700 text-white border-slate-700 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ── Excel-style register grid — deliberately always white/black,
               independent of theme, so it reads like a printed register. ── */}
         <div className="flex-1 min-h-0 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
@@ -422,19 +453,6 @@ export default function AttendanceRegisterPage() {
             <thead>
               <tr>
                 <th className="sticky left-0 top-0 z-20 bg-white border border-black px-3 py-2.5 text-left align-bottom" style={{ minWidth: 190, width: 190 }}>
-                  {isFullAdmin && (
-                    <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-slate-300 shadow-sm normal-case">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Filtru profesor</span>
-                      <select
-                        value={fTeacher}
-                        onChange={e => setFTeacher(e.target.value)}
-                        className="w-full text-xs font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md -ml-0.5"
-                      >
-                        <option value="">Toți profesorii</option>
-                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    </div>
-                  )}
                   {fDiscipline ? (
                     <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
@@ -444,8 +462,8 @@ export default function AttendanceRegisterPage() {
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
                           className="w-full text-xs font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
                         >
-                          <option value="">— fără profesor —</option>
-                          {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          <option value="">Toți profesorii de {fDiscipline}</option>
+                          {teachers.filter(t => (t.instruments ?? []).includes(fDiscipline)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       ) : (
                         <span className="text-xs font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>

@@ -12,6 +12,8 @@ import { useLocale } from '@/lib/i18n';
  */
 const videoIds = ['jNQXAC9IVRw', 'M7lc1UVf-VE', 'aqz-KE-bpKQ', 'ScMzIvxBSi4', 'kJQP7kiw5Fk', 'e-ORhEE9VVg'];
 
+const photoSrcs = ['/about-direction.jpg', '/about-guitar.jpg', '/about-scena.jpg', '/about-guitar-girl.jpg', '/about-stage.jpg'];
+
 function Thumb({ id }: { id: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, #1B1611, #2A211A)' }} />;
@@ -23,9 +25,11 @@ function Thumb({ id }: { id: string }) {
 
 export default function Gallery() {
   const [active, setActive] = useState<string | null>(null);
+  const [activePhoto, setActivePhoto] = useState<string | null>(null);
   const { t } = useLocale();
   const g = t.gallery;
   const videos = g.videos.map((v, i) => ({ ...v, id: videoIds[i] }));
+  const photos = photoSrcs.map((src, i) => ({ src, alt: g.photoAlts[i] ?? '' }));
 
   return (
     <section id="galerie" style={{ padding: 'clamp(64px, 9vh, 104px) 32px', background: 'var(--bg)' }}>
@@ -46,6 +50,25 @@ export default function Gallery() {
             </p>
           </Reveal>
         </div>
+
+        <Reveal delay={0.05}>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--sand-deep)', margin: '0 0 16px' }}>
+            {g.photosLabel}
+          </p>
+        </Reveal>
+        <Stagger className="photo-grid" style={{ marginBottom: 54 }}>
+          {photos.map((p, i) => (
+            <StaggerItem key={p.src} className="ph-wrap">
+              <motion.button
+                onClick={() => setActivePhoto(p.src)}
+                whileHover={{ scale: 1.03 }} transition={{ duration: 0.4, ease: EASE }}
+                style={{ width: '100%', height: '100%', border: '1px solid var(--line)', background: 'none', padding: 0, cursor: 'pointer', display: 'block', overflow: 'hidden', aspectRatio: i === 0 ? '3 / 4' : '1 / 1' }}
+              >
+                <img src={p.src} alt={p.alt} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </motion.button>
+            </StaggerItem>
+          ))}
+        </Stagger>
 
         <Stagger className="vid-grid">
           {videos.map(v => (
@@ -80,6 +103,22 @@ export default function Gallery() {
       </div>
 
       <AnimatePresence>
+        {activePhoto && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+            onClick={() => setActivePhoto(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(6,5,4,0.9)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.35, ease: EASE }}
+              style={{ maxWidth: 780, maxHeight: '86vh', position: 'relative' }}>
+              <button onClick={() => setActivePhoto(null)} aria-label={g.closeAria} style={{ position: 'absolute', top: -46, right: 0, width: 38, height: 38, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--tx)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X style={{ width: 16, height: 16 }} />
+              </button>
+              <img src={activePhoto} alt="" style={{ display: 'block', maxWidth: '100%', maxHeight: '86vh', border: '1px solid var(--line-strong)', objectFit: 'contain' }} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {active && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
             onClick={() => setActive(null)}
@@ -104,11 +143,12 @@ export default function Gallery() {
       </AnimatePresence>
 
       <style>{`
-        .vid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .photo-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+        .vid-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
         .vid-card { transition: border-color 0.3s ease; }
         .vid-card:hover { border-color: var(--sand-deep); }
-        @media (max-width: 880px) { .vid-grid { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 540px) { .vid-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 880px) { .vid-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 540px) { .vid-grid { grid-template-columns: minmax(0, 1fr); } .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       `}</style>
     </section>
   );

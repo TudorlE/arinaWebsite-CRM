@@ -12,7 +12,7 @@ import { countAbsences, creditLessons, creditMoney, initialRow, planRowUpdate, t
  *  Types
  * ────────────────────────────────────────────────────────────*/
 
-export type PaymentStatus = 'paid' | 'unpaid' | 'partial' | 'overdue';
+export type PaymentStatus = 'paid' | 'unpaid' | 'partial' | 'overdue' | 'paused';
 
 interface StudentRow {
   id: number;
@@ -122,7 +122,7 @@ export async function computeCredits(
  *         student no longer has, are removed.
  *     Safe to run any number of times.
  * ────────────────────────────────────────────────────────────*/
-const STATUS_RANK: Record<string, number> = { paid: 3, partial: 2, unpaid: 1, overdue: 1 };
+const STATUS_RANK: Record<string, number> = { paid: 3, partial: 2, unpaid: 1, overdue: 1, paused: 0 };
 
 export async function createMonthlyPayments(
   month?: number,
@@ -150,7 +150,12 @@ export async function createMonthlyPayments(
 
   const studentById = new Map((students ?? []).map((s: StudentRow) => [s.id, s]));
   const isActive = (s?: StudentRow) => (s?.status ?? 'active') === 'active';
-  const activeSubs = (s?: StudentRow) => (s?.subscriptions ?? []).filter(sub => (sub.status ?? 'active') === 'active');
+  const allSubs = (s?: StudentRow) => s?.subscriptions ?? [];
+  const activeSubs = (s?: StudentRow) => allSubs(s).filter(sub => (sub.status ?? 'active') === 'active');
+  // A paused instrument only gets its own "Pauză" row when the student has
+  // OTHER instruments too — a student paused on their only instrument is
+  // paused overall (isActive is false for them), already handled by step 3.
+  const pausedSubs = (s?: StudentRow) => allSubs(s).length > 1 ? allSubs(s).filter(sub => (sub.status ?? 'active') === 'paused') : [];
 
   const toDelete = new Set<number>();
   let fixed = 0;
@@ -192,18 +197,41 @@ export async function createMonthlyPayments(
   }
   rows = rows.filter(r => !toDelete.has(r.id));
 
-  // 3b) unpaid rows for an instrument the (active) student no longer has
+  // 3b) unpaid rows for an instrument the (active) student doesn't have AT ALL
+  // any more (dropped entirely) — a merely PAUSED instrument is kept and
+  // converted below instead of deleted, so it stays visible in Plăți.
   for (const r of rows) {
     const st = studentById.get(r.student_id);
-    const subs = activeSubs(st);
-    if (r.service && isActive(st) && subs.length > 0 && (STATUS_RANK[r.status] ?? 1) === 1
-        && !subs.some(sub => sub.instrument === r.service)) toDelete.add(r.id);
+    if (!r.service || !isActive(st) || (STATUS_RANK[r.status] ?? 1) > 1) continue;
+    const stillHasInstrument = allSubs(st).some(sub => sub.instrument === r.service);
+    if (!stillHasInstrument) toDelete.add(r.id);
   }
   rows = rows.filter(r => !toDelete.has(r.id));
 
   if (toDelete.size > 0) {
     const { error } = await supabase.from('payments').delete().in('id', Array.from(toDelete));
     if (error) return fail(error.message);
+  }
+
+  // 3c) an instrument that's now PAUSED (student still active overall via
+  // another instrument) keeps its row but shows as "Pauză" — zero amount, no
+  // credit maths — instead of silently vanishing from Plăți. The reverse also
+  // holds: a row stuck as "paused" whose instrument became active again gets
+  // put back in the normal flow so it can be billed this month.
+  for (const r of rows) {
+    const st = studentById.get(r.student_id);
+    if (!r.service || !isActive(st)) continue;
+    const nowPaused = pausedSubs(st).some(sub => sub.instrument === r.service);
+    if (nowPaused && r.status !== 'paused' && (STATUS_RANK[r.status] ?? 1) <= 1) {
+      const { error } = await supabase.from('payments').update({ status: 'paused', amount: 0, notes: 'Pauză — fără taxă luna aceasta' }).eq('id', r.id);
+      if (!error) { r.status = 'paused'; r.amount = 0; r.notes = 'Pauză — fără taxă luna aceasta'; fixed++; }
+    } else if (!nowPaused && r.status === 'paused') {
+      const sub = activeSubs(st).find(x => x.instrument === r.service);
+      if (sub) {
+        const { error } = await supabase.from('payments').update({ status: 'unpaid', amount: Number(sub.monthly_fee) || 0, notes: null }).eq('id', r.id);
+        if (!error) { r.status = 'unpaid'; r.amount = Number(sub.monthly_fee) || 0; r.notes = null; fixed++; }
+      }
+    }
   }
 
   // Lesson credit from last month's serious-reason absences. If it can't be
@@ -251,6 +279,24 @@ export async function createMonthlyPayments(
         plan_type: sub.plan,
         lesson_count: sub.lessons,
         ...(first.notes ? { notes: first.notes } : {}),
+      });
+    }
+    // Paused instruments (student is active overall via another one) still get
+    // a row — zero amount, "paused" status — so Plăți shows it's on hold
+    // instead of it just never appearing.
+    for (const sub of pausedSubs(s)) {
+      if (have.has(`${s.id}|${sub.instrument}`)) { skipped++; continue; }
+      have.add(`${s.id}|${sub.instrument}`);
+      toInsert.push({
+        student_id: s.id,
+        amount: 0,
+        month: period.month,
+        year: period.year,
+        status: 'paused',
+        service: sub.instrument,
+        plan_type: sub.plan,
+        lesson_count: sub.lessons,
+        notes: 'Pauză — fără taxă luna aceasta',
       });
     }
   }
@@ -322,7 +368,9 @@ export async function calculateRevenue(
     .select('amount, status, student_id')
     .eq('month', period.month)
     .eq('year', period.year);
-  const rows = (rowsData ?? []) as PRow[];
+  // Paused instruments carry no obligation this month — excluded from every
+  // count/percentage below, same as if the row didn't exist at all.
+  const rows = ((rowsData ?? []) as PRow[]).filter(r => r.status !== 'paused');
 
   const monthRevenue   = rows.filter(r => r.status === 'paid').reduce((s, r) => s + r.amount, 0);
   const outstanding    = rows.filter(r => r.status === 'unpaid' || r.status === 'overdue').reduce((s, r) => s + r.amount, 0);

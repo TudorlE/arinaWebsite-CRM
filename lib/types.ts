@@ -46,7 +46,15 @@ export interface StudentSubscription {
   teacher_name?: string | null;
   /** Each instrument can have its own status — e.g. still active at Chitară but paused at Canto. */
   status?: StudentStatus;
+  /** Group size — only meaningful for Solfegiu și teoria muzicii (group lessons). */
+  group?: 'mica' | 'medie' | 'mare' | null;
 }
+
+export const SOLFEGIU_GROUPS: { value: 'mica' | 'medie' | 'mare'; label: string }[] = [
+  { value: 'mica',  label: 'Grupa mică' },
+  { value: 'medie', label: 'Grupa medie' },
+  { value: 'mare',  label: 'Grupa mare' },
+];
 
 export interface Student {
   id: number;
@@ -226,7 +234,7 @@ export interface Payment {
   amount: number;
   month: number; // 1-12
   year: number;
-  status: 'paid' | 'unpaid' | 'partial' | 'overdue';
+  status: 'paid' | 'unpaid' | 'partial' | 'overdue' | 'paused';
   due_date?: string;       // YYYY-MM-DD
   payment_date?: string;
   paid_at?: string | null; // ISO timestamp

@@ -190,6 +190,13 @@ function initializeTables(db: Database.Database): void {
     if (!colsForTeacherLink.some(c => c.name === 'teacher_id')) {
       db.exec('ALTER TABLE users ADD COLUMN teacher_id INTEGER');
     }
+    // Migration: add student_id column — links a `role='student'` user to their
+    // Supabase `students` row, same idea as teacher_id above. Not yet exposed
+    // anywhere in the UI for self-signup — an admin links it by hand via Roluri
+    // when they actually want to hand a student a login.
+    if (!colsForTeacherLink.some(c => c.name === 'student_id')) {
+      db.exec('ALTER TABLE users ADD COLUMN student_id INTEGER');
+    }
   } catch (e) { console.error('[db migration]', e); }
 }
 
@@ -603,34 +610,35 @@ export interface UserRow {
   role: string | null;
   status: 'pending' | 'approved' | 'rejected';
   teacher_id: number | null;
+  student_id: number | null;
   created_at: string;
 }
 
 export function getUserByEmail(email: string) {
   return getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) as
-    | { id: number; name: string; email: string; password_hash: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; teacher_id: number | null; created_at: string }
+    | { id: number; name: string; email: string; password_hash: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; teacher_id: number | null; student_id: number | null; created_at: string }
     | undefined;
 }
 
 /** The account everyone is treated as now that login is bypassed (see lib/auth.ts). */
 export function getFirstAdmin() {
   return getDb()
-    .prepare("SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
+    .prepare("SELECT id, name, email, role, status, teacher_id, student_id, created_at FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
     .get() as UserRow | undefined;
 }
 
 export function getUserById(id: number) {
-  return getDb().prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE id = ?').get(id) as UserRow | undefined;
+  return getDb().prepare('SELECT id, name, email, role, status, teacher_id, student_id, created_at FROM users WHERE id = ?').get(id) as UserRow | undefined;
 }
 
 export function getAllUsers(status?: string) {
   if (status) {
     return getDb()
-      .prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users WHERE status = ? ORDER BY id ASC')
+      .prepare('SELECT id, name, email, role, status, teacher_id, student_id, created_at FROM users WHERE status = ? ORDER BY id ASC')
       .all(status) as UserRow[];
   }
   return getDb()
-    .prepare('SELECT id, name, email, role, status, teacher_id, created_at FROM users ORDER BY id ASC')
+    .prepare('SELECT id, name, email, role, status, teacher_id, student_id, created_at FROM users ORDER BY id ASC')
     .all() as UserRow[];
 }
 
@@ -641,9 +649,11 @@ export function createUser(data: { name: string; email: string; password_hash: s
   return getUserById(Number(info.lastInsertRowid));
 }
 
-export function approveUser(id: number, role: string, teacherId?: number | null) {
+export function approveUser(id: number, role: string, teacherId?: number | null, studentId?: number | null) {
   if (role === 'teacher' && teacherId != null) {
     getDb().prepare("UPDATE users SET status = 'approved', role = ?, teacher_id = ? WHERE id = ?").run(role, teacherId, id);
+  } else if (role === 'student' && studentId != null) {
+    getDb().prepare("UPDATE users SET status = 'approved', role = ?, student_id = ? WHERE id = ?").run(role, studentId, id);
   } else {
     getDb().prepare("UPDATE users SET status = 'approved', role = ? WHERE id = ?").run(role, id);
   }

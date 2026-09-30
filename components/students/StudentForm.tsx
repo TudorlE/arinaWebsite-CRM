@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import DatePicker from '@/components/ui/DatePicker';
-import { INSTRUMENTS, Student, StudentSubscription, StudentStatus, STUDENT_STATUSES } from '@/lib/types';
+import { INSTRUMENTS, Student, StudentSubscription, StudentStatus, STUDENT_STATUSES, SOLFEGIU_GROUPS } from '@/lib/types';
 import { PRICING, LESSON_COUNTS, subscriptionAmount, perLessonPrice, sumSubscriptions, type PlanType, type LessonCount } from '@/lib/pricing';
 import useSWR from 'swr';
 
@@ -105,13 +105,14 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
     setErrors(prev => ({ ...prev, instruments: false }));
   };
 
-  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons' | 'teacher_id' | 'status'>>) => {
+  const updateSubscription = (instrument: string, patch: Partial<Pick<StudentSubscription, 'plan' | 'lessons' | 'teacher_id' | 'status' | 'group'>>) => {
     setForm(prev => ({
       ...prev,
       subscriptions: prev.subscriptions.map(s => {
         if (s.instrument !== instrument) return s;
         if ('teacher_id' in patch) return { ...s, teacher_id: patch.teacher_id ?? null };
         if ('status' in patch) return { ...s, status: patch.status ?? 'active' };
+        if ('group' in patch) return { ...s, group: patch.group ?? null };
         const plan = patch.plan ?? s.plan;
         const lessons = patch.lessons ?? s.lessons;
         return { ...s, plan, lessons, monthly_fee: subscriptionAmount(instrument, plan, lessons) ?? s.monthly_fee };
@@ -297,6 +298,15 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
                         options={STUDENT_STATUSES.map(st => ({ value: st.value, label: st.label }))}
                       />
                     </div>
+                    {instr === 'Solfegiu și teoria muzicii' && (
+                      <Select
+                        label="Grupă"
+                        value={sub.group ?? ''}
+                        onChange={e => updateSubscription(instr, { group: (e.target.value || null) as StudentSubscription['group'] })}
+                        placeholder="Fără grupă atribuită"
+                        options={SOLFEGIU_GROUPS}
+                      />
+                    )}
                     <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-brand-200/50 dark:border-brand-900/30">
                       <span>{isFlatP ? `Lecție de grup — ${svcP.flatMonthly} lei/lună` : <>Preț per lecție: <strong className="text-slate-700 dark:text-slate-200">{perLessonP} lei</strong></>}</span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">{sub.monthly_fee} lei/lună</span>

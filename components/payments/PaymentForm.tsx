@@ -40,9 +40,9 @@ const blank = {
   status: 'unpaid', payment_date: todayMoldova(), notes: '',
 };
 
-const PAYMENT_LABEL: Record<string, string> = { paid: 'Plătit', unpaid: 'Neplătit', partial: 'Parțial', overdue: 'Restant' };
+const PAYMENT_LABEL: Record<string, string> = { paid: 'Plătit', unpaid: 'Neplătit', partial: 'Parțial', overdue: 'Restant', paused: 'Pauză' };
 const PAYMENT_DOT: Record<string, string> = {
-  paid: 'bg-emerald-500', partial: 'bg-orange-500', unpaid: 'bg-red-500', overdue: 'bg-red-500',
+  paid: 'bg-emerald-500', partial: 'bg-orange-500', unpaid: 'bg-red-500', overdue: 'bg-red-500', paused: 'bg-slate-400',
 };
 
 export default function PaymentForm({ open, onClose, onSaved, payment, defaultStudentId, defaultMonth, defaultYear, showToast }: Props) {
@@ -194,7 +194,9 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         // One payment per instrument, each with its own status/amount — PUT
         // to the existing row when this instrument already has a payment for
         // this period, otherwise POST a new one.
-        const results = await Promise.all(studentSubs.map(sub => {
+        // Paused instruments are read-only here (system-managed by
+        // createMonthlyPayments) — never submitted from this form.
+        const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused').map(sub => {
           const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
           const fallbackAmount = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
           const body = JSON.stringify({
@@ -280,6 +282,11 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                 const subFlat = PRICING[sub.instrument]?.flatMonthly != null;
                 const subPerLesson = perLessonPrice(sub.instrument, sub.plan);
                 const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
+                // A paused instrument's payment is system-managed (createMonthlyPayments
+                // keeps it at 0 lei / status 'paused') — shown read-only here instead of
+                // an editable Sumă+Status pair, so nobody can manually bill an instrument
+                // the student isn't actually taking right now.
+                const isPaused = sub.status === 'paused';
                 return (
                   <div key={sub.instrument} className="rounded-lg border border-brand-200/70 dark:border-brand-900/40 bg-white/70 dark:bg-slate-900/30 p-2.5 space-y-2">
                     <div className="flex items-center justify-between">
@@ -288,24 +295,31 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                         {sub.plan === 'old' ? 'vechi' : 'nou'} · {sub.lessons} lecții {subFlat ? '' : `· ${subPerLesson} lei/lecție`}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        label="Sumă (MDL)"
-                        value={row.amount}
-                        onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, amount: e.target.value } }))}
-                        type="number" min={0}
-                      />
-                      <Select
-                        label="Status"
-                        value={row.status}
-                        onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, status: e.target.value } }))}
-                        options={[
-                          { value: 'paid',    label: 'Plătit'   },
-                          { value: 'unpaid',  label: 'Neplătit' },
-                          { value: 'partial', label: 'Parțial'  },
-                        ]}
-                      />
-                    </div>
+                    {isPaused ? (
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
+                        Pauză — fără taxă luna aceasta
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          label="Sumă (MDL)"
+                          value={row.amount}
+                          onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, amount: e.target.value } }))}
+                          type="number" min={0}
+                        />
+                        <Select
+                          label="Status"
+                          value={row.status}
+                          onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, status: e.target.value } }))}
+                          options={[
+                            { value: 'paid',    label: 'Plătit'   },
+                            { value: 'unpaid',  label: 'Neplătit' },
+                            { value: 'partial', label: 'Parțial'  },
+                          ]}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}

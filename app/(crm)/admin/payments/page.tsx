@@ -133,7 +133,7 @@ export default function PaymentsPage() {
   // breakdown as supporting detail underneath.
   type DisplayRow =
     | { kind: 'single'; payment: Payment; sortKey: string }
-    | { kind: 'group'; studentId: number; studentName: string; subs: StudentSubscription[]; ids: number[]; totalAmount: number; overallStatus: Payment['status']; sortKey: string };
+    | { kind: 'group'; studentId: number; studentName: string; subs: StudentSubscription[]; ids: number[]; billableIds: number[]; totalAmount: number; overallStatus: Payment['status']; sortKey: string };
 
   const multiStudentIds = new Set(
     payments.filter(p => (studentSubsById.get(p.student_id) ?? []).length > 1).map(p => p.student_id),
@@ -148,9 +148,10 @@ export default function PaymentsPage() {
     const subs = studentSubsById.get(studentId) ?? [];
     const studentName = payments.find(p => p.student_id === studentId)?.student_name ?? '';
     const ids: number[] = [];
+    const billableIds: number[] = [];
     let totalAmount = 0;
     let sortKey = '';
-    let anyPaid = false, anyUnpaid = false, anyPartial = false;
+    let anyPaid = false, anyUnpaid = false, anyPartial = false, anyBillable = false;
     for (const sub of subs) {
       const match = periodPayments.find(pp => pp.student_id === studentId && pp.service === sub.instrument);
       const st = match?.status ?? 'unpaid';
@@ -159,10 +160,17 @@ export default function PaymentsPage() {
         totalAmount += match.amount;
         if (match.created_at > sortKey) sortKey = match.created_at;
       }
+      // A paused instrument carries no obligation — it doesn't drag the
+      // student's overall status down to "unpaid", it's just excluded, and
+      // it never gets swept into a bulk "mark paid".
+      if (st === 'paused') continue;
+      anyBillable = true;
+      if (match) billableIds.push(match.id);
       if (st === 'paid') anyPaid = true; else if (st === 'partial') anyPartial = true; else anyUnpaid = true;
     }
-    const overallStatus: Payment['status'] = anyPartial || (anyPaid && anyUnpaid) ? 'partial' : anyUnpaid ? 'unpaid' : 'paid';
-    displayRows.push({ kind: 'group', studentId, studentName, subs, ids, totalAmount, overallStatus, sortKey });
+    const overallStatus: Payment['status'] = !anyBillable ? 'paused'
+      : anyPartial || (anyPaid && anyUnpaid) ? 'partial' : anyUnpaid ? 'unpaid' : 'paid';
+    displayRows.push({ kind: 'group', studentId, studentName, subs, ids, billableIds, totalAmount, overallStatus, sortKey });
   }
 
   // List reads bottom-up: oldest at top, most recent added at the bottom.
@@ -414,6 +422,7 @@ export default function PaymentsPage() {
                 { value: 'paid',    label: '✓ Plătit'   },
                 { value: 'unpaid',  label: '⏳ Neplătit' },
                 { value: 'partial', label: '◐ Parțial'  },
+                { value: 'paused',  label: '⏸ Pauză'    },
               ]}
               className="min-w-32 text-sm"
             />
@@ -453,9 +462,11 @@ export default function PaymentsPage() {
               const payment = row.payment;
               const isPaid    = payment.status === 'paid';
               const isPartial = payment.status === 'partial';
+              const isPaused  = payment.status === 'paused';
               const dotColor =
                 isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
                 isPartial ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+                isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                             'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
               return (
                 <div key={`p${payment.id}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
@@ -485,7 +496,7 @@ export default function PaymentsPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    {!isPaid && (
+                    {!isPaid && !isPaused && (
                       <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([payment.id])}
                         className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                       >
@@ -508,9 +519,11 @@ export default function PaymentsPage() {
             // status, with each instrument's own status as supporting detail.
             const isPaid    = row.overallStatus === 'paid';
             const isPartial = row.overallStatus === 'partial';
+            const isPaused  = row.overallStatus === 'paused';
             const dotColor =
               isPaid    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' :
               isPartial ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' :
+              isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                           'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
             return (
               <div key={`s${row.studentId}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
@@ -528,7 +541,7 @@ export default function PaymentsPage() {
                       return (
                         <span
                           key={sub.instrument}
-                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st === 'paid' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : st === 'partial' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}
+                          className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${st === 'paid' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : st === 'partial' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : st === 'paused' ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}
                         >
                           {sub.instrument} · {paymentLabel(st)}
                         </span>
@@ -545,8 +558,8 @@ export default function PaymentsPage() {
                   <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  {!isPaid && row.ids.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(row.ids)}
+                  {!isPaid && !isPaused && row.billableIds.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(row.billableIds)}
                       className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />

@@ -10,16 +10,12 @@ import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
 import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
-import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+import { timeSlotsForDay } from '@/lib/timeSlots';
 
 const CABINET_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#14b8a6', '#3b82f6', '#f59e0b'];
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-// Standard cabinet-table time slots (45min lessons, 13:15-20:45). Any
-// additional times already used by existing schedules on the selected day
-// are appended so nothing gets hidden.
-const DEFAULT_SLOTS = DEFAULT_TIME_SLOTS;
 const DAY_LABELS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
 function todayDayIdx(): number {
@@ -91,9 +87,13 @@ export default function SchedulePage() {
     const key = `${cid}|${t}`;
     (byCabinetTime[key] ??= []).push(s);
   }
+  // Weekend cabinet table starts earlier (09:00) and ends by 18:00 — weekdays
+  // keep the standard 13:15-20:45 slots. Any extra time already used by an
+  // existing schedule on this day is appended so nothing gets hidden.
+  const daySlots = timeSlotsForDay(selectedDow);
   const extraSlots = Array.from(new Set(daySchedules.map(s => (s.start_time ?? '').slice(0, 5))))
-    .filter(t => t && !DEFAULT_SLOTS.includes(t));
-  const timeSlots = [...DEFAULT_SLOTS, ...extraSlots].sort();
+    .filter(t => t && !daySlots.includes(t));
+  const timeSlots = [...daySlots, ...extraSlots].sort();
   // Only the cabinets actually configured (via Gestionare cabinete) get a
   // column — no synthetic "Fără cabinet" bucket, even if some schedule lacks
   // a cabinet assignment.
@@ -218,7 +218,7 @@ export default function SchedulePage() {
   const totalActive = allSchedules.length;
   const totalDay = daySchedules.length;
 
-  if (role === 'administrator') return <AccessDenied title="Program Privat" />;
+  if (role === 'administrator' || role === 'student') return <AccessDenied title="Program Privat" />;
 
   return (
     <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>

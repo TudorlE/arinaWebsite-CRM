@@ -1,5 +1,5 @@
 'use client';
-import { Reveal, RevealLines, Stagger, StaggerItem, Parallax } from '@/components/motionx';
+import { Reveal, RevealLines } from '@/components/motionx';
 import { useLocale } from '@/lib/i18n';
 
 export default function About() {
@@ -12,7 +12,7 @@ export default function About() {
       <hr className="rule" style={{ maxWidth: 1240, margin: '0 auto 54px' }} />
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 40, alignItems: 'end', marginBottom: 56 }} className="about-head">
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 40, alignItems: 'end' }} className="about-head">
           <div>
             <Reveal><span className="eyebrow" style={{ marginBottom: 24, display: 'inline-flex' }}>{a.eyebrow}</span></Reveal>
             <RevealLines
@@ -26,54 +26,11 @@ export default function About() {
             </p>
           </Reveal>
         </div>
-
-        <Stagger className="mosaic">
-          <StaggerItem style={{ gridArea: 'a' }} className="ph-wrap">
-            <Parallax distance={22} style={{ height: '100%', minHeight: 300 }}>
-              <img src="/about-direction.jpg" alt={a.imgAltA} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </Parallax>
-          </StaggerItem>
-
-          <StaggerItem style={{ gridArea: 'b' }} className="ph-wrap">
-            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
-              <img src="/about-guitar.jpg" alt={a.imgAltB} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </Parallax>
-          </StaggerItem>
-
-          <StaggerItem style={{ gridArea: 'c' }} className="ph-wrap">
-            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
-              <img src="/about-scena.jpg" alt={a.imgAltC} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </Parallax>
-          </StaggerItem>
-
-          <StaggerItem style={{ gridArea: 'd' }} className="ph-wrap">
-            <Parallax distance={22} style={{ height: '100%', minHeight: 200 }}>
-              <img src="/about-guitar-girl.jpg" alt={a.imgAltD} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </Parallax>
-          </StaggerItem>
-
-          <StaggerItem style={{ gridArea: 'e' }} className="ph-wrap">
-            <Parallax distance={26} style={{ height: '100%', minHeight: 220 }}>
-              <img src="/about-stage.jpg" alt={a.imgAltE} className="ph" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </Parallax>
-          </StaggerItem>
-        </Stagger>
       </div>
 
       <style>{`
-        .mosaic {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          grid-auto-rows: minmax(190px, auto);
-          grid-template-areas: "a b c" "a d e";
-          gap: 14px;
-        }
         @media (max-width: 860px) {
           .about-head { grid-template-columns: 1fr !important; }
-          .mosaic { grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(170px, auto); grid-template-areas: "a a" "b c" "d e"; }
-        }
-        @media (max-width: 520px) {
-          .mosaic { grid-template-columns: 1fr; grid-auto-rows: auto; grid-template-areas: "a" "b" "c" "d" "e"; }
         }
       `}</style>
     </section>

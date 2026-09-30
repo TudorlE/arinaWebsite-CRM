@@ -15,3 +15,11 @@ export function generateSlots(startHHMM: string, endHHMM: string, stepMinutes: n
 
 /** Standard lesson slots: 45min apart, 13:15–20:45 inclusive. */
 export const DEFAULT_TIME_SLOTS = generateSlots('13:15', '20:45', 45);
+
+/** Weekend lesson slots: 45min apart, starting 09:00, last lesson ending by 18:00. */
+export const WEEKEND_TIME_SLOTS = generateSlots('09:00', '17:15', 45);
+
+/** Picks the right slot set for a DB day_of_week (0=Duminică..6=Sâmbătă). */
+export function timeSlotsForDay(dayOfWeek: number): string[] {
+  return dayOfWeek === 0 || dayOfWeek === 6 ? WEEKEND_TIME_SLOTS : DEFAULT_TIME_SLOTS;
+}

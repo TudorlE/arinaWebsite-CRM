@@ -41,7 +41,9 @@ export default function AdminUsersPage() {
   const [approveTarget, setApproveTarget] = useState<User | null>(null);
   const [approveRole, setApproveRole] = useState<'teacher' | 'student'>('teacher');
   const [approveTeacherId, setApproveTeacherId] = useState('');
+  const [approveStudentId, setApproveStudentId] = useState('');
   const [teachers, setTeachers] = useState<{ id: number; name: string }[]>([]);
+  const [students, setStudents] = useState<{ id: number; name: string }[]>([]);
   const [rejectTarget, setRejectTarget] = useState<User | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -52,6 +54,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setMe(d.user ?? null));
     fetch('/api/teachers').then(r => r.json()).then(d => setTeachers(d.teachers ?? []));
+    fetch('/api/students').then(r => r.json()).then(d => setStudents(d.students ?? []));
     refresh();
   }, []);
 
@@ -77,6 +80,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           role: approveRole,
           teacher_id: approveRole === 'teacher' && approveTeacherId ? Number(approveTeacherId) : undefined,
+          student_id: approveRole === 'student' && approveStudentId ? Number(approveStudentId) : undefined,
         }),
       });
       const data = await res.json();
@@ -255,7 +259,7 @@ export default function AdminUsersPage() {
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => { setApproveTarget(u); setApproveRole('teacher'); setApproveTeacherId(''); }}
+                          onClick={() => { setApproveTarget(u); setApproveRole('teacher'); setApproveTeacherId(''); setApproveStudentId(''); }}
                         >
                           <UserCheck className="w-3.5 h-3.5" /> Aprobă
                         </Button>
@@ -323,6 +327,16 @@ export default function AdminUsersPage() {
                 onChange={e => setApproveTeacherId(e.target.value)}
                 placeholder="Fără asociere (poate fi setată mai târziu)"
                 options={teachers.map(t => ({ value: t.id, label: t.name }))}
+              />
+            )}
+
+            {approveRole === 'student' && (
+              <Select
+                label="Asociază cu fișa de elev"
+                value={approveStudentId}
+                onChange={e => setApproveStudentId(e.target.value)}
+                placeholder="Fără asociere (poate fi setată mai târziu)"
+                options={students.map(s => ({ value: s.id, label: s.name }))}
               />
             )}
 
