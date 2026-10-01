@@ -5,8 +5,9 @@ import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, ClipboardList, ChevronDown, Search } from 'lucide-react';
 import Select from '@/components/ui/Select';
 import PageBanner from '@/components/ui/PageBanner';
-import { MonthlyStats, INSTRUMENTS, Student, Payment, STUDENT_STATUSES } from '@/lib/types';
+import { MonthlyStats, INSTRUMENTS, Student, Payment, Lesson, STUDENT_STATUSES } from '@/lib/types';
 import { inRegister } from '@/lib/rosters';
+import { monthEnd } from '@/lib/dates';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -86,6 +87,42 @@ export default function StudentsAttendancePage() {
   const { data: expPaymentsData } = useSWR(expandedId ? `/api/payments?student_id=${expandedId}&month=${monthNum}&year=${year}` : null, fetcher);
   const expandedPayment: Payment | undefined = (expPaymentsData?.payments ?? [])[0];
   const expandedStudent = expandedId ? studentById.get(expandedId) : undefined;
+
+  // Who/when behind each Motivată/Nemotivată/Recuperare tally — fetched only
+  // for the expanded student, for this month, and matched to the right
+  // instrument card by `discipline`.
+  const monthFrom = `${year}-${pad2(monthNum)}-01`;
+  const monthTo = monthEnd(year, monthNum);
+  const { data: expLessonsData } = useSWR(
+    expandedId ? `/api/lessons?student_id=${expandedId}&from=${monthFrom}&to=${monthTo}` : null, fetcher,
+  );
+  const expandedLessons: Lesson[] = expLessonsData?.lessons ?? [];
+  type LessonDetail = { kind: 'excused' | 'unexcused' | 'recovered'; date: string; time: string; teacher: string; replaced?: string };
+  const detailsFor = (instrument: string): LessonDetail[] =>
+    expandedLessons
+      .filter(l => l.discipline === instrument)
+      .map((l): LessonDetail | null => {
+        const kind = l.status === 'recovered' ? 'recovered' as const
+          : l.attendance_status === 'excused_absence' ? 'excused' as const
+          : l.attendance_status === 'unexcused_absence' ? 'unexcused' as const
+          : null;
+        if (!kind) return null;
+        return {
+          kind, date: l.date, time: (l.time ?? '').slice(0, 5),
+          teacher: l.replacement_teacher_name ?? l.teacher_name ?? '—',
+          replaced: l.replacement_teacher_name ? (l.teacher_name ?? undefined) : undefined,
+        };
+      })
+      .filter((d): d is LessonDetail => d !== null)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const DETAIL_LABEL: Record<LessonDetail['kind'], string> = { excused: 'Motivată', unexcused: 'Nemotivată', recovered: 'Recuperare' };
+  const DETAIL_CLASS: Record<LessonDetail['kind'], string> = {
+    excused: 'text-amber-600 dark:text-amber-400', unexcused: 'text-red-600 dark:text-red-400', recovered: 'text-accent-600 dark:text-accent-400',
+  };
+  const fmtDetailDate = (d: string) => {
+    const dt = new Date(`${d}T00:00:00`);
+    return dt.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+  };
 
   const toggleRow = (id?: number) => {
     if (!id) return;
@@ -256,6 +293,25 @@ export default function StudentsAttendancePage() {
                                               <span className="text-red-600 dark:text-red-400">Nemotivate: <strong>{unexcusedFor(student.id, sub.instrument)}</strong></span>
                                               <span className="text-accent-600 dark:text-accent-400">Recuperate: <strong>{recoveredFor(student.id, sub.instrument)}</strong></span>
                                             </div>
+                                            {(() => {
+                                              const details = detailsFor(sub.instrument);
+                                              if (details.length === 0) return null;
+                                              return (
+                                                <div className="pt-1.5 mt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                                                  {details.map((d, i) => (
+                                                    <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
+                                                      <span className={`font-semibold ${DETAIL_CLASS[d.kind]}`}>{DETAIL_LABEL[d.kind]}</span>
+                                                      <span className="text-slate-500 dark:text-slate-400 text-right">
+                                                        {fmtDetailDate(d.date)}, {d.time} ·{' '}
+                                                        {d.replaced ? (
+                                                          <span>{d.teacher} <span className="text-violet-500 dark:text-violet-400">(înloc. {d.replaced})</span></span>
+                                                        ) : d.teacher}
+                                                      </span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              );
+                                            })()}
                                           </div>
                                         );
                                       })}
