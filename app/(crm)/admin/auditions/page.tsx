@@ -263,7 +263,7 @@ export default function AuditionsPage() {
                           {canEdit && (
                             <button
                               onClick={() => openAddAudition(dateStr, time)}
-                              className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1.5 py-3 rounded-lg border border-dashed border-cyan-300 text-cyan-500 text-sm font-semibold hover:bg-cyan-50"
+                              className="w-full opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1.5 py-3 rounded-lg border border-dashed border-cyan-300 text-cyan-500 text-sm font-semibold hover:bg-cyan-50"
                             >
                               <Plus className="w-4 h-4" /> Adaugă
                             </button>

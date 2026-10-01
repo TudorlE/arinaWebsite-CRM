@@ -469,11 +469,11 @@ export default function PaymentsPage() {
                 isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                             'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
               return (
-                <div key={`p${payment.id}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <div key={`p${payment.id}`} className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
                     {(payment.student_name ?? '?').charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-[160px]">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{payment.student_name}</p>
                       <Badge variant={paymentBadge(payment.status)} className="flex-shrink-0">{paymentLabel(payment.status)}</Badge>
@@ -486,30 +486,32 @@ export default function PaymentsPage() {
                       return c ? <CreditNote credit={{ ...c, service: '' }} applied={creditApplied(payment, c, payment.student_id)} /> : null;
                     })()}
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
-                    {payment.payment_date && (
-                      <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-                        {isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-                        {payment.payment_date}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    {!isPaid && !isPaused && (
-                      <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([payment.id])}
-                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">Plătit</span>
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+                    <div className="text-right">
+                      <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
+                      {payment.payment_date && (
+                        <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+                          {isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                          {payment.payment_date}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
+                      {!isPaid && !isPaused && (
+                        <Button variant="ghost" size="sm" onClick={() => handleMarkPaid([payment.id])}
+                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span className="text-xs font-bold">Plătit</span>
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setEditStudentId(null); setShowForm(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setEditStudentId(null); setShowForm(true); }}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: [payment.id], label: payment.student_name ?? '' })}>
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                    </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: [payment.id], label: payment.student_name ?? '' })}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -526,11 +528,11 @@ export default function PaymentsPage() {
               isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                           'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
             return (
-              <div key={`s${row.studentId}`} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <div key={`s${row.studentId}`} className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
                   {(row.studentName || '?').charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[160px]">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{row.studentName}</p>
                     <Badge variant={paymentBadge(row.overallStatus)} className="flex-shrink-0">{paymentLabel(row.overallStatus)}</Badge>
@@ -554,26 +556,28 @@ export default function PaymentsPage() {
                     return c ? <CreditNote key={sub.instrument} credit={c} applied={!!match && creditApplied(match, c, row.studentId)} /> : null;
                   })}
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  {!isPaid && !isPaused && row.billableIds.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(row.billableIds)}
-                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span className="text-xs font-bold">Plătit</span>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
+                  <div className="text-right">
+                    <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
+                    {!isPaid && !isPaused && row.billableIds.length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(row.billableIds)}
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-bold">Plătit</span>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => { setEditPayment(null); setEditStudentId(row.studentId); setShowForm(true); }}>
+                      <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => { setEditPayment(null); setEditStudentId(row.studentId); setShowForm(true); }}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  {row.ids.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: row.ids, label: row.studentName })}>
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                    </Button>
-                  )}
+                    {row.ids.length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: row.ids, label: row.studentName })}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

@@ -103,7 +103,7 @@ export default function StudentsPage() {
             )}
           </div>
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-xs text-slate-400 font-medium">Instrument</span>
@@ -195,7 +195,7 @@ export default function StudentsPage() {
               )}
 
               <div className="flex items-center justify-end mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                <div className="flex gap-0.5 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
                   <Button variant="ghost" size="sm" onClick={() => setDetailsTarget(student)} title="Detalii">
                     <Info className="w-3.5 h-3.5" />
                   </Button>

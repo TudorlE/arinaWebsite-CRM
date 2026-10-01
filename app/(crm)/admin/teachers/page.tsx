@@ -173,7 +173,7 @@ export default function TeachersPage() {
                     <p className="text-xs text-slate-400 mt-0.5">Profesor</p>
                   </div>
                 </div>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                <div className="flex gap-0.5 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
                   <Button variant="ghost" size="sm" onClick={() => setDetailsTarget(teacher)} title="Detalii">
                     <Info className="w-3.5 h-3.5" />
                   </Button>

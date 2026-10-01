@@ -399,7 +399,7 @@ export default function SchedulePage() {
                             {!isStudent && cellSchedules.length === 0 && (
                               <button
                                 onClick={() => openAddSlot(selectedDow, time, typeof col.id === 'number' ? col.id : undefined)}
-                                className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1 py-2 rounded-lg border border-dashed border-brand-300 text-brand-500 text-[11px] font-semibold hover:bg-brand-50"
+                                className="w-full opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-1 py-2 rounded-lg border border-dashed border-brand-300 text-brand-500 text-[11px] font-semibold hover:bg-brand-50"
                               >
                                 <Plus className="w-3.5 h-3.5" /> Adaugă
                               </button>
