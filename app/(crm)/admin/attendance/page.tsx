@@ -76,7 +76,9 @@ export default function AttendanceRegisterPage() {
 
   const { toasts, toast, remove } = useToast();
   const [monthRef, setMonthRef] = useState(new Date());
-  const [fDiscipline, setFDiscipline] = useState('');
+  // There's no more "toate serviciile" tab — an instrument is always picked,
+  // defaulting to the first one.
+  const [fDiscipline, setFDiscipline] = useState<string>(INSTRUMENTS[0]);
   const [fGroup, setFGroup] = useState('');
   const chooseDiscipline = (d: string) => { setFDiscipline(d); setFGroup(''); };
   const [activeCell, setActiveCell] = useState<string | null>(null);
@@ -163,9 +165,14 @@ export default function AttendanceRegisterPage() {
   // chosen (via the header dropdown) once a discipline is selected, and that
   // choice resolves each student's teacher for the SPECIFIC instrument (from
   // their per-instrument subscription) rather than just their primary teacher_id.
+  // Solfegiu is taught in groups rather than one-teacher-per-student, so its
+  // single "discipline teacher" assignment must never gate the roster — doing
+  // so silently hid every student whose Solfegiu subscription had a different
+  // (or no) teacher_id, which is most of them. Grupa mică/medie/mare (below)
+  // is the real way to narrow Solfegiu, not a teacher pick.
   const effectiveTeacherId = role === 'teacher'
     ? myTeacherId
-    : (fDiscipline ? (disciplineTeacherAssignment?.teacher_id ?? null) : null);
+    : (fDiscipline && fDiscipline !== SOLFEGIU ? (disciplineTeacherAssignment?.teacher_id ?? null) : null);
 
   // Strict roster: only students actually enrolled (per-instrument subscription
   // and its teacher), active, and never paused/inactive ones — see lib/rosters.ts.
@@ -404,13 +411,6 @@ export default function AttendanceRegisterPage() {
 
         {/* ── Service / discipline picker ── */}
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <button
-            onClick={() => chooseDiscipline('')}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors
-              ${fDiscipline === '' ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300'}`}
-          >
-            Toate serviciile
-          </button>
           {INSTRUMENTS.map(i => (
             <button
               key={i}
@@ -456,7 +456,7 @@ export default function AttendanceRegisterPage() {
                   {fDiscipline ? (
                     <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
                       <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
-                      {isFullAdmin ? (
+                      {fDiscipline === SOLFEGIU ? null : isFullAdmin ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}

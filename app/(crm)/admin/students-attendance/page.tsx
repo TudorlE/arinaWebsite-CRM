@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, ClipboardList, ChevronDown, Search } from 'l
 import Select from '@/components/ui/Select';
 import PageBanner from '@/components/ui/PageBanner';
 import { MonthlyStats, INSTRUMENTS, Student, Payment, STUDENT_STATUSES } from '@/lib/types';
+import { inRegister } from '@/lib/rosters';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -46,7 +47,22 @@ export default function StudentsAttendancePage() {
 
   const { data, isLoading } = useSWR(`/api/students/stats?${params.toString()}`, fetcher);
   const statsAll: MonthlyStats[] = data?.stats ?? [];
-  const stats = statsAll
+  // A student with zero lesson rows that month (e.g. the recurring schedule
+  // hasn't generated next month's lessons for them yet) would otherwise just
+  // vanish from this list entirely — fill in a zero-stats row for every
+  // active, enrolled student the API's own filters didn't already return.
+  const statsById = new Map(statsAll.map(s => [s.student_id, s]));
+  const filterTeacherId = fTeacher ? Number(fTeacher) : null;
+  for (const s of allStudentsFull) {
+    if (statsById.has(s.id)) continue;
+    if (!inRegister(s, fDiscipline, filterTeacherId)) continue;
+    statsById.set(s.id, {
+      student_id: s.id, student_name: s.name, discipline: fDiscipline || null,
+      total: 0, scheduled: 0, completed: 0, cancelled: 0, recovered: 0, present: 0, excused_absence: 0, unexcused_absence: 0,
+    });
+  }
+  const statsMerged = Array.from(statsById.values()).sort((a, b) => (a.student_name ?? '').localeCompare(b.student_name ?? ''));
+  const stats = statsMerged
     .filter(s => !search.trim() || (s.student_name ?? '').toLowerCase().includes(search.trim().toLowerCase()))
     .filter(s => {
       if (showInactive) return true;
@@ -60,8 +76,12 @@ export default function StudentsAttendancePage() {
   // panel, so "8 lecții la Canto" always means the same thing everywhere.
   type DisciplineRow = { student_id: number; discipline: string; total: number; done: number; recovered: number; excused_absence: number; unexcused_absence: number };
   const byDiscipline: DisciplineRow[] = data?.byDiscipline ?? [];
-  const doneFor = (studentId?: number, instrument?: string) =>
-    byDiscipline.find(r => r.student_id === studentId && r.discipline === instrument)?.done ?? 0;
+  const disciplineRow = (studentId?: number, instrument?: string) =>
+    byDiscipline.find(r => r.student_id === studentId && r.discipline === instrument);
+  const doneFor = (studentId?: number, instrument?: string) => disciplineRow(studentId, instrument)?.done ?? 0;
+  const excusedFor = (studentId?: number, instrument?: string) => disciplineRow(studentId, instrument)?.excused_absence ?? 0;
+  const unexcusedFor = (studentId?: number, instrument?: string) => disciplineRow(studentId, instrument)?.unexcused_absence ?? 0;
+  const recoveredFor = (studentId?: number, instrument?: string) => disciplineRow(studentId, instrument)?.recovered ?? 0;
 
   const { data: expPaymentsData } = useSWR(expandedId ? `/api/payments?student_id=${expandedId}&month=${monthNum}&year=${year}` : null, fetcher);
   const expandedPayment: Payment | undefined = (expPaymentsData?.payments ?? [])[0];
@@ -230,6 +250,11 @@ export default function StudentsAttendancePage() {
                                               <span className={`text-xs font-bold ${remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
                                                 {remaining === 0 ? 'Complet' : `${remaining} rămase`}
                                               </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-[11px] pt-0.5">
+                                              <span className="text-amber-600 dark:text-amber-400">Motivate: <strong>{excusedFor(student.id, sub.instrument)}</strong></span>
+                                              <span className="text-red-600 dark:text-red-400">Nemotivate: <strong>{unexcusedFor(student.id, sub.instrument)}</strong></span>
+                                              <span className="text-accent-600 dark:text-accent-400">Recuperate: <strong>{recoveredFor(student.id, sub.instrument)}</strong></span>
                                             </div>
                                           </div>
                                         );
