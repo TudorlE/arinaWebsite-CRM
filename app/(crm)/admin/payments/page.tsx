@@ -588,7 +588,7 @@ export default function PaymentsPage() {
       <PaymentForm
         open={showForm}
         onClose={() => { setShowForm(false); setEditStudentId(null); }}
-        onSaved={() => { mutate(); mutateRevenue(); mutatePeriod(); }}
+        onSaved={() => { mutate(); mutateRevenue(); mutatePeriod(); mutateCredits(); }}
         payment={editPayment}
         defaultMonth={Number(monthFilter)}
         defaultYear={Number(yearFilter)}

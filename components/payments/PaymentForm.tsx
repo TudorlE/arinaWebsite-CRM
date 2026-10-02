@@ -66,7 +66,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   const isMultiInstrument = studentSubs.length > 1;
 
   // Full payment history for the selected student — "vedea rapid situația plăților pentru fiecare lună".
-  const { data: historyData } = useSWR(
+  const { data: historyData, mutate: mutateHistory } = useSWR(
     form.student_id ? `/api/payments?student_id=${form.student_id}` : null, fetcher,
   );
   const history: Payment[] = (historyData?.payments ?? [])
@@ -199,9 +199,13 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused').map(sub => {
           const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
           const fallbackAmount = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
+          // `Number(row.amount) || fallbackAmount` would silently replace an
+          // intentional 0 (JS treats 0 as falsy) with the computed subscription
+          // price — only fall back when the field was actually left empty.
+          const amount = row.amount === '' ? (fallbackAmount ?? 0) : (Number(row.amount) || 0);
           const body = JSON.stringify({
             student_id: Number(form.student_id),
-            amount: Number(row.amount) || fallbackAmount || 0,
+            amount,
             month: Number(form.month),
             year: Number(form.year),
             status: row.status,
@@ -219,6 +223,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         }));
         if (results.every(r => r.ok)) {
           showToast('Plăți înregistrate!', 'success');
+          mutateHistory();
           onSaved();
           onClose();
         } else {
@@ -253,6 +258,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         showToast(data.error ?? 'Eroare la salvare', 'error');
       } else {
         showToast(payment ? 'Plată actualizată!' : 'Plată înregistrată!', 'success');
+        mutateHistory();
         onSaved();
         onClose();
       }
