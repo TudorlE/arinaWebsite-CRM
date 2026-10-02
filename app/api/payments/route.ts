@@ -45,7 +45,9 @@ export async function POST(request: NextRequest) {
       student_id, amount, month, year, status, payment_date, due_date, notes,
       service, plan_type, lesson_count, price_per_lesson,
     } = await request.json();
-    if (!student_id || !amount || !month || !year || !status) {
+    // `!amount` would reject a deliberate 0 (falsy in JS) as "missing" —
+    // only actually-missing values should fail this check.
+    if (!student_id || amount == null || !month || !year || !status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const isPaid = status === 'paid';

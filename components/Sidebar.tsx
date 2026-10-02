@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
   Settings, LogOut, CalendarDays, ShieldCheck, ExternalLink,
-  CalendarRange, Mic2, ClipboardList, BookOpen, Menu, X,
+  CalendarRange, Mic2, ClipboardList, BookOpen, Menu, X, Repeat,
 } from 'lucide-react';
 
 type NavItem = {
@@ -23,6 +23,7 @@ const nav: NavItem[] = [
   { href: '/admin',              label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/admin/schedule',     label: 'Program Privat', icon: CalendarDays, teacherAllowed: true },
   { href: '/admin/general-schedule',   label: 'Program General',    icon: CalendarRange, studentAllowed: true, teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/recurring-schedule', label: 'Orar Fix',           icon: Repeat,        adminOnly: true },
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, studentAllowed: true, teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
