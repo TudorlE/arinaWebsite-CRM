@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock } from 'lucide-react';
+import { CalendarDays, Plus, Pencil, Trash2, GripVertical, Settings2, X, Check, Lock, Sparkles } from 'lucide-react';
 import RecurringScheduleForm from '@/components/recurring-schedule/RecurringScheduleForm';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -56,6 +56,8 @@ export default function SchedulePage() {
   const [editSchedule, setEditSchedule] = useState<RecurringSchedule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecurringSchedule | null>(null);
   const [deleting, setDeleting]         = useState(false);
+  const [generateTarget, setGenerateTarget] = useState<RecurringSchedule | null>(null);
+  const [generating, setGenerating]     = useState(false);
   const [activeMenu, setActiveMenu]     = useState<number | null>(null);
   const [draggingId, setDraggingId]     = useState<number | null>(null);
   const [dropCell, setDropCell]         = useState<string | null>(null); // "cabinetId|time"
@@ -212,6 +214,21 @@ export default function SchedulePage() {
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
+    }
+  };
+
+  const handleGenerate = async (months: 3 | 6 | 12) => {
+    if (!generateTarget) return;
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/recurring-schedules/${generateTarget.id}/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ months }),
+      });
+      const data = await res.json();
+      if (res.ok) { toast(`${data.inserted} lecții generate pentru următoarele ${months} luni`, 'success'); setGenerateTarget(null); }
+      else toast(data.error ?? 'Eroare la generare', 'error');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -387,6 +404,10 @@ export default function SchedulePage() {
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-brand-600 hover:bg-brand-50 transition-colors"
                                       ><Pencil className="w-3 h-3" /> Editează</button>
                                       <button
+                                        onClick={() => { setGenerateTarget(s); setActiveMenu(null); }}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+                                      ><Sparkles className="w-3 h-3" /> Generează</button>
+                                      <button
                                         onClick={() => { setDeleteTarget(s); setActiveMenu(null); }}
                                         className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
                                       ><Trash2 className="w-3 h-3" /> Șterge</button>
@@ -432,6 +453,20 @@ export default function SchedulePage() {
         defaultCabinetId={addCabinetId}
         showToast={toast}
       />
+
+      <Modal open={!!generateTarget} onClose={() => setGenerateTarget(null)} title="Generează lecții" size="sm">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+          Generează lecțiile viitoare pentru <strong className="text-slate-900 dark:text-slate-100">{generateTarget?.student_name}</strong>
+          {generateTarget && <> ({DAY_LABELS[(generateTarget.day_of_week + 6) % 7]}, {generateTarget.start_time?.slice(0, 5)})</>}. Regenerarea e sigură — lecțiile deja generate nu se duplică.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {[3, 6, 12].map(m => (
+            <Button key={m} variant="secondary" disabled={generating} onClick={() => handleGenerate(m as 3 | 6 | 12)}>
+              {generating ? '…' : `${m} luni`}
+            </Button>
+          ))}
+        </div>
+      </Modal>
 
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge orarul" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
