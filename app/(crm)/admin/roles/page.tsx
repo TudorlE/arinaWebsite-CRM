@@ -55,7 +55,7 @@ export default function RolesPage() {
 
   if (me && me.role !== 'admin') {
     return (
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-h-0">
         <PageBanner icon={ShieldCheck} title="Roluri" subtitle="Gestionare conturi și permisiuni" accent="#5934DC" />
         <main className="flex-1 p-6 flex items-center justify-center">
           <p className="text-slate-400 text-sm">Acces restricționat — doar administratorii pot gestiona rolurile.</p>
@@ -65,10 +65,10 @@ export default function RolesPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       <PageBanner icon={ShieldCheck} title="Roluri" subtitle={`${users.length} conturi gestionate`} accent="#5934DC" />
 
-      <main className="flex-1 p-6 overflow-y-auto space-y-4">
+      <main className="flex-1 min-h-0 p-6 overflow-y-auto space-y-4">
         <div className="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-900/15 p-4 text-sm text-violet-800 dark:text-violet-300">
           <strong>Administrator (acces limitat)</strong> — vede doar Program General, Audiții, Registru Frecvență,
           Profesori General, Profesori Frecvență, Elevi General și Elevi Frecvență. Restul secțiunilor
@@ -76,8 +76,9 @@ export default function RolesPage() {
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
-          {/* Table header */}
-          <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+          {/* Table header — desktop only; mobile rows stack as cards instead,
+              where column headers wouldn't mean anything. */}
+          <div className="hidden sm:grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_auto] gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
             <span>Utilizator</span>
             <span>Email</span>
             <span>Rol actual</span>
@@ -89,9 +90,11 @@ export default function RolesPage() {
             <p className="p-6 text-sm text-slate-400">Se încarcă...</p>
           )}
 
-          {/* Rows */}
+          {/* Rows — stacked on mobile (a fixed 4-column grid has no room for a
+              long role label like "Administrator (acces limitat)" on a phone,
+              it was overlapping other text), a single grid row from sm: up. */}
           {users.length > 0 && users.map(u => (
-            <div key={u.id} className="grid grid-cols-[2fr_2fr_1fr_auto] gap-4 items-center px-5 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+            <div key={u.id} className="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_auto] sm:gap-4 sm:items-center px-5 py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
               {/* Avatar + name */}
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center flex-shrink-0">
@@ -110,24 +113,26 @@ export default function RolesPage() {
               {/* Email */}
               <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{u.email}</p>
 
-              {/* Current role badge */}
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full w-fit ${u.role ? (ROLE_LABELS[u.role]?.color ?? 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                {u.role ? (ROLE_LABELS[u.role]?.label ?? u.role) : 'Fără rol'}
-              </span>
+              <div className="flex items-center justify-between gap-3 sm:contents">
+                {/* Current role badge */}
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full w-fit ${u.role ? (ROLE_LABELS[u.role]?.color ?? 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                  {u.role ? (ROLE_LABELS[u.role]?.label ?? u.role) : 'Fără rol'}
+                </span>
 
-              {/* Role select */}
-              <select
-                value={u.role ?? ''}
-                disabled={updating === u.id || u.id === me?.id || u.role === 'admin'}
-                onChange={e => handleRoleChange(u.id, e.target.value)}
-                className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                {!u.role && <option value="" disabled>Fără rol</option>}
-                {u.role === 'admin' && <option value="admin">Fondator</option>}
-                <option value="administrator">Administrator (acces limitat)</option>
-                <option value="teacher">Profesor</option>
-                <option value="student">Elev</option>
-              </select>
+                {/* Role select */}
+                <select
+                  value={u.role ?? ''}
+                  disabled={updating === u.id || u.id === me?.id || u.role === 'admin'}
+                  onChange={e => handleRoleChange(u.id, e.target.value)}
+                  className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  {!u.role && <option value="" disabled>Fără rol</option>}
+                  {u.role === 'admin' && <option value="admin">Fondator</option>}
+                  <option value="administrator">Administrator (acces limitat)</option>
+                  <option value="teacher">Profesor</option>
+                  <option value="student">Elev</option>
+                </select>
+              </div>
             </div>
           ))}
 

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Playfair_Display, Inter, Anton } from 'next/font/google';
 import './globals.css';
 
@@ -7,6 +7,16 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['700', '900'], variable: '--font-playfair' });
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
+
+// Explicitly allow pinch-zoom (the CRM's dense tables need it on phone/tablet)
+// — left to Next's default this is already unrestricted, but spelled out here
+// so nothing re-adds a maximumScale/userScalable lock by accident later.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
 
 export const metadata: Metadata = {
   title: 'Arry Production – Școală de Muzică Premium',

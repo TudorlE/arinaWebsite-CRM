@@ -287,16 +287,18 @@ export default function DashboardPage() {
   if (role === 'administrator') return <AccessDenied title="Dashboard" />;
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 max-w-full">
-      {/* ── Page Banner ──────────────────────────────────── */}
-      <div className="relative overflow-hidden py-5 sm:py-6 px-5 sm:px-8 pl-16 lg:pl-8" style={{
+    <div className="flex flex-col flex-1 min-w-0 min-h-0 max-w-full">
+      {/* ── Page Banner — icon/title/subtitle hidden on phone/tablet, same
+            as every other page's PageBanner; the month switcher (the actual
+            control, not decoration) stays visible everywhere. ── */}
+      <div className="relative overflow-hidden py-3 sm:py-5 lg:py-6 px-5 sm:px-8" style={{
         background: 'linear-gradient(135deg, #0f0820 0%, #1a0d38 55%, #0d1a2e 100%)',
         borderBottom: '1px solid rgba(201,160,32,0.18)',
       }}>
-        <div style={{ position: 'absolute', top: -30, left: -20, width: 200, height: 200, borderRadius: '50%', background: 'rgba(201,160,32,0.08)', filter: 'blur(60px)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -20, right: 60, width: 160, height: 160, borderRadius: '50%', background: 'rgba(109,40,217,0.1)', filter: 'blur(48px)', pointerEvents: 'none' }} />
+        <div className="hidden lg:block" style={{ position: 'absolute', top: -30, left: -20, width: 200, height: 200, borderRadius: '50%', background: 'rgba(201,160,32,0.08)', filter: 'blur(60px)', pointerEvents: 'none' }} />
+        <div className="hidden lg:block" style={{ position: 'absolute', bottom: -20, right: 60, width: 160, height: 160, borderRadius: '50%', background: 'rgba(109,40,217,0.1)', filter: 'blur(48px)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 16 }}>
             <div style={{ padding: '10px', background: 'rgba(201,160,32,0.15)', borderRadius: 16, border: '1px solid rgba(201,160,32,0.3)' }}>
               <LayoutDashboard style={{ width: 26, height: 26, color: '#c9a020' }} />
             </div>
@@ -307,7 +309,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Month switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(201,160,32,0.25)', borderRadius: 12, padding: 4 }}>
+          <div className="ml-auto lg:ml-0" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(201,160,32,0.25)', borderRadius: 12, padding: 4 }}>
             <button
               onClick={() => goMonth(-1)}
               aria-label="Luna anterioară"
@@ -339,7 +341,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <main className="flex-1 p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 min-h-0 p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto overflow-x-hidden">
 
         {/* ── Stats cards ──────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

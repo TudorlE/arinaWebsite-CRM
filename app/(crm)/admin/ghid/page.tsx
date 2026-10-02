@@ -173,7 +173,7 @@ export default function GhidPage() {
   }, [filter]);
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-accent-600 px-4 sm:px-8 py-5 sm:py-7 shadow-lg">
         <div className="absolute -top-10 -left-10 w-56 h-56 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-8 right-16 w-40 h-40 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />

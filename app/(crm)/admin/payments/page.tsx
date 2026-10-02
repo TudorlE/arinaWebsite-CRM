@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
-import { Plus, Search, Pencil, Trash2, Filter, CreditCard, Clock, CheckCircle2, Activity, Target, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, CreditCard, Clock, CheckCircle2, Activity, Target, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Badge, { paymentBadge, paymentLabel } from '@/components/ui/Badge';
 import PaymentForm from '@/components/payments/PaymentForm';
@@ -262,7 +262,7 @@ export default function PaymentsPage() {
   if (role === 'administrator') return <AccessDenied title="Plăți" />;
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       <PageBanner
         icon={CreditCard}
         title="Plăți"
@@ -270,7 +270,7 @@ export default function PaymentsPage() {
         accent="#10B981"
       />
 
-      <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto">
 
         {/* ── Collection rate progress bar ───────────────── */}
         {summary && (
@@ -368,9 +368,11 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* ── Toolbar ────────────────────────────────────── */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-48">
+        {/* ── Toolbar — stacked, symmetric rows on phone/tablet (a single
+              flex-wrap row of mismatched widths looked jagged there); the
+              original single-row layout returns from sm: up. ── */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative sm:flex-1 sm:min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
               value={search}
@@ -391,11 +393,10 @@ export default function PaymentsPage() {
             )}
           </div>
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-xs text-slate-400 font-medium">Filtre</span>
-            </div>
+
+          {/* Month/year — an even 4-col grid on phone instead of flex-wrap,
+              so the two buttons and two selects line up instead of jostling. */}
+          <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 sm:flex sm:items-center sm:gap-2">
             <button onClick={() => shiftMonth(-1)} aria-label="Luna anterioară" className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -403,17 +404,21 @@ export default function PaymentsPage() {
               value={monthFilter}
               onChange={e => setMonthFilter(e.target.value)}
               options={MONTHS.map((m, i) => ({ value: i + 1, label: m }))}
-              className="min-w-28 text-sm"
+              className="sm:min-w-28 text-sm"
             />
             <Select
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
               options={YEARS.map(y => ({ value: y, label: String(y) }))}
-              className="min-w-20 text-sm"
+              className="sm:min-w-20 text-sm"
             />
             <button onClick={() => shiftMonth(1)} aria-label="Luna următoare" className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Status — its own full-width row on phone */}
+          <div className="flex items-center gap-2">
             <Select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
@@ -424,27 +429,29 @@ export default function PaymentsPage() {
                 { value: 'partial', label: '◐ Parțial'  },
                 { value: 'paused',  label: '⏸ Pauză'    },
               ]}
-              className="min-w-32 text-sm"
+              className="flex-1 sm:flex-none sm:min-w-32 text-sm"
             />
             {statusFilter && (
               <button
                 onClick={() => setStatusFilter('')}
-                className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors"
+                className="flex-shrink-0 flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors"
               >
                 <X className="w-3 h-3" /> Resetează
               </button>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-3">
+
+          {/* Actions — full-width stacked buttons on phone, inline on desktop */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
             {payments.length > 0 && (
-              <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full self-start sm:self-auto">
                 {payments.length} plăți
               </span>
             )}
-            <Button variant="secondary" onClick={handleGenerateMissing} disabled={generating} title="Adaugă o plată Neplătit pentru fiecare elev/instrument activ care nu are încă o plată în luna selectată">
+            <Button variant="secondary" onClick={handleGenerateMissing} disabled={generating} title="Adaugă o plată Neplătit pentru fiecare elev/instrument activ care nu are încă o plată în luna selectată" className="w-full sm:w-auto">
               {generating ? 'Se generează…' : 'Generează plăți lipsă'}
             </Button>
-            <Button onClick={() => { setEditPayment(null); setEditStudentId(null); setShowForm(true); }}>
+            <Button onClick={() => { setEditPayment(null); setEditStudentId(null); setShowForm(true); }} className="w-full sm:w-auto">
               <Plus className="w-4 h-4" /> Înregistrează plată
             </Button>
           </div>
@@ -469,8 +476,8 @@ export default function PaymentsPage() {
                 isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                             'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
               return (
-                <div key={`p${payment.id}`} className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
+                <div key={`p${payment.id}`} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5 sm:gap-x-4 sm:gap-y-2 sm:px-5 sm:py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${dotColor}`}>
                     {(payment.student_name ?? '?').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-[160px]">
@@ -488,7 +495,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
                     <div className="text-right">
-                      <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
+                      <p className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-none">{payment.amount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
                       {payment.payment_date && (
                         <div className="flex items-center justify-end gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
                           {isPaid && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
@@ -528,8 +535,8 @@ export default function PaymentsPage() {
               isPaused  ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' :
                           'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
             return (
-              <div key={`s${row.studentId}`} className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${dotColor}`}>
+              <div key={`s${row.studentId}`} className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5 sm:gap-x-4 sm:gap-y-2 sm:px-5 sm:py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${dotColor}`}>
                   {(row.studentName || '?').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-[160px]">
@@ -558,7 +565,7 @@ export default function PaymentsPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
                   <div className="text-right">
-                    <p className="text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
+                    <p className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white leading-none">{row.totalAmount.toLocaleString()} <span className="text-xs font-medium text-slate-400">MDL</span></p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
                     {!isPaid && !isPaused && row.billableIds.length > 0 && (

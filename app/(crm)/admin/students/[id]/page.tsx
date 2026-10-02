@@ -109,7 +109,7 @@ export default function StudentProfilePage({ params }: PageProps) {
 
   if (!data) {
     return (
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-h-0">
         <Header title="Profil elev" />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-400">Se încarcă…</p>
@@ -120,7 +120,7 @@ export default function StudentProfilePage({ params }: PageProps) {
 
   if (!student) {
     return (
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-h-0">
         <Header title="Elev negăsit" />
         <div className="flex-1 flex items-center justify-center">
           <Button onClick={() => router.push('/students')} variant="secondary">
@@ -135,10 +135,10 @@ export default function StudentProfilePage({ params }: PageProps) {
   const totalPaid = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       <Header title={student.name} subtitle={`${(student.instruments ?? []).join(', ')} · ${student.level}`} />
 
-      <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto">
         {/* Back + actions */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.push('/students')}>

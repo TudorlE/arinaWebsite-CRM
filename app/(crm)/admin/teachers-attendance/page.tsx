@@ -29,7 +29,7 @@ export default function TeachersAttendancePage() {
   const stats: MonthlyStats[] = data?.stats ?? [];
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       <PageBanner
         icon={ClipboardList}
         title="Profesori Frecvență"
@@ -37,7 +37,7 @@ export default function TeachersAttendancePage() {
         accent="#AC2A88"
       />
 
-      <main className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1">
             <button onClick={() => setMonthOffset(m => m - 1)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ChevronLeft className="w-4 h-4 text-slate-400" /></button>

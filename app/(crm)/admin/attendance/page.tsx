@@ -448,37 +448,41 @@ export default function AttendanceRegisterPage() {
 
         {/* ── Excel-style register grid — deliberately always white/black,
               independent of theme, so it reads like a printed register. ── */}
-        <div className="flex-1 min-h-0 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm">
-          <table className="border-collapse text-base w-full" style={{ minWidth: 190 + days.length * 46 }}>
+        {/* Deliberately compact on phone/tablet — a dense grid you pinch-zoom
+            into beats one enlarged just enough to still need scrolling both
+            ways. touch-action: pan-x/pan-y below lets the browser's native
+            pinch-zoom coexist with the grid's own scroll. */}
+        <div className="flex-1 min-h-0 overflow-auto rounded-2xl border-2 border-black bg-white shadow-sm" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+          <table className="border-collapse text-base w-full" style={{ minWidth: 130 + days.length * 32 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 top-0 z-20 bg-white border border-black px-3 py-2.5 text-left align-bottom" style={{ minWidth: 190, width: 190 }}>
+                <th className="sticky left-0 top-0 z-20 bg-white border border-black px-1.5 sm:px-3 py-1 sm:py-2.5 text-left align-bottom w-[110px] min-w-[110px] sm:w-[190px] sm:min-w-[190px]">
                   {fDiscipline ? (
-                    <div className="flex flex-col gap-0.5 mb-2 p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
+                    <div className="flex flex-col gap-0.5 mb-1 sm:mb-2 p-1 sm:p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
+                      <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
                       {fDiscipline === SOLFEGIU ? null : isFullAdmin ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}
-                          className="w-full text-xs font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
+                          className="w-full text-[10px] sm:text-xs font-semibold text-slate-700 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-amber-400 rounded-md -ml-0.5"
                         >
                           <option value="">Toți profesorii de {fDiscipline}</option>
                           {teachers.filter(t => (t.instruments ?? []).includes(fDiscipline)).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       ) : (
-                        <span className="text-xs font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-700">{disciplineTeacherAssignment?.teacher_name ?? '—'}</span>
                       )}
                     </div>
                   ) : null}
-                  <span className="text-base sm:text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
+                  <span className="text-[11px] sm:text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
                 </th>
                 {days.map(d => {
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = fmtDate(d) === fmtDate(new Date());
                   return (
-                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-1 py-2.5 text-center font-semibold bg-white min-w-[54px] w-[54px] sm:min-w-[46px] sm:w-[46px]">
-                      <div className={`text-[11px] sm:text-[10px] uppercase tracking-wide leading-none ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
-                      <div className={`text-base sm:text-sm leading-tight mt-0.5 ${isToday ? 'inline-flex items-center justify-center w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
+                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-0.5 sm:px-1 py-1 sm:py-2.5 text-center font-semibold bg-white w-8 min-w-8 sm:w-[46px] sm:min-w-[46px]">
+                      <div className={`text-[7px] sm:text-[10px] uppercase tracking-wide leading-none ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
+                      <div className={`text-[11px] sm:text-sm leading-tight mt-0.5 ${isToday ? 'inline-flex items-center justify-center w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
                     </th>
                   );
                 })}
@@ -489,7 +493,7 @@ export default function AttendanceRegisterPage() {
                 <tr><td colSpan={days.length + 1} className="text-center py-10 text-slate-400">Niciun elev</td></tr>
               ) : students.map(s => (
                 <tr key={s.id}>
-                  <td className="sticky left-0 z-10 bg-white border border-black px-3 py-2.5 sm:py-2 text-base sm:text-sm font-medium text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: 190 }}>
+                  <td className="sticky left-0 z-10 bg-white border border-black px-1.5 sm:px-3 py-1 sm:py-2 text-[11px] sm:text-sm font-medium text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis w-[110px] max-w-[110px] sm:w-[190px] sm:max-w-[190px]">
                     {s.name}
                   </td>
                   {days.map(d => {
@@ -511,8 +515,8 @@ export default function AttendanceRegisterPage() {
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.clientX, e.clientY); }}
                           data-cell-trigger
                           title={combinedTitle}
-                          className={`relative w-full h-14 sm:h-11 flex items-center justify-center font-bold transition-colors
-                            ${syms.length > 2 ? 'text-sm sm:text-xs' : syms.length > 1 ? 'text-base sm:text-sm' : 'text-xl sm:text-lg'}
+                          className={`relative w-full h-8 sm:h-11 flex items-center justify-center font-bold transition-colors
+                            ${syms.length > 2 ? 'text-[9px] sm:text-xs' : syms.length > 1 ? 'text-[11px] sm:text-sm' : 'text-sm sm:text-lg'}
                             ${cellClassName} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >

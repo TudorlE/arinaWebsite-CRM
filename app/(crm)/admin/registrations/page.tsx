@@ -70,9 +70,9 @@ export default function RegistrationsPage() {
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-blue-600 px-8 py-6 shadow-lg">
+      <div className="hidden lg:block relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-600 to-blue-600 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="relative flex items-center gap-4">
           <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
@@ -95,7 +95,7 @@ export default function RegistrationsPage() {
         </div>
       </div>
 
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 min-h-0 p-6 overflow-auto">
         {/* Filter tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[

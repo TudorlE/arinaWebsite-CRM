@@ -127,7 +127,7 @@ export default function AuditionsPage() {
   const completed = weekAuditions.filter(a => a.status === 'completed').length;
 
   return (
-    <div className="flex flex-col flex-1" onClick={() => activeMenu !== null && setActiveMenu(null)}>
+    <div className="flex flex-col flex-1 min-h-0" onClick={() => activeMenu !== null && setActiveMenu(null)}>
 
       {/* ── Animated Banner — teal/cyan, distinct from Program Privat (violet) & Registru (amber) ── */}
       <PageBanner
@@ -142,7 +142,7 @@ export default function AuditionsPage() {
         </>}
       />
 
-      <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 gap-4">
 
         {/* ── Full week grid — Ora × Zilele săptămânii ───────── */}
         <div className="flex-1 overflow-auto rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-white dark:bg-slate-900 shadow-sm">

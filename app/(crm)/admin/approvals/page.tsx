@@ -116,8 +116,8 @@ export default function AdminUsersPage() {
 
   if (me && me.role !== 'admin') {
     return (
-      <div className="flex flex-col flex-1">
-        <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="hidden lg:block relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
           <div className="relative flex items-center gap-4">
             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
               <ShieldCheck className="w-7 h-7 text-white" />
@@ -136,9 +136,9 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
+      <div className="hidden lg:block relative overflow-hidden bg-gradient-to-r from-brand-700 via-brand-700 to-accent-700 px-8 py-6 shadow-lg">
         <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-white/10 blur-3xl animate-pulse" />
         <div className="absolute -bottom-6 right-12 w-32 h-32 rounded-full bg-white/10 blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         <div className="relative flex items-center gap-4">
@@ -160,7 +160,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <main className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
         {/* Stats cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[

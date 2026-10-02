@@ -70,7 +70,7 @@ export default function StudentsPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* ── Page Banner ──────────────────────────────────── */}
       <PageBanner
         icon={GraduationCap}
@@ -79,7 +79,7 @@ export default function StudentsPage() {
         accent="#F59E0B"
       />
 
-      <main className="flex-1 p-6 space-y-4 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
         {/* Toolbar */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-48">

@@ -57,7 +57,7 @@ export default function SettingsPage() {
   if (me?.role === 'administrator') return <AccessDenied title="Setări" />;
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* ── Page Banner ──────────────────────────────────── */}
       <PageBanner
         icon={SlidersHorizontal}
@@ -66,7 +66,7 @@ export default function SettingsPage() {
         accent="#8B8FA3"
       />
 
-      <main className="flex-1 p-6 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full">
+      <main className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto max-w-2xl mx-auto w-full">
 
         {/* ── My Role ──────────────────────────────────────── */}
         <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">

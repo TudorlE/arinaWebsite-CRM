@@ -17,7 +17,10 @@ interface PageBannerProps {
  */
 export default function PageBanner({ icon: Icon, title, subtitle, accent, right }: PageBannerProps) {
   return (
-    <div className="relative overflow-hidden px-8 py-6 shadow-lg" style={{
+    // Hidden below lg (phone/tablet, same breakpoint as the Sidebar's hamburger):
+    // the current section's icon already lives in that hamburger-turned-icon
+    // button, so the title/subtitle banner here would just be redundant space.
+    <div className="hidden lg:block relative overflow-hidden px-8 py-6 shadow-lg" style={{
       background: 'linear-gradient(135deg, #0f0820 0%, #1a0d38 55%, #0d1a2e 100%)',
       borderBottom: `1px solid ${accent}2e`,
     }}>

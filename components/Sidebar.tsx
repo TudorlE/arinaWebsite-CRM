@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { LogoMark } from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, CreditCard, Music2,
   Settings, LogOut, CalendarDays, ShieldCheck, ExternalLink,
@@ -74,18 +75,34 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
+  // The most specific (longest href) match — otherwise e.g. "/admin/students-attendance"
+  // would wrongly resolve to the "Elevi General" entry since it also matches via prefix.
+  const activeNavItem = [...nav].sort((a, b) => b.href.length - a.href.length).find(n => isActive(n.href));
+  const CurrentIcon = activeNavItem?.icon ?? Menu;
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001';
 
   return (
     <>
-      {/* Mobile hamburger trigger */}
+      {/* Mobile trigger — shows the current section's icon once inside one,
+          morphing from the hamburger glyph with a quick scale/rotate transition. */}
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Deschide meniul"
-        className="lg:hidden fixed top-3 left-3 z-40 p-2.5 rounded-xl shadow-lg"
+        className="lg:hidden fixed top-3 left-3 z-40 p-2.5 rounded-xl shadow-lg overflow-hidden"
         style={{ background: 'var(--ink)' }}
       >
-        <Menu style={{ width: 20, height: 20, color: '#fff' }} />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeNavItem?.href ?? 'menu'}
+            initial={{ opacity: 0, scale: 0.5, rotate: -45 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.5, rotate: 45 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <CurrentIcon style={{ width: 20, height: 20, color: activeNavItem ? 'var(--gold)' : '#fff' }} />
+          </motion.div>
+        </AnimatePresence>
       </button>
 
       {/* Mobile backdrop */}

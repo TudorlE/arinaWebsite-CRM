@@ -90,25 +90,25 @@ export default function GeneralSchedulePage() {
           </div>
 
           {/* Cabinet table — Ora | Cabinet 1 | Cabinet 2 | Cabinet 3 (read-only) */}
-          <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="flex-1 min-h-0 overflow-auto p-4" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
             {cabinetColumns.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <p className="text-sm font-semibold text-slate-500">Nu există cabinete configurate</p>
               </div>
             ) : (
-              <table className="w-full border-collapse bg-white" style={{ minWidth: 560 }}>
+              <table className="w-full border-collapse bg-white" style={{ minWidth: 320 }}>
                 <thead>
                   <tr className="bg-brand-50">
-                    <th className="border border-brand-100 px-4 py-4 text-sm font-bold uppercase tracking-wider text-brand-700 text-left w-24">Ora</th>
+                    <th className="border border-brand-100 px-1.5 py-1.5 sm:px-4 sm:py-4 text-[10px] sm:text-sm font-bold uppercase tracking-wider text-brand-700 text-left w-12 sm:w-24">Ora</th>
                     {cabinetColumns.map(col => {
                       const status = typeof col.id === 'number' ? dayStatusFor(col.id) : null;
                       const label = col.id === 'none' ? col.name : /cabinet/i.test(col.name) ? col.name : `Cabinet ${col.name}`;
                       return (
-                        <th key={col.id} className="border border-brand-100 px-4 py-4 text-sm font-bold uppercase tracking-wider text-brand-700 text-left align-top">
+                        <th key={col.id} className="border border-brand-100 px-1.5 py-1.5 sm:px-4 sm:py-4 text-[10px] sm:text-sm font-bold uppercase tracking-wider text-brand-700 text-left align-top">
                           <div className="flex flex-col gap-1.5">
                             <span>{label}</span>
                             {status === 'ocupat' && (
-                              <span className="self-start text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full normal-case bg-red-100 text-red-700">
+                              <span className="self-start text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full normal-case bg-red-100 text-red-700">
                                 Ocupat
                               </span>
                             )}
@@ -121,7 +121,7 @@ export default function GeneralSchedulePage() {
                 <tbody>
                   {timeSlots.map(time => (
                     <tr key={time}>
-                      <td className="border border-gray-200 px-4 py-5 text-base font-mono font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                      <td className="border border-gray-200 px-1.5 py-2 sm:px-4 sm:py-5 text-[11px] sm:text-base font-mono font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
                         {time}
                       </td>
                       {cabinetColumns.map(col => {
@@ -130,15 +130,15 @@ export default function GeneralSchedulePage() {
                         return (
                           <td
                             key={col.id}
-                            className="relative border border-gray-200 px-2.5 py-2.5 align-top min-w-[180px] min-h-[64px]"
+                            className="relative border border-gray-200 px-1 py-1 sm:px-2.5 sm:py-2.5 align-top min-w-[100px] min-h-[36px] sm:min-w-[180px] sm:min-h-[64px]"
                           >
                             {cellSchedules.map(s => (
                               <div
                                 key={s.id}
-                                className="relative text-sm px-3 py-2.5 rounded-lg border mb-1 last:mb-0 select-none bg-brand-50 border-brand-300 text-brand-800"
+                                className="relative text-[10px] sm:text-sm px-1.5 py-1 sm:px-3 sm:py-2.5 rounded-lg border mb-1 last:mb-0 select-none bg-brand-50 border-brand-300 text-brand-800"
                               >
                                 <p className="font-semibold truncate">{s.student_name}</p>
-                                <p className="truncate text-xs mt-0.5">
+                                <p className="truncate text-[9px] sm:text-xs mt-0.5">
                                   <span className="font-semibold" style={{ color: 'inherit' }}>{s.discipline || '—'}</span>
                                   <span className="opacity-70"> · {s.teacher_name}</span>
                                 </p>
