@@ -170,6 +170,9 @@ export interface CabinetDayStatus {
 }
 
 /** Live-computed monthly counters — always derived from `lessons`/`attendance`, never stored. */
+/** One dated lesson behind a Profesori Frecvență detail chip. */
+export interface LessonOccurrence { date: string; time: string | null }
+
 export interface MonthlyStats {
   student_id?: number;
   student_name?: string;
@@ -190,13 +193,13 @@ export interface MonthlyStats {
   replaced?: number;
   students?: string[]; // for per-teacher stats: the teacher's OWN students (never the ones they only substituted for)
   /** Per-teacher only: which students had an excused absence with this teacher, and how many times. */
-  excused_students?: { name: string; count: number }[];
+  excused_students?: { name: string; count: number; dates?: LessonOccurrence[] }[];
   /** Per-teacher only: same breakdown for unexcused absences (N). */
-  unexcused_students?: { name: string; count: number }[];
+  unexcused_students?: { name: string; count: number; dates?: LessonOccurrence[] }[];
   /** Per-teacher only: same breakdown for recovered lessons (R). */
-  recovered_students?: { name: string; count: number }[];
+  recovered_students?: { name: string; count: number; dates?: LessonOccurrence[] }[];
   /** Per-teacher only: students this teacher covered as a substitute — with whose student it was. */
-  replaced_students?: { name: string; count: number; for_teacher?: string; discipline?: string | null }[];
+  replaced_students?: { name: string; count: number; for_teacher?: string; discipline?: string | null; dates?: LessonOccurrence[] }[];
 }
 
 export const DAYS_OF_WEEK = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];

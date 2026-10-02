@@ -5,17 +5,23 @@ import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, ClipboardList, Users } from 'lucide-react';
 import Select from '@/components/ui/Select';
 import PageBanner from '@/components/ui/PageBanner';
-import { MonthlyStats, INSTRUMENTS } from '@/lib/types';
+import { MonthlyStats, INSTRUMENTS, LessonOccurrence } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 
 type DetailKind = 'recovered' | 'excused' | 'unexcused' | 'replaced';
-type DetailChip = { key: string; text: string; count: number };
+type DetailChip = { key: string; text: string; count: number; dates: LessonOccurrence[] };
 
-const plain = (list?: { name: string; count: number }[]): DetailChip[] =>
-  (list ?? []).map(s => ({ key: s.name, text: s.name, count: s.count }));
+const plain = (list?: { name: string; count: number; dates?: LessonOccurrence[] }[]): DetailChip[] =>
+  (list ?? []).map(s => ({ key: s.name, text: s.name, count: s.count, dates: s.dates ?? [] }));
+
+/** "12 sept., 14:00" — when exactly the lesson was, for the admin. */
+function fmtOccurrence(o: LessonOccurrence) {
+  const d = new Date(`${o.date}T00:00:00`).toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'short' });
+  return o.time ? `${d}, ${o.time}` : d;
+}
 
 /** The clickable counters: tap one to list which students make up that number. */
 const DETAIL_KINDS: {
@@ -51,6 +57,7 @@ const DETAIL_KINDS: {
       key: `${s.name}|${s.for_teacher}|${s.discipline}`,
       text: `${s.name}${s.discipline ? ` (${s.discipline})` : ''}${s.for_teacher ? ` — pt. ${s.for_teacher}` : ''}`,
       count: s.count,
+      dates: s.dates ?? [],
     })),
   },
 ];
@@ -140,11 +147,20 @@ export default function TeachersAttendancePage() {
                       <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${k.number}`}>
                         {k.title} — {t.teacher_name}
                       </p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="space-y-2">
                         {list.map(s => (
-                          <span key={s.key} className={`text-xs font-medium px-2 py-0.5 rounded-full ${k.chip}`}>
-                            {s.text}{s.count > 1 ? ` ×${s.count}` : ''}
-                          </span>
+                          <div key={s.key}>
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                              {s.text}{s.count > 1 ? <span className="font-normal text-slate-400"> ×{s.count}</span> : null}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {s.dates.map((o, i) => (
+                                <span key={i} className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${k.chip}`}>
+                                  {fmtOccurrence(o)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                         {list.length === 0 && <span className="text-xs text-slate-400">{k.empty}</span>}
                       </div>

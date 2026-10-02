@@ -15,6 +15,8 @@ export interface StatsFilters {
 
 export interface StatsLessonRow {
   id: number;
+  date: string;
+  time: string | null;
   student_id: number;
   student_name: string | null;
   teacher_id: number;
@@ -34,7 +36,7 @@ function monthRange(month: string): { from: string; to: string } {
 }
 
 type EmbeddedLessonRow = {
-  id: number; student_id: number; teacher_id: number; discipline: string | null; status: string;
+  id: number; date: string; time: string | null; student_id: number; teacher_id: number; discipline: string | null; status: string;
   replacement_teacher_id: number | null;
   students: { name: string } | null;
   teachers: { name: string } | null;
@@ -46,6 +48,8 @@ function mapLessonRows(data: unknown): StatsLessonRow[] {
     const att = Array.isArray(l.attendance) ? l.attendance[0] : l.attendance;
     return {
       id: l.id,
+      date: l.date,
+      time: l.time ?? null,
       student_id: l.student_id,
       student_name: l.students?.name ?? null,
       teacher_id: l.teacher_id,
@@ -58,7 +62,7 @@ function mapLessonRows(data: unknown): StatsLessonRow[] {
   });
 }
 
-const LESSON_SELECT = 'id, student_id, teacher_id, discipline, status, replacement_teacher_id, students(name), teachers!lessons_teacher_id_fkey(name), attendance(status)';
+const LESSON_SELECT = 'id, date, time, student_id, teacher_id, discipline, status, replacement_teacher_id, students(name), teachers!lessons_teacher_id_fkey(name), attendance(status)';
 
 export async function getLessonsInMonth(month: string, filters: StatsFilters = {}): Promise<StatsLessonRow[]> {
   const { from, to } = monthRange(month);
@@ -258,19 +262,23 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   // unexcused absence, and how many times — surfaced when clicking that
   // counter in Profesori Frecvență.
   type StudentKind = 'recovered' | 'excused' | 'unexcused';
-  const byKind = new Map<string, Map<string, number>>(); // key: `${teacherId}|${kind}`
-  const bumpStudent = (teacherId: number, kind: StudentKind, name: string | null) => {
-    if (!name) return;
+  // Each occurrence keeps its date + time, so the admin sees exactly WHEN.
+  type Occurrence = { date: string; time: string | null };
+  const byKind = new Map<string, Map<string, Occurrence[]>>(); // key: `${teacherId}|${kind}`
+  const occ = (r: StatsLessonRow): Occurrence => ({ date: r.date, time: r.time ? r.time.slice(0, 5) : null });
+  const byDate = (a: Occurrence, b: Occurrence) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? '');
+  const bumpStudent = (teacherId: number, kind: StudentKind, r: StatsLessonRow) => {
+    if (!r.student_name) return;
     const k = `${teacherId}|${kind}`;
-    const m = byKind.get(k) ?? new Map<string, number>();
-    m.set(name, (m.get(name) ?? 0) + 1);
+    const m = byKind.get(k) ?? new Map<string, Occurrence[]>();
+    m.set(r.student_name, [...(m.get(r.student_name) ?? []), occ(r)]);
     byKind.set(k, m);
   };
   const studentsOf = (teacherId: number, kind: StudentKind) =>
     Array.from(byKind.get(`${teacherId}|${kind}`)?.entries() ?? [])
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, dates]) => ({ name, count: dates.length, dates: dates.sort(byDate) }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-  type ReplacedEntry = { name: string; count: number; for_teacher?: string; discipline: string | null };
+  type ReplacedEntry = { name: string; count: number; for_teacher?: string; discipline: string | null; dates: Occurrence[] };
   const replacedByTeacher = new Map<number, Map<string, ReplacedEntry>>();
   for (const r of rows) {
     const outcome = outcomeOf(r);
@@ -281,8 +289,10 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       const name = r.student_name ?? '—';
       const m = replacedByTeacher.get(subId) ?? new Map<string, ReplacedEntry>();
       const key = `${name}|${r.teacher_id}|${r.discipline ?? ''}`;
-      const cur = m.get(key) ?? { name, count: 0, for_teacher: r.teacher_name?.trim() || undefined, discipline: r.discipline };
+      const cur = m.get(key) ?? { name, count: 0, for_teacher: r.teacher_name?.trim() || undefined, discipline: r.discipline, dates: [] as Occurrence[] };
       cur.count++;
+      cur.dates.push(occ(r));
+      cur.dates.sort(byDate);
       m.set(key, cur);
       replacedByTeacher.set(subId, m);
       continue;
@@ -290,9 +300,9 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     if (filters.teacherId && r.teacher_id !== filters.teacherId) continue;
     const t = ensureTally(r.teacher_id);
     if (outcome === 'present' || outcome === 'late') t.completed++;
-    else if (outcome === 'recovered') { t.recovered++; bumpStudent(r.teacher_id, 'recovered', r.student_name); }
-    else if (outcome === 'unexcused') { t.unexcused_absence++; bumpStudent(r.teacher_id, 'unexcused', r.student_name); }
-    else if (outcome === 'excused') { t.excused_absence++; bumpStudent(r.teacher_id, 'excused', r.student_name); }
+    else if (outcome === 'recovered') { t.recovered++; bumpStudent(r.teacher_id, 'recovered', r); }
+    else if (outcome === 'unexcused') { t.unexcused_absence++; bumpStudent(r.teacher_id, 'unexcused', r); }
+    else if (outcome === 'excused') { t.excused_absence++; bumpStudent(r.teacher_id, 'excused', r); }
     if (r.student_name) addStudent(r.teacher_id, r.student_name, r.discipline);
   }
 
