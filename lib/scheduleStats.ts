@@ -5,6 +5,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { MonthlyStats, StudentSubscription } from '@/lib/types';
+import { outcomeOf } from '@/lib/attendanceMarks';
 
 export interface StatsFilters {
   studentId?: number;
@@ -208,7 +209,9 @@ export function aggregateByTeacher(rows: StatsLessonRow[]): MonthlyStats[] {
  * view is meant to surface.
  */
 export async function computeTeacherWorkload(month: string, filters: StatsFilters = {}): Promise<MonthlyStats[]> {
-  const rows = await getLessonsInMonth(month, { teacherId: filters.teacherId, discipline: filters.discipline });
+  // No teacherId in the query: a teacher's lessons as a SUBSTITUTE sit on other
+  // teachers' rows (replacement_teacher_id), so that filter is applied below.
+  const rows = await getLessonsInMonth(month, { discipline: filters.discipline });
 
   const [{ data: teachersData }, { data: studentsData }] = await Promise.all([
     supabase.from('teachers').select('id, name'),
@@ -219,9 +222,12 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   type StudentRow = { id: number; name: string; status: string | null; subscriptions: StudentSubscription[] | null };
   const expected = new Map<number, number>();
   const studentsByTeacher = new Map<number, Set<string>>();
-  const addStudent = (teacherId: number, name: string) => {
+  // "Name (Instrument)" — a student taking Canto with one teacher and Piano with
+  // another appears under both, so the label says which lesson links them.
+  const addStudent = (teacherId: number, name: string, discipline?: string | null) => {
+    const label = discipline ? `${name} (${discipline})` : name;
     if (!studentsByTeacher.has(teacherId)) studentsByTeacher.set(teacherId, new Set());
-    studentsByTeacher.get(teacherId)!.add(name);
+    studentsByTeacher.get(teacherId)!.add(label);
   };
   for (const s of (studentsData ?? []) as StudentRow[]) {
     if ((s.status ?? 'active') !== 'active') continue; // paused/inactive students aren't expected to attend
@@ -231,14 +237,18 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       if (filters.discipline && sub.instrument !== filters.discipline) continue;
       if ((sub.status ?? 'active') !== 'active') continue;
       expected.set(sub.teacher_id, (expected.get(sub.teacher_id) ?? 0) + (Number(sub.lessons) || 0));
-      addStudent(sub.teacher_id, s.name);
+      addStudent(sub.teacher_id, s.name, sub.instrument);
     }
   }
 
-  // A substituted lesson's actual delivery (completed/recovered/absence) counts
-  // toward the substitute's own workload, not the originally-assigned teacher's
-  // — and the substitute's `replaced` tally credits THEM for covering it
-  // (+1 to whoever did the replacement, not the teacher who was replaced).
+  // Counted exactly as the register shows each cell (outcomeOf), so
+  // "Finalizate" equals that teacher's ✓ marks in Registru:
+  //   - ✓ / Î (present, late) → Finalizate; an "N" is NOT a finished lesson
+  //     here even though it's stored as status=completed for billing;
+  //   - "I" (replaced) is in neither teacher's Finalizate: the substitute gets
+  //     +1 Înlocuite and the student is listed apart (replaced_students), never
+  //     among the substitute's own students — otherwise a Canto student covered
+  //     once by the other Canto teacher showed up as theirs.
   const tallies = new Map<number, { completed: number; recovered: number; excused_absence: number; unexcused_absence: number; replaced: number }>();
   const ensureTally = (teacherId: number) => {
     if (!tallies.has(teacherId)) tallies.set(teacherId, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
@@ -247,24 +257,37 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   // Per-teacher breakdown of WHICH students had an excused absence, and how
   // many times — surfaced when clicking "Motivate" in Profesori Frecvență.
   const excusedByTeacher = new Map<number, Map<string, number>>();
+  type ReplacedEntry = { name: string; count: number; for_teacher?: string; discipline: string | null };
+  const replacedByTeacher = new Map<number, Map<string, ReplacedEntry>>();
   for (const r of rows) {
-    const effectiveId = r.replacement_teacher_id ?? r.teacher_id;
-    const t = ensureTally(effectiveId);
-    if (r.status === 'completed') t.completed++;
-    else if (r.status === 'recovered') t.recovered++;
-    if (r.attendance_status === 'excused_absence') {
+    const outcome = outcomeOf(r);
+    if (outcome === 'replaced') {
+      const subId = r.replacement_teacher_id!;
+      if (filters.teacherId && subId !== filters.teacherId) continue;
+      ensureTally(subId).replaced++;
+      const name = r.student_name ?? '—';
+      const m = replacedByTeacher.get(subId) ?? new Map<string, ReplacedEntry>();
+      const key = `${name}|${r.teacher_id}|${r.discipline ?? ''}`;
+      const cur = m.get(key) ?? { name, count: 0, for_teacher: r.teacher_name?.trim() || undefined, discipline: r.discipline };
+      cur.count++;
+      m.set(key, cur);
+      replacedByTeacher.set(subId, m);
+      continue;
+    }
+    if (filters.teacherId && r.teacher_id !== filters.teacherId) continue;
+    const t = ensureTally(r.teacher_id);
+    if (outcome === 'present' || outcome === 'late') t.completed++;
+    else if (outcome === 'recovered') t.recovered++;
+    else if (outcome === 'unexcused') t.unexcused_absence++;
+    else if (outcome === 'excused') {
       t.excused_absence++;
       if (r.student_name) {
-        const m = excusedByTeacher.get(effectiveId) ?? new Map<string, number>();
+        const m = excusedByTeacher.get(r.teacher_id) ?? new Map<string, number>();
         m.set(r.student_name, (m.get(r.student_name) ?? 0) + 1);
-        excusedByTeacher.set(effectiveId, m);
+        excusedByTeacher.set(r.teacher_id, m);
       }
     }
-    else if (r.attendance_status === 'unexcused_absence') t.unexcused_absence++;
-    if (r.student_name) addStudent(effectiveId, r.student_name);
-    if (r.replacement_teacher_id) {
-      t.replaced++;
-    }
+    if (r.student_name) addStudent(r.teacher_id, r.student_name, r.discipline);
   }
 
   const teacherIds = new Set<number>([...expected.keys(), ...tallies.keys()]);
@@ -286,6 +309,8 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       excused_students: excusedMap
         ? Array.from(excusedMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
         : [],
+      replaced_students: Array.from(replacedByTeacher.get(id)?.values() ?? [])
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     });
   }
   return out.sort((a, b) => (a.teacher_name ?? '').localeCompare(b.teacher_name ?? ''));

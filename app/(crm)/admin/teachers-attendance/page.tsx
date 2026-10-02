@@ -14,7 +14,9 @@ function pad2(n: number) { return String(n).padStart(2, '0'); }
 export default function TeachersAttendancePage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [fDiscipline, setFDiscipline] = useState('');
-  const [expandedExcused, setExpandedExcused] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<{ id: number; kind: 'excused' | 'replaced' } | null>(null);
+  const toggle = (id: number | undefined, kind: 'excused' | 'replaced') =>
+    setExpanded(cur => (cur?.id === id && cur?.kind === kind) || id == null ? null : { id, kind });
 
   const ref = new Date();
   ref.setDate(1);
@@ -76,7 +78,7 @@ export default function TeachersAttendancePage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setExpandedExcused(id => id === t.teacher_id ? null : (t.teacher_id ?? null))}
+                    onClick={() => toggle(t.teacher_id, 'excused')}
                     disabled={t.excused_absence === 0}
                     className="text-center rounded-lg transition-colors disabled:cursor-default enabled:hover:bg-amber-50 dark:enabled:hover:bg-amber-900/20 enabled:cursor-pointer py-0.5"
                   >
@@ -87,12 +89,18 @@ export default function TeachersAttendancePage() {
                     <p className="text-xl font-extrabold text-red-600 dark:text-red-400">{t.unexcused_absence}</p>
                     <p className="text-[10px] text-slate-400">Nemotivate</p>
                   </div>
-                  <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => toggle(t.teacher_id, 'replaced')}
+                    disabled={!t.replaced}
+                    title="Lecții ținute în locul altui profesor"
+                    className="text-center rounded-lg transition-colors disabled:cursor-default enabled:hover:bg-violet-50 dark:enabled:hover:bg-violet-900/20 enabled:cursor-pointer py-0.5"
+                  >
                     <p className="text-xl font-extrabold text-violet-600 dark:text-violet-400">{t.replaced ?? 0}</p>
                     <p className="text-[10px] text-slate-400">Înlocuite</p>
-                  </div>
+                  </button>
                 </div>
-                {expandedExcused === t.teacher_id && (
+                {expanded?.id === t.teacher_id && expanded?.kind === 'excused' && (
                   <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-amber-50/60 dark:bg-amber-900/10">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">
                       Absențe motivate — {t.teacher_name}
@@ -104,6 +112,20 @@ export default function TeachersAttendancePage() {
                         </span>
                       ))}
                       {(t.excused_students ?? []).length === 0 && <span className="text-xs text-slate-400">Nicio absență motivată luna asta</span>}
+                    </div>
+                  </div>
+                )}
+                {expanded?.id === t.teacher_id && expanded?.kind === 'replaced' && (
+                  <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-violet-50/60 dark:bg-violet-900/10">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-2">
+                      Înlocuiri făcute de {t.teacher_name}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(t.replaced_students ?? []).map(s => (
+                        <span key={`${s.name}|${s.for_teacher}|${s.discipline}`} className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300">
+                          {s.name}{s.discipline ? ` (${s.discipline})` : ''}{s.for_teacher ? ` — pt. ${s.for_teacher}` : ''}{s.count > 1 ? ` ×${s.count}` : ''}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
