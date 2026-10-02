@@ -472,7 +472,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Anulează</Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Se salvează…' : payment ? 'Salvează' : 'Înregistrează plată'}

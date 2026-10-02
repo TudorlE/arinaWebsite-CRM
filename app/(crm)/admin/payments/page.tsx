@@ -444,7 +444,7 @@ export default function PaymentsPage() {
           {/* Actions — full-width stacked buttons on phone, inline on desktop */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
             {payments.length > 0 && (
-              <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full self-start sm:self-auto">
+              <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full self-center sm:self-auto">
                 {payments.length} plăți
               </span>
             )}
@@ -512,10 +512,10 @@ export default function PaymentsPage() {
                           <span className="text-xs font-bold">Plătit</span>
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setEditStudentId(null); setShowForm(true); }}>
+                      <Button icon variant="ghost" size="sm" onClick={() => { setEditPayment(payment); setEditStudentId(null); setShowForm(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: [payment.id], label: payment.student_name ?? '' })}>
+                      <Button icon variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: [payment.id], label: payment.student_name ?? '' })}>
                         <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </Button>
                     </div>
@@ -576,11 +576,11 @@ export default function PaymentsPage() {
                         <span className="text-xs font-bold">Plătit</span>
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => { setEditPayment(null); setEditStudentId(row.studentId); setShowForm(true); }}>
+                    <Button icon variant="ghost" size="sm" onClick={() => { setEditPayment(null); setEditStudentId(row.studentId); setShowForm(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {row.ids.length > 0 && (
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: row.ids, label: row.studentName })}>
+                      <Button icon variant="ghost" size="sm" onClick={() => setDeleteTarget({ ids: row.ids, label: row.studentName })}>
                         <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </Button>
                     )}
@@ -607,7 +607,7 @@ export default function PaymentsPage() {
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           Șterge plata pentru <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.label}</strong>?
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import MonthNav from '@/components/ui/MonthNav';
 import { ATTENDANCE_STATUSES, AttendanceStatus } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -67,16 +67,14 @@ export default function StudentAttendanceGrid({ studentId }: { studentId: number
   };
 
   return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => setMonthOffset(m => m - 1)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-          <ChevronLeft className="w-4 h-4 text-slate-400" />
-        </button>
-        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize">{monthLabel}</p>
-        <button onClick={() => setMonthOffset(m => Math.min(m + 1, 0))} disabled={monthOffset >= 0} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30">
-          <ChevronRight className="w-4 h-4 text-slate-400" />
-        </button>
-      </div>
+    <div className="p-3 sm:p-5">
+      <MonthNav
+        label={monthLabel}
+        onPrev={() => setMonthOffset(m => m - 1)}
+        onNext={() => setMonthOffset(m => Math.min(m + 1, 0))}
+        nextDisabled={monthOffset >= 0}
+        className="mb-3 sm:mb-4"
+      />
 
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {

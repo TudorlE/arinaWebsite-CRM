@@ -310,7 +310,7 @@ export default function AuditionsPage() {
           Șterge audiția lui <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.candidate_name}</strong>
           {deleteTarget && <> din {deleteTarget.date} la {deleteTarget.time?.slice(0, 5)}</>}?
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}

@@ -331,7 +331,7 @@ export default function StudentForm({ open, onClose, onSaved, student, showToast
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Anulează</Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Se salvează…' : student ? 'Salvează' : 'Adaugă elev'}

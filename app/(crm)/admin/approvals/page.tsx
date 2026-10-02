@@ -340,7 +340,7 @@ export default function AdminUsersPage() {
               />
             )}
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <Button variant="secondary" onClick={() => setApproveTarget(null)} disabled={working}>Anulează</Button>
               <Button onClick={handleApprove} disabled={working}>
                 <UserCheck className="w-3.5 h-3.5" /> {working ? 'Se aprobă…' : 'Aprobă'}
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
                 </p>
               </div>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
               <Button variant="secondary" onClick={() => setRejectTarget(null)} disabled={working}>Anulează</Button>
               <Button variant="danger" onClick={handleReject} disabled={working}>
                 <X className="w-3.5 h-3.5" /> {working ? 'Se respinge…' : 'Respinge'}

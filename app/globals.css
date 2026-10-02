@@ -304,6 +304,17 @@ html.dark .site-root {
 }
 .animate-fade-in { animation: fade-in 0.2s ease-out; }
 
+/* Detail pages (e.g. a student's profile) slide in from the right, like a
+   native "push" — short and decelerating so it feels quick, never sluggish. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-page-enter { animation: page-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-enter { animation: none; }
+}
+
 @keyframes modal-pop {
   0%   { opacity: 0; transform: translateY(20px) scale(0.94); }
   60%  { opacity: 1; transform: translateY(-4px) scale(1.01); }

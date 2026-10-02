@@ -227,7 +227,7 @@ export default function LessonForm({ open, onClose, onSaved, lesson, defaultStud
         </div>
 
         {/* Acțiuni */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 animate-slide-up" style={{ animationDelay: '280ms' }}>
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 animate-slide-up" style={{ animationDelay: '280ms' }}>
           <Button type="button" variant="secondary" onClick={onClose}>Anulează</Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Se salvează…' : lesson ? 'Salvează' : 'Adaugă lecție'}

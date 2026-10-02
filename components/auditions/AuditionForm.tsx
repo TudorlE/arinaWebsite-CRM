@@ -140,7 +140,7 @@ export default function AuditionForm({ open, onClose, onSaved, audition, default
             className="w-full px-3.5 py-2.5 text-sm rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none" />
         </div>
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>Anulează</Button>
           <Button type="submit" disabled={loading}>{loading ? 'Se salvează…' : audition ? 'Salvează' : 'Programează audiția'}</Button>
         </div>

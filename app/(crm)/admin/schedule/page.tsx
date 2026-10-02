@@ -467,7 +467,7 @@ export default function SchedulePage() {
           Elimină din program orarul fix al lui <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
           {deleteTarget && <> din {DAY_LABELS[(deleteTarget.day_of_week + 6) % 7]} la {deleteTarget.start_time?.slice(0, 5)}</>}?
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}

@@ -221,7 +221,7 @@ export default function LessonOccurrenceForm({ open, onClose, onSaved, lesson, d
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <Button type="button" variant="secondary" onClick={onClose}>Anulează</Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Se salvează…' : lesson ? 'Salvează' : 'Adaugă lecție'}

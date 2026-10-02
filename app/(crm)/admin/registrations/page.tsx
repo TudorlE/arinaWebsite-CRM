@@ -203,7 +203,7 @@ export default function RegistrationsPage() {
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           Ștergi cererea de la <strong className="text-slate-900 dark:text-white">{deleteTarget?.name}</strong>? Aceasta nu poate fi recuperată.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>{deleting ? 'Se șterge…' : 'Șterge'}</Button>
         </div>

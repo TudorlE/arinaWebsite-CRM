@@ -1,9 +1,10 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { preload } from 'swr';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ClipboardList, ChevronDown, Search } from 'lucide-react';
+import { ChevronRight, ClipboardList, ChevronDown, Search } from 'lucide-react';
+import MonthNav from '@/components/ui/MonthNav';
 import Select from '@/components/ui/Select';
 import PageBanner from '@/components/ui/PageBanner';
 import { MonthlyStats, INSTRUMENTS, Student, Payment, Lesson, STUDENT_STATUSES } from '@/lib/types';
@@ -126,17 +127,25 @@ export default function StudentsAttendancePage() {
     return dt.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
   };
 
-  // On phone/tablet, this wide table needs a lot of horizontal scrolling just
-  // to reach the expand toggle and then even more to read the opened detail —
-  // so below the same breakpoint the Sidebar switches to a hamburger, tapping
-  // a row instead opens that student's full profile as its own page.
+  // Desktop: the row expands inline. Phone/tablet (below lg) gets cards that
+  // open the student's profile as its own page instead — and the profile's
+  // data starts loading on finger-down, so by the time the tap lands the page
+  // usually renders straight away (no "Se încarcă…" flash between the two).
   const toggleRow = (id?: number) => {
     if (!id) return;
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
-      router.push(`/admin/students/${id}`);
-      return;
-    }
     setExpandedId(prev => prev === id ? null : id);
+  };
+  const warmProfile = (id?: number) => {
+    if (!id) return;
+    router.prefetch(`/admin/students/${id}`);
+    preload(`/api/students/${id}`, fetcher);
+    preload(`/api/lessons?student_id=${id}`, fetcher);
+    preload(`/api/payments?student_id=${id}`, fetcher);
+  };
+  const openProfile = (id?: number) => {
+    if (!id) return;
+    warmProfile(id);
+    router.push(`/admin/students/${id}`);
   };
 
   return (
@@ -148,31 +157,92 @@ export default function StudentsAttendancePage() {
         accent="#F59E0B"
       />
 
-      <main className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1">
-            <button onClick={() => setMonthOffset(m => m - 1)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><ChevronLeft className="w-4 h-4 text-slate-400" /></button>
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 capitalize min-w-32 text-center">{monthLabel}</span>
-            <button onClick={() => setMonthOffset(m => Math.min(m + 1, 0))} disabled={monthOffset >= 0} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30"><ChevronRight className="w-4 h-4 text-slate-400" /></button>
-          </div>
-          <div className="relative flex-1 min-w-40 max-w-64">
+      <main className="flex-1 min-h-0 p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 shadow-sm grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+          <MonthNav
+            label={monthLabel}
+            onPrev={() => setMonthOffset(m => m - 1)}
+            onNext={() => setMonthOffset(m => Math.min(m + 1, 0))}
+            nextDisabled={monthOffset >= 0}
+            className="col-span-2 sm:w-64"
+          />
+          <div className="relative col-span-2 sm:flex-1 sm:min-w-40 sm:max-w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Caută elev…"
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             />
           </div>
-          <div className="w-40"><Select value={fTeacher} onChange={e => setFTeacher(e.target.value)} placeholder="Profesor" options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))} /></div>
-          <div className="w-40"><Select value={fDiscipline} onChange={e => setFDiscipline(e.target.value)} placeholder="Disciplină" options={INSTRUMENTS.map(i => ({ value: i, label: i }))} /></div>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <div className="min-w-0 sm:w-40"><Select value={fTeacher} onChange={e => setFTeacher(e.target.value)} placeholder="Profesor" options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))} /></div>
+          <div className="min-w-0 sm:w-40"><Select value={fDiscipline} onChange={e => setFDiscipline(e.target.value)} placeholder="Disciplină" options={INSTRUMENTS.map(i => ({ value: i, label: i }))} /></div>
+          <label className="col-span-2 flex items-center justify-center sm:justify-start gap-1.5 h-9 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
             Arată și inactivi/pauză
           </label>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        {/* Phone / tablet: compact cards — tap opens the profile */}
+        <div className="lg:hidden space-y-2">
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-[92px] rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse" />
+            ))
+          ) : stats.length === 0 ? (
+            <p className="text-center py-10 text-sm text-slate-400">Niciun elev găsit</p>
+          ) : stats.map(s => {
+            const student = s.student_id ? studentById.get(s.student_id) : undefined;
+            const subs = (student?.subscriptions ?? []).filter(sub => !fDiscipline || sub.instrument === fDiscipline);
+            return (
+              <button
+                key={s.student_id}
+                type="button"
+                onPointerDown={() => warmProfile(s.student_id)}
+                onClick={() => openProfile(s.student_id)}
+                className="w-full text-left rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm px-3 py-2.5 transition-transform duration-150 active:scale-[0.98] active:bg-slate-50 dark:active:bg-slate-800/60"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">{s.student_name}</p>
+                  <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                </div>
+                {subs.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {subs.map(sub => {
+                      const done = doneFor(s.student_id, sub.instrument);
+                      const complete = done >= sub.lessons;
+                      return (
+                        <div key={sub.instrument} className="flex items-center justify-between gap-2 text-[11px]">
+                          <span className="truncate text-slate-500 dark:text-slate-400">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{sub.instrument}</span> · {sub.teacher_name ?? '—'}
+                          </span>
+                          <span className={`shrink-0 font-bold tabular-nums ${complete ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
+                            {Math.min(done, sub.lessons)}/{sub.lessons}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="grid grid-cols-4 gap-1 mt-2">
+                  {([
+                    ['Finaliz.', s.completed, 'text-emerald-600 dark:text-emerald-400'],
+                    ['Recup.', s.recovered, 'text-accent-600 dark:text-accent-400'],
+                    ['Motiv.', s.excused_absence, 'text-amber-600 dark:text-amber-400'],
+                    ['Nemot.', s.unexcused_absence, 'text-red-600 dark:text-red-400'],
+                  ] as const).map(([label, value, color]) => (
+                    <div key={label} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 py-1 text-center">
+                      <p className={`text-sm font-extrabold leading-tight tabular-nums ${color}`}>{value}</p>
+                      <p className="text-[9px] uppercase tracking-wide text-slate-400">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">

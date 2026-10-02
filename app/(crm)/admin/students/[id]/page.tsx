@@ -22,6 +22,13 @@ import { formatBirthDate } from '@/lib/dateUtils';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
+const LESSON_STATUS_LABEL: Record<string, string> = {
+  scheduled: 'Programată', completed: 'Finalizată', cancelled: 'Anulată', recovered: 'Recuperată',
+};
+const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  paid: 'Plătit', unpaid: 'Neplătit', partial: 'Parțial', overdue: 'Restant',
+};
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -32,6 +39,10 @@ export default function StudentProfilePage({ params }: PageProps) {
   const { toasts, toast, remove } = useToast();
 
   const { data, mutate } = useSWR(`/api/students/${id}`, fetcher);
+  // Data already warm (preloaded on tap) → the page slides in once, ready.
+  // Otherwise the skeleton slides in and the content then just fades in over
+  // it, instead of sliding a second time.
+  const [warmOnArrival] = useState(() => data !== undefined);
   const { data: lessonsData, mutate: mutateLessons } = useSWR(`/api/lessons?student_id=${id}`, fetcher);
   const { data: paymentsData, mutate: mutatePayments } = useSWR(`/api/payments?student_id=${id}`, fetcher);
 
@@ -44,6 +55,13 @@ export default function StudentProfilePage({ params }: PageProps) {
   const [deleting, setDeleting]       = useState(false);
   const [savingNote, setSavingNote]   = useState(false);
 
+  // Back returns to the page the admin came from (Elevi Frecvență, Elevi…),
+  // keeping its scroll/filters; a direct link falls back to the student list.
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+    else router.push('/admin/students');
+  };
+
   const student: Student | undefined = data?.student;
   const notes: StudentNote[] = data?.notes ?? [];
   const lessons: Lesson[] = lessonsData?.lessons ?? [];
@@ -54,7 +72,7 @@ export default function StudentProfilePage({ params }: PageProps) {
     try {
       const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        router.push('/students');
+        router.push('/admin/students');
       } else {
         toast('Eroare la ștergere', 'error');
       }
@@ -104,16 +122,18 @@ export default function StudentProfilePage({ params }: PageProps) {
       body: JSON.stringify({ status: 'completed' }),
     });
     mutateLessons();
-    toast('Lesson marked complete', 'success');
+    toast('Lecție marcată ca finalizată', 'success');
   };
 
   if (!data) {
     return (
       <div className="flex flex-col flex-1 min-h-0">
-        <Header title="Profil elev" />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Se încarcă…</p>
-        </div>
+        <div className="hidden lg:block"><Header title="Profil elev" /></div>
+        <main className="flex-1 min-h-0 p-3 sm:p-6 space-y-3 overflow-hidden animate-page-enter">
+          <div className="h-9 w-full rounded-lg bg-slate-200/70 dark:bg-slate-800 animate-pulse" />
+          <div className="h-40 rounded-xl bg-slate-200/70 dark:bg-slate-800 animate-pulse" />
+          <div className="h-56 rounded-xl bg-slate-200/70 dark:bg-slate-800 animate-pulse" />
+        </main>
       </div>
     );
   }
@@ -123,8 +143,8 @@ export default function StudentProfilePage({ params }: PageProps) {
       <div className="flex flex-col flex-1 min-h-0">
         <Header title="Elev negăsit" />
         <div className="flex-1 flex items-center justify-center">
-          <Button onClick={() => router.push('/students')} variant="secondary">
-            <ArrowLeft className="w-4 h-4" /> Înapoie la Elevi
+          <Button onClick={() => router.push('/admin/students')} variant="secondary">
+            <ArrowLeft className="w-4 h-4" /> Înapoi la Elevi
           </Button>
         </div>
       </div>
@@ -136,33 +156,39 @@ export default function StudentProfilePage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <Header title={student.name} subtitle={`${(student.instruments ?? []).join(', ')} · ${student.level}`} />
+      <div className="hidden lg:block">
+        <Header title={student.name} subtitle={`${(student.instruments ?? []).join(', ')} · ${student.level}`} />
+      </div>
 
-      <main className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto">
+      <main className={`flex-1 min-h-0 p-3 sm:p-6 space-y-3 sm:space-y-6 overflow-y-auto ${warmOnArrival ? 'animate-page-enter' : 'animate-fade-in'}`}>
         {/* Back + actions */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/students')}>
-            <ArrowLeft className="w-4 h-4" /> Back
+        {/* Equal-width side columns keep the name exactly centred */}
+        <div className="grid grid-cols-[5rem_1fr_5rem] items-center gap-2">
+          <Button icon variant="secondary" onClick={goBack} title="Înapoi" aria-label="Înapoi" className="justify-self-start">
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)}>
-              <Pencil className="w-3.5 h-3.5" /> Editează
+          <p className="min-w-0 text-center text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+            <span className="lg:hidden">{student.name}</span>
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button icon variant="secondary" onClick={() => setShowEdit(true)} title="Editează" aria-label="Editează">
+              <Pencil className="w-4 h-4" />
             </Button>
-            <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>
-              <Trash2 className="w-3.5 h-3.5" />
+            <Button icon variant="danger" onClick={() => setShowDelete(true)} title="Șterge" aria-label="Șterge">
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* Profile card */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-brand-600 dark:text-brand-400">{initials}</span>
+          <div className="lg:col-span-1 space-y-3 sm:space-y-4">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 shrink-0 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                  <span className="text-base sm:text-xl font-bold text-brand-600 dark:text-brand-400">{initials}</span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{formatBirthDate(student.birth_date)}</p>
                 </div>
@@ -171,7 +197,7 @@ export default function StudentProfilePage({ params }: PageProps) {
                 </Badge>
               </div>
 
-              <div className="space-y-3 text-sm">
+              <div className="space-y-2 sm:space-y-3 text-sm">
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                   <Phone className="w-4 h-4 flex-shrink-0" />
                   <span>{student.phone || '—'}</span>
@@ -190,7 +216,7 @@ export default function StudentProfilePage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
+              <div className="mt-3 pt-3 sm:mt-4 sm:pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
                 {(student.subscriptions?.length ?? 0) > 0 ? (
                   <div className="text-xs text-slate-400 space-y-0.5">
                     <p className="text-slate-500 dark:text-slate-400 font-medium">Servicii:</p>
@@ -225,7 +251,7 @@ export default function StudentProfilePage({ params }: PageProps) {
 
             {/* Statistici lunare — citite live din Program */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="px-3 py-2.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Statistici lunare</h3>
               </div>
               <StudentMonthlyStats studentId={student.id} />
@@ -233,13 +259,13 @@ export default function StudentProfilePage({ params }: PageProps) {
           </div>
 
           {/* Right column */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {/* Lessons */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between px-3 py-2 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Lecții</h3>
                 <Button size="sm" onClick={() => setShowLesson(true)}>
-                  <Plus className="w-3.5 h-3.5" /> Add
+                  <Plus className="w-3.5 h-3.5" /> Adaugă
                 </Button>
               </div>
               {lessons.length === 0 ? (
@@ -247,7 +273,7 @@ export default function StudentProfilePage({ params }: PageProps) {
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {lessons.slice(0, 8).map(lesson => (
-                    <div key={lesson.id} className="flex items-center justify-between px-5 py-3">
+                    <div key={lesson.id} className="flex items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-3">
                       <div className="flex items-center gap-3">
                         <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
                         <div>
@@ -257,10 +283,10 @@ export default function StudentProfilePage({ params }: PageProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={lessonBadge(lesson.status)}>
-                          {lesson.status.charAt(0).toUpperCase() + lesson.status.slice(1)}
+                          {LESSON_STATUS_LABEL[lesson.status] ?? lesson.status}
                         </Badge>
                         {lesson.status === 'scheduled' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(lesson.id)}>
+                          <Button icon variant="ghost" size="sm" onClick={() => handleMarkComplete(lesson.id)} title="Marchează finalizată">
                             ✓
                           </Button>
                         )}
@@ -273,7 +299,7 @@ export default function StudentProfilePage({ params }: PageProps) {
 
             {/* Payments */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between px-3 py-2 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Plăți</h3>
                 <Button size="sm" onClick={() => setShowPayment(true)}>
                   <Plus className="w-3.5 h-3.5" /> Înregistrează
@@ -284,7 +310,7 @@ export default function StudentProfilePage({ params }: PageProps) {
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {payments.slice(0, 8).map(payment => (
-                    <div key={payment.id} className="flex items-center justify-between px-5 py-3">
+                    <div key={payment.id} className="flex items-center justify-between gap-2 px-3 py-2 sm:px-5 sm:py-3">
                       <div>
                         <p className="text-sm text-slate-900 dark:text-slate-100">
                           {MONTHS[payment.month - 1]} {payment.year}
@@ -295,7 +321,7 @@ export default function StudentProfilePage({ params }: PageProps) {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant={paymentBadge(payment.status)}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          {PAYMENT_STATUS_LABEL[payment.status] ?? payment.status}
                         </Badge>
                         <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{payment.amount} MDL</span>
                       </div>
@@ -307,7 +333,7 @@ export default function StudentProfilePage({ params }: PageProps) {
 
             {/* Frecvență */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="px-3 py-2.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Frecvență</h3>
               </div>
               <StudentAttendanceGrid studentId={student.id} />
@@ -315,10 +341,10 @@ export default function StudentProfilePage({ params }: PageProps) {
 
             {/* Notes */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="px-3 py-2.5 sm:px-5 sm:py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Note de progres</h3>
               </div>
-              <div className="p-5 space-y-3">
+              <div className="p-3 sm:p-5 space-y-3">
                 {/* Add note form */}
                 <form onSubmit={handleAddNote} className="flex gap-2">
                   <input
@@ -388,12 +414,12 @@ export default function StudentProfilePage({ params }: PageProps) {
       />
 
       {/* Delete confirm */}
-      <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Delete Student" size="sm">
+      <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Șterge elevul" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Permanently delete <strong className="text-slate-900 dark:text-slate-100">{student.name}</strong>?
-          All lessons, payments and notes will be removed.
+          Ștergi definitiv elevul <strong className="text-slate-900 dark:text-slate-100">{student.name}</strong>?
+          Toate lecțiile, plățile și notele lui vor fi șterse.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setShowDelete(false)}>Anulează</Button>
           <Button variant="danger" onClick={handleDeleteStudent} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}

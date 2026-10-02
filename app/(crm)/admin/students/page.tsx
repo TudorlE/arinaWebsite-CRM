@@ -79,16 +79,16 @@ export default function StudentsPage() {
         accent="#F59E0B"
       />
 
-      <main className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
+      <main className="flex-1 min-h-0 p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto">
         {/* Toolbar */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-48">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 shadow-sm grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="relative col-span-2 sm:flex-1 sm:min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Caută elevi…"
-              className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl border bg-slate-50 dark:bg-slate-800
+              className="w-full h-9 sm:h-10 pl-9 pr-8 text-sm rounded-xl border bg-slate-50 dark:bg-slate-800
                 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700
                 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent
                 transition-shadow duration-200"
@@ -103,8 +103,8 @@ export default function StudentsPage() {
             )}
           </div>
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <div className="contents sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-xs text-slate-400 font-medium">Instrument</span>
             </div>
@@ -113,33 +113,33 @@ export default function StudentsPage() {
               onChange={e => setInstrument(e.target.value)}
               placeholder="Toate"
               options={INSTRUMENTS.map(i => ({ value: i, label: i }))}
-              className="min-w-40 text-sm"
+              className="h-9 sm:min-w-40 text-sm"
             />
             {instrument && (
               <button
                 onClick={() => setInstrument('')}
-                className="flex items-center gap-1 text-xs font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-2.5 py-1 rounded-full hover:bg-orange-100 transition-colors"
+                className="hidden sm:flex items-center gap-1 text-xs font-semibold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-2.5 py-1 rounded-full hover:bg-orange-100 transition-colors"
               >
                 <X className="w-3 h-3" /> Resetează
               </button>
             )}
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <label className="flex items-center justify-center gap-1.5 h-9 text-xs font-medium text-slate-500 dark:text-slate-400 cursor-pointer select-none px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded" />
-              Arată și inactivi/pauză
+              <span className="sm:hidden">Și inactivi</span><span className="hidden sm:inline">Arată și inactivi/pauză</span>
             </label>
           </div>
-          <span className="ml-auto text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+          <span className="hidden sm:inline ml-auto text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
             {students.length} elevi
           </span>
         </div>
 
         {/* Cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4">
 
           {/* Add student card — hidden for read-only roles */}
           {!isReadOnly && <button
             onClick={() => { setEditStudent(null); setShowForm(true); }}
-            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[156px] cursor-pointer"
+            className="group flex flex-row sm:flex-col items-center justify-center gap-3 p-3 sm:p-6 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-brand-400 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200 hover:scale-[1.03] hover:shadow-lg active:scale-[0.98] min-h-[64px] sm:min-h-[156px] cursor-pointer"
           >
             <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center group-hover:bg-brand-200 dark:group-hover:bg-brand-800/60 group-hover:scale-110 transition-all duration-200">
               <Plus className="w-6 h-6 text-brand-600 dark:text-brand-400" />
@@ -196,17 +196,17 @@ export default function StudentsPage() {
 
               <div className="flex items-center justify-end mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex gap-0.5 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity duration-150">
-                  <Button variant="ghost" size="sm" onClick={() => setDetailsTarget(student)} title="Detalii">
+                  <Button icon variant="ghost" size="sm" onClick={() => setDetailsTarget(student)} title="Detalii">
                     <Info className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => router.push(`/admin/students/${student.id}`)} title="Profil complet">
+                  <Button icon variant="ghost" size="sm" onClick={() => router.push(`/admin/students/${student.id}`)} title="Profil complet">
                     <Eye className="w-3.5 h-3.5" />
                   </Button>
                   {!isReadOnly && <>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditStudent(student); setShowForm(true); }}>
+                    <Button icon variant="ghost" size="sm" onClick={() => { setEditStudent(student); setShowForm(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(student)}>
+                    <Button icon variant="ghost" size="sm" onClick={() => setDeleteTarget(student)}>
                       <Trash2 className="w-3.5 h-3.5 text-red-500" />
                     </Button>
                   </>}
@@ -234,7 +234,7 @@ export default function StudentsPage() {
           Ești sigur că vrei să ștergi <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.name}</strong>?
           Aceasta va șterge și lecțiile, plățile și notele sale.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Se șterge…' : 'Șterge'}

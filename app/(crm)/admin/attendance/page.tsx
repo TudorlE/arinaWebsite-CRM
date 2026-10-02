@@ -398,24 +398,24 @@ export default function AttendanceRegisterPage() {
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-2 gap-2 sm:p-4 sm:gap-4 bg-slate-200 dark:bg-slate-950">
         {/* ── Month nav + teacher filter ── */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
             <ChevronLeft className="w-5 h-5 text-slate-500" />
           </button>
-          <span className="text-lg font-extrabold text-slate-900 dark:text-white min-w-48 text-center">{monthLabel}</span>
+          <span className="min-w-0 sm:min-w-48 text-base sm:text-lg font-extrabold text-slate-900 dark:text-white text-center truncate">{monthLabel}</span>
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
             <ChevronRight className="w-5 h-5 text-slate-500" />
           </button>
-          <button onClick={() => setMonthRef(new Date())} className="px-4 py-2 text-sm font-bold rounded-xl bg-amber-600 text-white shadow-md hover:bg-amber-500">Luna curentă</button>
+          <button onClick={() => setMonthRef(new Date())} className="col-span-3 h-9 sm:h-10 px-4 text-sm font-bold rounded-xl bg-amber-600 text-white shadow-md hover:bg-amber-500">Luna curentă</button>
         </div>
 
-        {/* ── Service / discipline picker ── */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        {/* ── Service / discipline picker — 4 equal + Solfegiu full width on phone ── */}
+        <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
           {INSTRUMENTS.map(i => (
             <button
               key={i}
               onClick={() => chooseDiscipline(i)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors
+              className={`${i === SOLFEGIU ? 'col-span-4' : ''} h-9 px-1 sm:px-4 truncate rounded-xl text-xs sm:text-sm font-semibold border transition-colors
                 ${fDiscipline === i ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300'}`}
             >
               {i}
@@ -425,7 +425,7 @@ export default function AttendanceRegisterPage() {
 
         {/* ── Group filter — Solfegiu only (grupa mică/medie/mare) ── */}
         {fDiscipline === SOLFEGIU && (
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
             <button
               onClick={() => setFGroup('')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors
@@ -686,7 +686,7 @@ export default function AttendanceRegisterPage() {
           Șterge lecția cu <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
           {deleteTarget && <> din {deleteTarget.date} la {deleteTarget.time?.slice(0, 5)}</>}?
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">
           <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Anulează</Button>
           <Button variant="danger" onClick={handleDelete}>Șterge</Button>
         </div>
