@@ -254,9 +254,22 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     if (!tallies.has(teacherId)) tallies.set(teacherId, { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 });
     return tallies.get(teacherId)!;
   };
-  // Per-teacher breakdown of WHICH students had an excused absence, and how
-  // many times — surfaced when clicking "Motivate" in Profesori Frecvență.
-  const excusedByTeacher = new Map<number, Map<string, number>>();
+  // Per-teacher breakdown of WHICH students had a recovery / excused /
+  // unexcused absence, and how many times — surfaced when clicking that
+  // counter in Profesori Frecvență.
+  type StudentKind = 'recovered' | 'excused' | 'unexcused';
+  const byKind = new Map<string, Map<string, number>>(); // key: `${teacherId}|${kind}`
+  const bumpStudent = (teacherId: number, kind: StudentKind, name: string | null) => {
+    if (!name) return;
+    const k = `${teacherId}|${kind}`;
+    const m = byKind.get(k) ?? new Map<string, number>();
+    m.set(name, (m.get(name) ?? 0) + 1);
+    byKind.set(k, m);
+  };
+  const studentsOf = (teacherId: number, kind: StudentKind) =>
+    Array.from(byKind.get(`${teacherId}|${kind}`)?.entries() ?? [])
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   type ReplacedEntry = { name: string; count: number; for_teacher?: string; discipline: string | null };
   const replacedByTeacher = new Map<number, Map<string, ReplacedEntry>>();
   for (const r of rows) {
@@ -277,16 +290,9 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     if (filters.teacherId && r.teacher_id !== filters.teacherId) continue;
     const t = ensureTally(r.teacher_id);
     if (outcome === 'present' || outcome === 'late') t.completed++;
-    else if (outcome === 'recovered') t.recovered++;
-    else if (outcome === 'unexcused') t.unexcused_absence++;
-    else if (outcome === 'excused') {
-      t.excused_absence++;
-      if (r.student_name) {
-        const m = excusedByTeacher.get(r.teacher_id) ?? new Map<string, number>();
-        m.set(r.student_name, (m.get(r.student_name) ?? 0) + 1);
-        excusedByTeacher.set(r.teacher_id, m);
-      }
-    }
+    else if (outcome === 'recovered') { t.recovered++; bumpStudent(r.teacher_id, 'recovered', r.student_name); }
+    else if (outcome === 'unexcused') { t.unexcused_absence++; bumpStudent(r.teacher_id, 'unexcused', r.student_name); }
+    else if (outcome === 'excused') { t.excused_absence++; bumpStudent(r.teacher_id, 'excused', r.student_name); }
     if (r.student_name) addStudent(r.teacher_id, r.student_name, r.discipline);
   }
 
@@ -294,7 +300,6 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   const out: MonthlyStats[] = [];
   for (const id of teacherIds) {
     const tal = tallies.get(id) ?? { completed: 0, recovered: 0, excused_absence: 0, unexcused_absence: 0, replaced: 0 };
-    const excusedMap = excusedByTeacher.get(id);
     out.push({
       teacher_id: id,
       teacher_name: teacherNameMap.get(id) ?? undefined,
@@ -306,9 +311,9 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       unexcused_absence: tal.unexcused_absence,
       replaced: tal.replaced,
       students: Array.from(studentsByTeacher.get(id) ?? []).sort(),
-      excused_students: excusedMap
-        ? Array.from(excusedMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-        : [],
+      excused_students: studentsOf(id, 'excused'),
+      unexcused_students: studentsOf(id, 'unexcused'),
+      recovered_students: studentsOf(id, 'recovered'),
       replaced_students: Array.from(replacedByTeacher.get(id)?.values() ?? [])
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     });

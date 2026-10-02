@@ -191,6 +191,10 @@ export interface MonthlyStats {
   students?: string[]; // for per-teacher stats: the teacher's OWN students (never the ones they only substituted for)
   /** Per-teacher only: which students had an excused absence with this teacher, and how many times. */
   excused_students?: { name: string; count: number }[];
+  /** Per-teacher only: same breakdown for unexcused absences (N). */
+  unexcused_students?: { name: string; count: number }[];
+  /** Per-teacher only: same breakdown for recovered lessons (R). */
+  recovered_students?: { name: string; count: number }[];
   /** Per-teacher only: students this teacher covered as a substitute — with whose student it was. */
   replaced_students?: { name: string; count: number; for_teacher?: string; discipline?: string | null }[];
 }

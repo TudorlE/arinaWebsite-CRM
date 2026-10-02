@@ -11,11 +11,55 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 
+type DetailKind = 'recovered' | 'excused' | 'unexcused' | 'replaced';
+type DetailChip = { key: string; text: string; count: number };
+
+const plain = (list?: { name: string; count: number }[]): DetailChip[] =>
+  (list ?? []).map(s => ({ key: s.name, text: s.name, count: s.count }));
+
+/** The clickable counters: tap one to list which students make up that number. */
+const DETAIL_KINDS: {
+  kind: DetailKind; label: string; title: string; empty: string; hint?: string;
+  number: string; hover: string; panel: string; chip: string;
+  count: (t: MonthlyStats) => number; students: (t: MonthlyStats) => DetailChip[];
+}[] = [
+  {
+    kind: 'recovered', label: 'Recuperate', title: 'Recuperări', empty: 'Nicio recuperare luna asta',
+    number: 'text-accent-600 dark:text-accent-400', hover: 'enabled:hover:bg-sky-50 dark:enabled:hover:bg-sky-900/20',
+    panel: 'bg-sky-50/60 dark:bg-sky-900/10', chip: 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300',
+    count: t => t.recovered, students: t => plain(t.recovered_students),
+  },
+  {
+    kind: 'excused', label: 'Motivate', title: 'Absențe motivate', empty: 'Nicio absență motivată luna asta',
+    number: 'text-amber-600 dark:text-amber-400', hover: 'enabled:hover:bg-amber-50 dark:enabled:hover:bg-amber-900/20',
+    panel: 'bg-amber-50/60 dark:bg-amber-900/10', chip: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+    count: t => t.excused_absence, students: t => plain(t.excused_students),
+  },
+  {
+    kind: 'unexcused', label: 'Nemotivate', title: 'Absențe nemotivate', empty: 'Nicio absență nemotivată luna asta',
+    number: 'text-red-600 dark:text-red-400', hover: 'enabled:hover:bg-red-50 dark:enabled:hover:bg-red-900/20',
+    panel: 'bg-red-50/60 dark:bg-red-900/10', chip: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+    count: t => t.unexcused_absence, students: t => plain(t.unexcused_students),
+  },
+  {
+    kind: 'replaced', label: 'Înlocuite', title: 'Înlocuiri făcute', empty: 'Nicio înlocuire luna asta',
+    hint: 'Lecții ținute în locul altui profesor',
+    number: 'text-violet-600 dark:text-violet-400', hover: 'enabled:hover:bg-violet-50 dark:enabled:hover:bg-violet-900/20',
+    panel: 'bg-violet-50/60 dark:bg-violet-900/10', chip: 'bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300',
+    count: t => t.replaced ?? 0,
+    students: t => (t.replaced_students ?? []).map(s => ({
+      key: `${s.name}|${s.for_teacher}|${s.discipline}`,
+      text: `${s.name}${s.discipline ? ` (${s.discipline})` : ''}${s.for_teacher ? ` — pt. ${s.for_teacher}` : ''}`,
+      count: s.count,
+    })),
+  },
+];
+
 export default function TeachersAttendancePage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [fDiscipline, setFDiscipline] = useState('');
-  const [expanded, setExpanded] = useState<{ id: number; kind: 'excused' | 'replaced' } | null>(null);
-  const toggle = (id: number | undefined, kind: 'excused' | 'replaced') =>
+  const [expanded, setExpanded] = useState<{ id: number; kind: DetailKind } | null>(null);
+  const toggle = (id: number | undefined, kind: DetailKind) =>
     setExpanded(cur => (cur?.id === id && cur?.kind === kind) || id == null ? null : { id, kind });
 
   const ref = new Date();
@@ -72,63 +116,41 @@ export default function TeachersAttendancePage() {
                     <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{t.completed}</p>
                     <p className="text-[10px] text-slate-400">Finalizate</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-xl font-extrabold text-accent-600 dark:text-accent-400">{t.recovered}</p>
-                    <p className="text-[10px] text-slate-400">Recuperate</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggle(t.teacher_id, 'excused')}
-                    disabled={t.excused_absence === 0}
-                    className="text-center rounded-lg transition-colors disabled:cursor-default enabled:hover:bg-amber-50 dark:enabled:hover:bg-amber-900/20 enabled:cursor-pointer py-0.5"
-                  >
-                    <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400">{t.excused_absence}</p>
-                    <p className="text-[10px] text-slate-400">Motivate</p>
-                  </button>
-                  <div className="text-center">
-                    <p className="text-xl font-extrabold text-red-600 dark:text-red-400">{t.unexcused_absence}</p>
-                    <p className="text-[10px] text-slate-400">Nemotivate</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggle(t.teacher_id, 'replaced')}
-                    disabled={!t.replaced}
-                    title="Lecții ținute în locul altui profesor"
-                    className="text-center rounded-lg transition-colors disabled:cursor-default enabled:hover:bg-violet-50 dark:enabled:hover:bg-violet-900/20 enabled:cursor-pointer py-0.5"
-                  >
-                    <p className="text-xl font-extrabold text-violet-600 dark:text-violet-400">{t.replaced ?? 0}</p>
-                    <p className="text-[10px] text-slate-400">Înlocuite</p>
-                  </button>
+                  {DETAIL_KINDS.map(k => {
+                    const count = k.count(t);
+                    return (
+                      <button
+                        key={k.kind}
+                        type="button"
+                        onClick={() => toggle(t.teacher_id, k.kind)}
+                        disabled={count === 0}
+                        title={k.hint}
+                        className={`text-center rounded-lg transition-colors disabled:cursor-default enabled:cursor-pointer py-0.5 ${k.hover} ${expanded?.id === t.teacher_id && expanded?.kind === k.kind ? k.panel : ''}`}
+                      >
+                        <p className={`text-xl font-extrabold ${k.number}`}>{count}</p>
+                        <p className="text-[10px] text-slate-400">{k.label}</p>
+                      </button>
+                    );
+                  })}
                 </div>
-                {expanded?.id === t.teacher_id && expanded?.kind === 'excused' && (
-                  <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-amber-50/60 dark:bg-amber-900/10">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">
-                      Absențe motivate — {t.teacher_name}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(t.excused_students ?? []).map(s => (
-                        <span key={s.name} className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
-                          {s.name}{s.count > 1 ? ` ×${s.count}` : ''}
-                        </span>
-                      ))}
-                      {(t.excused_students ?? []).length === 0 && <span className="text-xs text-slate-400">Nicio absență motivată luna asta</span>}
+                {DETAIL_KINDS.filter(k => expanded?.id === t.teacher_id && expanded?.kind === k.kind).map(k => {
+                  const list = k.students(t);
+                  return (
+                    <div key={k.kind} className={`px-5 py-3 border-b border-slate-100 dark:border-slate-800 ${k.panel}`}>
+                      <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${k.number}`}>
+                        {k.title} — {t.teacher_name}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {list.map(s => (
+                          <span key={s.key} className={`text-xs font-medium px-2 py-0.5 rounded-full ${k.chip}`}>
+                            {s.text}{s.count > 1 ? ` ×${s.count}` : ''}
+                          </span>
+                        ))}
+                        {list.length === 0 && <span className="text-xs text-slate-400">{k.empty}</span>}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {expanded?.id === t.teacher_id && expanded?.kind === 'replaced' && (
-                  <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-violet-50/60 dark:bg-violet-900/10">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 mb-2">
-                      Înlocuiri făcute de {t.teacher_name}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(t.replaced_students ?? []).map(s => (
-                        <span key={`${s.name}|${s.for_teacher}|${s.discipline}`} className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300">
-                          {s.name}{s.discipline ? ` (${s.discipline})` : ''}{s.for_teacher ? ` — pt. ${s.for_teacher}` : ''}{s.count > 1 ? ` ×${s.count}` : ''}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
                 <div className="px-5 py-4">
                   <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                     <Users className="w-3.5 h-3.5" /> Elevi ({(t.students ?? []).length})
