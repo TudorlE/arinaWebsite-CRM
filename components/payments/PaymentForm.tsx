@@ -37,7 +37,7 @@ function todayMoldova(): string {
 const blank = {
   student_id: '', service: SERVICE_KEYS[0], plan: 'new' as PlanType, lessons: 4 as LessonCount,
   amount: '', month: String(now.getMonth() + 1), year: String(now.getFullYear()),
-  status: 'unpaid', payment_date: todayMoldova(), notes: '',
+  status: 'unpaid', payment_date: todayMoldova(), comment: '',
 };
 
 const PAYMENT_LABEL: Record<string, string> = { paid: 'Plătit', unpaid: 'Neplătit', partial: 'Parțial', overdue: 'Restant', paused: 'Pauză' };
@@ -56,9 +56,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   // abonamente instead of hiding the others. Each row remembers the existing
   // payment `id` for that instrument/period (if any) so saving updates it
   // instead of creating a duplicate.
-  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number; notes?: string }>>({});
-  // Only overwrite the per-instrument notes if the user actually typed a note.
-  const [noteEdited, setNoteEdited] = useState(false);
+  const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }>>({});
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
   const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
@@ -88,7 +86,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         year: String(payment.year),
         status: payment.status,
         payment_date: payment.payment_date ?? todayMoldova(),
-        notes: payment.notes ?? '',
+        comment: payment.comment ?? '',
       });
     } else {
       const initialAmount = subscriptionAmount(blank.service, blank.plan, blank.lessons);
@@ -99,11 +97,9 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         month: String(defaultMonth ?? now.getMonth() + 1),
         year: String(defaultYear ?? now.getFullYear()),
         amount: initialAmount != null ? String(initialAmount) : '',
-        notes: planSummary(blank.service, blank.plan, blank.lessons),
       });
     }
     setErrors({});
-    setNoteEdited(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payment, open, defaultStudentId]);
 
@@ -119,14 +115,14 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       (p: Payment) => p.month === monthNum && p.year === yearNum,
     );
     setPerInstrument(() => {
-      const next: Record<string, { status: string; amount: string; id?: number; notes?: string }> = {};
+      const next: Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }> = {};
       for (const sub of studentSubs) {
         const existing = periodPayments.find((p: Payment) => p.service === sub.instrument);
         if (existing) {
-          next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id, notes: existing.notes ?? '' };
+          next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id, notes: existing.notes ?? null, comment: existing.comment ?? '' };
         } else {
           const computed = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
-          next[sub.instrument] = { status: 'unpaid', amount: computed != null ? String(computed) : '', notes: planSummary(sub.instrument, sub.plan, sub.lessons) };
+          next[sub.instrument] = { status: 'unpaid', amount: computed != null ? String(computed) : '', notes: planSummary(sub.instrument, sub.plan, sub.lessons), comment: '' };
         }
       }
       return next;
@@ -154,12 +150,10 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     setForm(prev => ({
       ...prev,
       amount: computedAmount != null ? String(computedAmount) : prev.amount,
-      notes: planSummary(prev.service, prev.plan, prev.lessons),
     }));
   }, [computedAmount, form.service, form.plan, form.lessons, payment]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    if (field === 'notes') setNoteEdited(true);
     setForm(prev => ({ ...prev, [field]: e.target.value }));
     setErrors(prev => ({ ...prev, [field]: false }));
   };
@@ -211,7 +205,11 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
             status: row.status,
             payment_date: form.payment_date || todayMoldova(),
             due_date: null,
-            notes: (noteEdited ? form.notes : row.notes) || null,
+            // `notes` is the system's own credit recalculation line — passed
+            // through untouched, never set from this form, so the admin's
+            // comment below can never clobber it (and vice versa).
+            notes: row.notes ?? null,
+            comment: row.comment || null,
             plan_type: sub.plan,
             lesson_count: sub.lessons,
             price_per_lesson: perLessonPrice(sub.instrument, sub.plan),
@@ -245,7 +243,10 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
           status: form.status,
           payment_date: form.payment_date || todayMoldova(),
           due_date: null,
-          notes: form.notes || null,
+          // `notes` is the system's own descriptive/credit line, never edited
+          // here — preserved as-is when editing, auto-filled when creating.
+          notes: payment ? (payment.notes ?? null) : planSummary(form.service, form.plan, form.lessons),
+          comment: form.comment || null,
           // structured plan info (API stores if columns exist, otherwise ignores)
           plan_type: isFlat ? null : form.plan,
           lesson_count: isFlat ? null : form.lessons,
@@ -307,24 +308,39 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                         Pauză — fără taxă luna aceasta
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2">
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            label="Sumă (MDL)"
+                            value={row.amount}
+                            onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, amount: e.target.value } }))}
+                            type="number" min={0}
+                          />
+                          <Select
+                            label="Status"
+                            value={row.status}
+                            onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, status: e.target.value } }))}
+                            options={[
+                              { value: 'paid',    label: 'Plătit'   },
+                              { value: 'unpaid',  label: 'Neplătit' },
+                              { value: 'partial', label: 'Parțial'  },
+                            ]}
+                          />
+                        </div>
+                        {/* `row.notes` is the system's credit recalculation line — shown
+                            here read-only, never mixed with the admin's own comment below.
+                            (A brand-new row's `notes` is just a plan summary, not a credit,
+                            so it's skipped here — it'd only duplicate the line above.) */}
+                        {row.notes?.startsWith('Credit') && (
+                          <p className="text-[11px] font-semibold text-sky-600 dark:text-sky-400">↩ {row.notes}</p>
+                        )}
                         <Input
-                          label="Sumă (MDL)"
-                          value={row.amount}
-                          onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, amount: e.target.value } }))}
-                          type="number" min={0}
+                          label="Comentariu (opțional)"
+                          value={row.comment ?? ''}
+                          onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, comment: e.target.value } }))}
+                          placeholder="Un aspect despre plată sau elev…"
                         />
-                        <Select
-                          label="Status"
-                          value={row.status}
-                          onChange={e => setPerInstrument(prev => ({ ...prev, [sub.instrument]: { ...row, status: e.target.value } }))}
-                          options={[
-                            { value: 'paid',    label: 'Plătit'   },
-                            { value: 'unpaid',  label: 'Neplătit' },
-                            { value: 'partial', label: 'Parțial'  },
-                          ]}
-                        />
-                      </div>
+                      </>
                     )}
                   </div>
                 );
@@ -416,18 +432,23 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
           <Input label="Data" value={form.payment_date} onChange={set('payment_date')} type="date" className="col-span-2 sm:col-span-1" />
         </div>
 
+        {/* Multi-instrument students have their own comment field per
+            instrument card above instead — a single shared one here would
+            apply the same text to every instrument's payment. */}
+        {!isMultiInstrument && (
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Note</label>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Comentariu</label>
           <textarea
-            value={form.notes}
-            onChange={set('notes')}
+            value={form.comment}
+            onChange={set('comment')}
             rows={2}
-            placeholder="Note despre plată…"
+            placeholder="Un aspect despre plată sau elev…"
             className="w-full px-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800
               text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700
               placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
           />
         </div>
+        )}
 
         {form.student_id && history.length > 0 && (
           <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 space-y-2">

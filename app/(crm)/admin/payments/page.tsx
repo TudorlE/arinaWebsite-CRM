@@ -45,7 +45,7 @@ function CreditNote({ credit, applied }: { credit: CreditRow; applied: boolean }
       className={`text-[11px] font-semibold mt-1 ${applied ? 'text-sky-600 dark:text-sky-400' : 'text-orange-600 dark:text-orange-400'}`}
       title={applied ? undefined : 'Suma acestei plăți nu include creditul (a fost deja plătită sau modificată manual). Scade manual dacă e cazul.'}
     >
-      ↩ {credit.service !== '' ? `${credit.service}: ` : ''}credit {credit.credit_lessons} {credit.credit_lessons === 1 ? 'lecție' : 'lecții'} din {credit.from_label} · −{credit.credit_amount.toLocaleString()} MDL{applied ? '' : ' · neaplicat'}
+      ↩ {credit.service !== '' ? `${credit.service}: ` : ''}credit {credit.credit_lessons} {credit.credit_lessons === 1 ? 'lecție' : 'lecții'} din {credit.from_label}: −{credit.credit_amount.toLocaleString()} MDL{applied ? '' : ' (neaplicat)'}
     </p>
   );
 }

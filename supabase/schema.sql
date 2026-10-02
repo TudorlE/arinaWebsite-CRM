@@ -68,6 +68,9 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS due_date date;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at timestamptz;
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check;
 ALTER TABLE payments ADD CONSTRAINT payments_status_check CHECK (status IN ('paid', 'unpaid', 'partial', 'overdue', 'paused'));
+-- "notes" is the system-managed credit recalculation line; "comment" is the
+-- admin's own free-text remark — kept separate so editing one never erases the other.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS comment text;
 
 -- ── Student Notes ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS student_notes (

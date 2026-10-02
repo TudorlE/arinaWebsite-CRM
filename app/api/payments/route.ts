@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const {
-      student_id, amount, month, year, status, payment_date, due_date, notes,
+      student_id, amount, month, year, status, payment_date, due_date, notes, comment,
       service, plan_type, lesson_count, price_per_lesson,
     } = await request.json();
     // `!amount` would reject a deliberate 0 (falsy in JS) as "missing" —
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       plan_type: plan_type || null,
       lesson_count: lesson_count ? Number(lesson_count) : null,
       price_per_lesson: price_per_lesson ? Number(price_per_lesson) : null,
+      comment: comment || null,
     };
     const fullInsert = {
       ...baseInsert,
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Schema not migrated yet for one of the newer columns — retry without them.
-    if (error && /due_date|paid_at|service|plan_type|lesson_count|price_per_lesson/.test(error.message)) {
+    if (error && /due_date|paid_at|service|plan_type|lesson_count|price_per_lesson|comment/.test(error.message)) {
       if (existing) {
         ({ data, error } = await supabase.from('payments').update(baseInsert).eq('id', existing.id).select().single());
       } else {

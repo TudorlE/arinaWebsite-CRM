@@ -396,9 +396,9 @@ export default function AttendanceRegisterPage() {
         accent="#E08A3C"
       />
 
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 gap-4 bg-slate-200 dark:bg-slate-950">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-2 gap-2 sm:p-4 sm:gap-4 bg-slate-200 dark:bg-slate-950">
         {/* ── Month nav + teacher filter ── */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
             <ChevronLeft className="w-5 h-5 text-slate-500" />
           </button>
@@ -470,15 +470,15 @@ export default function AttendanceRegisterPage() {
                       )}
                     </div>
                   ) : null}
-                  <span className="text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
+                  <span className="text-base sm:text-sm font-bold uppercase tracking-wider text-slate-900">Elev</span>
                 </th>
                 {days.map(d => {
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = fmtDate(d) === fmtDate(new Date());
                   return (
-                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-1 py-2.5 text-center font-semibold bg-white" style={{ minWidth: 46, width: 46 }}>
-                      <div className={`text-[10px] uppercase tracking-wide leading-none ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
-                      <div className={`text-sm leading-tight mt-0.5 ${isToday ? 'inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
+                    <th key={d.getDate()} className="sticky top-0 z-10 border border-black px-1 py-2.5 text-center font-semibold bg-white min-w-[54px] w-[54px] sm:min-w-[46px] sm:w-[46px]">
+                      <div className={`text-[11px] sm:text-[10px] uppercase tracking-wide leading-none ${isWeekend ? 'text-red-500' : 'text-slate-500'}`}>{WEEKDAY_LETTERS[d.getDay()]}</div>
+                      <div className={`text-base sm:text-sm leading-tight mt-0.5 ${isToday ? 'inline-flex items-center justify-center w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-amber-500 text-white font-extrabold' : 'text-slate-900'}`}>{d.getDate()}</div>
                     </th>
                   );
                 })}
@@ -489,7 +489,7 @@ export default function AttendanceRegisterPage() {
                 <tr><td colSpan={days.length + 1} className="text-center py-10 text-slate-400">Niciun elev</td></tr>
               ) : students.map(s => (
                 <tr key={s.id}>
-                  <td className="sticky left-0 z-10 bg-white border border-black px-3 py-2 text-sm font-medium text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: 190 }}>
+                  <td className="sticky left-0 z-10 bg-white border border-black px-3 py-2.5 sm:py-2 text-base sm:text-sm font-medium text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: 190 }}>
                     {s.name}
                   </td>
                   {days.map(d => {
@@ -511,8 +511,8 @@ export default function AttendanceRegisterPage() {
                           onClick={e => { e.stopPropagation(); openCell(dateStr, cellLessons, s.id, e.clientX, e.clientY); }}
                           data-cell-trigger
                           title={combinedTitle}
-                          className={`relative w-full h-11 flex items-center justify-center font-bold transition-colors
-                            ${syms.length > 2 ? 'text-xs' : syms.length > 1 ? 'text-sm' : 'text-lg'}
+                          className={`relative w-full h-14 sm:h-11 flex items-center justify-center font-bold transition-colors
+                            ${syms.length > 2 ? 'text-sm sm:text-xs' : syms.length > 1 ? 'text-base sm:text-sm' : 'text-xl sm:text-lg'}
                             ${cellClassName} ${canEdit ? 'hover:brightness-95 hover:bg-slate-100 cursor-pointer' : 'cursor-default'}
                             ${isMenu ? 'ring-2 ring-amber-400 ring-inset' : ''}`}
                         >

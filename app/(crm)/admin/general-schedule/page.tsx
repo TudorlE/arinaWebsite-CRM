@@ -56,7 +56,7 @@ export default function GeneralSchedulePage() {
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* ── Banner ────────────────────────────────────────── */}
       <PageBanner
         icon={CalendarRange}
@@ -65,8 +65,12 @@ export default function GeneralSchedulePage() {
         accent="#5934DC"
       />
 
-      <main className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
-        <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 gap-4">
+        {/* min-h-0 below is load-bearing: without it, a flex-1 child defaults to
+            its CONTENT's height (flexbox's min-height:auto), so the card grows
+            or shrinks with how many lessons that day has instead of staying a
+            fixed size — exactly the "jumps up and down on day switch" bug. */}
+        <div className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col">
           {/* Day tabs */}
           <div className="flex flex-wrap items-center gap-1.5 p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
             {DAY_LABELS.map((label, i) => {
@@ -86,7 +90,7 @@ export default function GeneralSchedulePage() {
           </div>
 
           {/* Cabinet table — Ora | Cabinet 1 | Cabinet 2 | Cabinet 3 (read-only) */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 min-h-0 overflow-auto p-4">
             {cabinetColumns.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <p className="text-sm font-semibold text-slate-500">Nu există cabinete configurate</p>

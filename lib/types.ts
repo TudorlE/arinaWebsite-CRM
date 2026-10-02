@@ -238,7 +238,10 @@ export interface Payment {
   due_date?: string;       // YYYY-MM-DD
   payment_date?: string;
   paid_at?: string | null; // ISO timestamp
-  notes?: string;
+  /** System-managed credit recalculation line (e.g. "Credit 2 lecții..."). Never edited by hand. */
+  notes?: string | null;
+  /** The admin's own free-text remark about this payment — separate from `notes` so one never erases the other. */
+  comment?: string | null;
   /** Which of the student's instruments/services this specific payment covers (a student can have several). */
   service?: string | null;
   plan_type?: 'old' | 'new' | null;
