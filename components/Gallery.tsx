@@ -12,7 +12,7 @@ import { useLocale } from '@/lib/i18n';
  */
 const videoIds = ['jNQXAC9IVRw', 'M7lc1UVf-VE', 'aqz-KE-bpKQ', 'ScMzIvxBSi4', 'kJQP7kiw5Fk', 'e-ORhEE9VVg'];
 
-const photoSrcs = ['/about-direction.jpg', '/about-guitar.jpg', '/about-scena.jpg', '/about-guitar-girl.jpg', '/about-stage.jpg'];
+const photoSrcs = ['/studio-1.jpg', '/studio-2.jpg', '/studio-3.jpg', '/studio-4.jpg', '/studio-5.jpg'];
 
 function Thumb({ id }: { id: string }) {
   const [failed, setFailed] = useState(false);

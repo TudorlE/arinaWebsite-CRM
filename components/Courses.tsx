@@ -8,13 +8,14 @@ import { useLocale } from '@/lib/i18n';
 const stepIcons = [Phone, Mic2, Users2, Rocket];
 const planIcons = [Sparkles, CalendarClock, TrendingUp];
 
+// Order matches lib/translations.ts' courses.services: Canto, Pian, Chitară, Tobe, Solfegiu, Înregistrări.
 const serviceMeta = [
-  { n: '01', img: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=700&q=80&auto=format&fit=crop' },
-  { n: '02', img: 'https://images.unsplash.com/photo-1552422535-c45813c61732?w=700&q=80&auto=format&fit=crop' },
-  { n: '03', img: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=700&q=80&auto=format&fit=crop' },
-  { n: '04', img: 'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=700&q=80&auto=format&fit=crop' },
-  { n: '05', img: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=700&q=80&auto=format&fit=crop' },
-  { n: '06', img: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=700&q=80&auto=format&fit=crop' },
+  { n: '01', img: '/service-canto.jpg' },
+  { n: '02', img: '/service-pian.jpg' },
+  { n: '03', img: '/service-chitara.jpg' },
+  { n: '04', img: '/service-tobe.jpg' },
+  { n: '05', img: '/service-solfegiu.jpg' },
+  { n: '06', img: '/service-inregistrari.jpg' },
 ];
 
 export default function Courses() {
