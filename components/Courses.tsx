@@ -56,12 +56,12 @@ export default function Courses() {
                 animate="rest"
                 style={{ width: '100%', textAlign: 'left', border: '1px solid var(--line)', background: 'var(--bg)', padding: 0, cursor: 'pointer', display: 'block', overflow: 'hidden' }}
               >
-                <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '4 / 3' }}>
+                <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '3 / 4' }}>
                   <motion.img
                     src={s.img} alt={s.title} className="ph"
                     variants={{ rest: { scale: 1 }, hover: { scale: 1.08 } }}
                     transition={{ duration: 0.7, ease: EASE }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
                   />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(16,13,11,0.9) 0%, rgba(16,13,11,0.15) 55%, transparent 100%)' }} />
                   <span style={{ position: 'absolute', top: 14, left: 16, fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: '#D8B892' }}>{s.n}</span>
