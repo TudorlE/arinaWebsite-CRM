@@ -81,6 +81,10 @@ export function amountAfterCredit(base: number, money: number): number {
 }
 
 const CREDIT_LINE = /^Credit (\d+) lec[^\n]*$/m;
+// Same line, but also captures the per-lesson price and the money actually
+// deducted — both exactly as recorded at the time, so re-checking a row later
+// never depends on re-deriving them from pricing.ts (which can change).
+const CREDIT_LINE_DETAIL = /^Credit (\d+) lec(?:ție|ții) × ([\d.]+) = −([\d.]+) MDL/m;
 
 export function creditNoteLine(lessons: number, perLesson: number, money: number, fromLabel: string): string {
   return `Credit ${lessons} ${lessons === 1 ? 'lecție' : 'lecții'} × ${perLesson} = −${money} MDL (absențe motivate din ${fromLabel})`;
@@ -90,6 +94,12 @@ export function creditNoteLine(lessons: number, perLesson: number, money: number
 export function parseCredit(notes: string | null | undefined): number {
   const m = (notes ?? '').match(CREDIT_LINE);
   return m ? Number(m[1]) : 0;
+}
+
+/** Money actually deducted by the credit line stored in `notes` (null if none, or unparsable). */
+export function parseCreditMoney(notes: string | null | undefined): number | null {
+  const m = (notes ?? '').match(CREDIT_LINE_DETAIL);
+  return m ? Number(m[3]) : null;
 }
 
 /** Replace (or remove, with null) the credit line in the notes, leaving anything else the admin wrote. */
@@ -120,7 +130,11 @@ export function planRowUpdate(
 ): { amount: number; notes: string | null } | null {
   if (row.status !== 'unpaid') return null;
   const oldCredit = parseCredit(row.notes);
-  if (Math.round(Number(row.amount)) !== amountAfterCredit(base, creditMoney(oldCredit, perLesson))) return null;
+  // The money actually deducted, as recorded in the note — not recomputed at
+  // today's per-lesson price. A price change (lib/pricing.ts) must never make
+  // an untouched row look "manually edited" just because the live rate moved.
+  const oldMoney = oldCredit > 0 ? (parseCreditMoney(row.notes) ?? creditMoney(oldCredit, perLesson)) : 0;
+  if (Math.round(Number(row.amount)) !== amountAfterCredit(base, oldMoney)) return null;
   const newMoney = creditMoney(newCredit, perLesson);
   const effective = newMoney > 0 ? newCredit : 0;
   const newAmount = amountAfterCredit(base, newMoney);

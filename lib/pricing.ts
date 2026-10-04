@@ -37,8 +37,8 @@ export const PRICING: Record<string, ServicePricing> = {
   },
   'Piano': {
     label: 'Pian',
-    sub: { 4: { old: 1000, new: 1500 }, 8: { old: 2000, new: 2500 }, 12: { old: 3000, new: 4000 } },
-    perLesson: { old: 250, new: 300 },
+    sub: { 4: { old: 1200, new: 1400 }, 8: { old: 2400, new: 2800 }, 12: { old: 3600, new: 4200 } },
+    perLesson: { old: 300, new: 350 },
   },
   'Solfegiu și teoria muzicii': {
     label: 'Solfegiu',
