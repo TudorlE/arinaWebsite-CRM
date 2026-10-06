@@ -1,12 +1,12 @@
 'use client';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Sparkles, CalendarClock, TrendingUp, Phone, Mic2, Users2, Rocket } from 'lucide-react';
+import { ArrowUpRight, Sparkles, CalendarClock, TrendingUp, Phone, Mic2, Users2, Rocket, Flame } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem, EASE } from '@/components/motionx';
 import { openBooking } from '@/components/Booking';
 import { useLocale } from '@/lib/i18n';
 
 const stepIcons = [Phone, Mic2, Users2, Rocket];
-const planIcons = [Sparkles, CalendarClock, TrendingUp];
+const planIcons = [Sparkles, CalendarClock, TrendingUp, Flame];
 
 // Order matches lib/translations.ts' courses.services: Canto, Pian, Chitară, Tobe, Solfegiu, Înregistrări.
 const serviceMeta = [
@@ -167,13 +167,14 @@ export default function Courses() {
         .step-node:hover .step-circle { background: var(--accent); color: var(--sand-ink); }
         .step-index { display: block; margin-top: 10px; font-family: var(--font-playfair), serif; font-size: 12px; color: var(--tx-faint); letter-spacing: 0.1em; }
 
-        .plans-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .plans-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
         .plan-card { transition: border-color 0.35s ease, box-shadow 0.35s ease; }
         .plan-card:hover { border-color: var(--sand-deep); box-shadow: 0 18px 40px rgba(0,0,0,0.14); }
         .plan-btn { position: relative; }
 
-        @media (max-width: 880px) { .svc-grid { grid-template-columns: 1fr 1fr; } .plans-row { grid-template-columns: 1fr; } }
-        @media (max-width: 700px) { .steps-row { grid-template-columns: 1fr 1fr; row-gap: 36px; } .steps-line { display: none; } }
+        @media (max-width: 1080px) { .plans-row { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 880px) { .svc-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 700px) { .steps-row { grid-template-columns: 1fr 1fr; row-gap: 36px; } .steps-line { display: none; } .plans-row { grid-template-columns: 1fr; } }
         @media (max-width: 540px) { .svc-grid { grid-template-columns: 1fr; } }
       `}</style>
     </section>
