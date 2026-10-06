@@ -303,11 +303,12 @@ export default function StudentsAttendancePage() {
                               {subs.map(sub => {
                                 const done = doneFor(s.student_id, sub.instrument);
                                 const remaining = Math.max(0, sub.lessons - done);
+                                const over = Math.max(0, done - sub.lessons);
                                 return (
                                   <span key={sub.instrument} className="text-xs whitespace-nowrap">
                                     <span className="font-bold text-slate-800 dark:text-slate-100">{sub.instrument}: {sub.lessons} lecții</span>{' '}
-                                    <span className={`font-semibold ${remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
-                                      ({remaining === 0 ? 'complet' : `${remaining} rămase`})
+                                    <span className={`font-semibold ${over > 0 ? 'text-orange-600 dark:text-orange-400' : remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
+                                      ({over > 0 ? `+${over} peste abonament` : remaining === 0 ? 'complet' : `${remaining} rămase`})
                                     </span>
                                   </span>
                                 );
@@ -348,6 +349,11 @@ export default function StudentsAttendancePage() {
                                       {subs.map(sub => {
                                         const done = doneFor(student.id, sub.instrument);
                                         const remaining = Math.max(0, sub.lessons - done);
+                                        // More lessons marked than the subscription covers (e.g. extra
+                                        // sessions added by hand) — flagged instead of silently showing
+                                        // a "Complet" that hides the overshoot, or a done/total ratio
+                                        // over 100% with no explanation.
+                                        const over = Math.max(0, done - sub.lessons);
                                         const stStatus = sub.status ?? 'active';
                                         const stLabel = STUDENT_STATUSES.find(st => st.value === stStatus)?.label ?? stStatus;
                                         const dotColor = stStatus === 'active' ? 'bg-emerald-500' : stStatus === 'paused' ? 'bg-amber-500' : 'bg-slate-400';
@@ -363,9 +369,9 @@ export default function StudentsAttendancePage() {
                                             <p className="text-xs text-slate-500 dark:text-slate-400">Abonament: <span className="font-medium text-slate-700 dark:text-slate-300">{sub.plan === 'old' ? 'vechi' : 'nou'} · {sub.lessons} lecții/lună</span></p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">Preț: <span className="font-medium text-slate-700 dark:text-slate-300">{sub.monthly_fee} lei/lună</span></p>
                                             <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-100 dark:border-slate-800">
-                                              <span className="text-xs text-slate-500 dark:text-slate-400">Făcute: <strong className="text-emerald-600 dark:text-emerald-400">{done}</strong>/{sub.lessons}</span>
-                                              <span className={`text-xs font-bold ${remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
-                                                {remaining === 0 ? 'Complet' : `${remaining} rămase`}
+                                              <span className="text-xs text-slate-500 dark:text-slate-400">Făcute: <strong className={over > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}>{done}</strong>/{sub.lessons}</span>
+                                              <span className={`text-xs font-bold ${over > 0 ? 'text-orange-600 dark:text-orange-400' : remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
+                                                {over > 0 ? `+${over} peste abonament` : remaining === 0 ? 'Complet' : `${remaining} rămase`}
                                               </span>
                                             </div>
                                             <div className="flex items-center gap-3 text-[11px] pt-0.5">

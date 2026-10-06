@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, friendlyDbError } from '@/lib/supabase';
 import { withTeacherNames } from '@/lib/pricing';
+import { currentPeriod } from '@/lib/payments';
+import { parseCreditMoney } from '@/lib/credits';
 import type { StudentSubscription } from '@/lib/types';
 
 type Params = { params: Promise<{ id: string }> };
@@ -47,6 +49,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (update.parent_name === '') update.parent_name = null;
     if (update.parent_phone === '') update.parent_phone = null;
 
+    // Fetched before the write so a changed per-instrument fee can be told
+    // apart from one that was always this value.
+    const prevSubs: StudentSubscription[] = 'subscriptions' in update
+      ? ((await supabase.from('students').select('subscriptions').eq('id', id).single()).data?.subscriptions ?? [])
+      : [];
+
     let { data: student, error } = await supabase.from('students').update(update).eq('id', id).select().single();
     // subscriptions/parent_name/parent_phone columns not migrated yet — retry without them.
     if (error && /subscriptions|parent_name|parent_phone/.test(error.message)) {
@@ -56,6 +64,34 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
     if (error) return NextResponse.json({ error: friendlyDbError(error) }, { status: 400 });
     if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+
+    // An instrument's price just changed — push it into any UNPAID payment
+    // already sitting in the current or a future month, so the admin doesn't
+    // have to go find and hand-edit it. Paid/partial rows are history and are
+    // never touched; the credit already applied to a row (if any) is kept as
+    // it was, only the base fee portion changes.
+    if ('subscriptions' in update) {
+      const newSubs: StudentSubscription[] = (update.subscriptions as StudentSubscription[]) ?? [];
+      const prevFee = new Map(prevSubs.map(s => [s.instrument, Number(s.monthly_fee)]));
+      const changed = newSubs.filter(s => prevFee.has(s.instrument) && prevFee.get(s.instrument) !== Number(s.monthly_fee));
+      if (changed.length > 0) {
+        const { month, year } = currentPeriod();
+        for (const sub of changed) {
+          const { data: rows } = await supabase
+            .from('payments')
+            .select('id, amount, notes, month, year')
+            .eq('student_id', id).eq('service', sub.instrument).eq('status', 'unpaid');
+          for (const r of rows ?? []) {
+            if (r.year < year || (r.year === year && r.month < month)) continue; // past period — leave it
+            const creditMoney = parseCreditMoney(r.notes) ?? 0;
+            const newAmount = Math.max(0, Math.round(Number(sub.monthly_fee)) - creditMoney);
+            if (newAmount === Math.round(Number(r.amount))) continue;
+            await supabase.from('payments').update({ amount: newAmount }).eq('id', r.id);
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ student });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
