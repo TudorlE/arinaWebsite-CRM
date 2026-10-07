@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 import { StudentSubscription, MONTHS } from './types';
 import { todayChisinau, currentPeriodChisinau, monthEnd } from './dates';
 import { perLessonPrice } from './pricing';
-import { countAbsences, creditLessons, creditMoney, initialRow, planRowUpdate, type CreditLesson } from './credits';
+import { countAbsences, creditLessons, creditMoney, extraLessons, initialRow, planRowUpdate, type CreditLesson } from './credits';
 
 /* ─────────────────────────────────────────────────────────────
  *  Types
@@ -102,6 +102,72 @@ export async function computeCredits(
       out.set(`${s.id}|${sub.instrument}`, {
         student_id: s.id, service: sub.instrument, credit_lessons: lessonsCredit, per_lesson: perLesson, credit_amount: money,
         excused: abs.excused, recovered: abs.recovered, from_month: prev.month, from_year: prev.year, from_label: fromLabel,
+      });
+    }
+  }
+  return out;
+}
+
+/* ─────────────────────────────────────────────────────────────
+ *  Lesson overage — the inverse of a credit: lessons already marked in the
+ *  register THIS month beyond the subscription's quota (e.g. a student kept
+ *  coming without renewing a bigger plan) are billed same-month at the
+ *  per-lesson rate, on top of the subscription fee (see lib/credits.ts).
+ * ────────────────────────────────────────────────────────────*/
+export interface OverageInfo {
+  student_id: number;
+  service: string;
+  extra_lessons: number;
+  per_lesson: number;
+  extra_amount: number;
+  consumed: number;
+  month: number;
+  year: number;
+  label: string;
+}
+
+/** Overage owed by each active student/instrument for `period` (the CURRENT month), keyed `${studentId}|${instrument}`. */
+export async function computeOverage(
+  period: { month: number; year: number },
+  students: StudentRow[],
+): Promise<Map<string, OverageInfo>> {
+  const out = new Map<string, OverageInfo>();
+  const ids = students.map(s => s.id);
+  if (ids.length === 0) return out;
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('student_id, discipline, date, time, status, replacement_teacher_id, attendance(status)')
+    .gte('date', `${period.year}-${String(period.month).padStart(2, '0')}-01`)
+    .lte('date', monthEnd(period.year, period.month))
+    .in('student_id', ids);
+  if (error) throw new Error(error.message);
+
+  type Row = { student_id: number; discipline: string | null; date: string; time: string; status: string; replacement_teacher_id: number | null; attendance: { status: string } | { status: string }[] | null };
+  const lessons: CreditLesson[] = ((data ?? []) as Row[]).map(l => {
+    const att = Array.isArray(l.attendance) ? l.attendance[0] : l.attendance;
+    return {
+      student_id: l.student_id, discipline: l.discipline, date: l.date, time: l.time, status: l.status,
+      attendance_status: att?.status ?? null, replacement_teacher_id: l.replacement_teacher_id ?? null,
+    };
+  });
+
+  const byId = new Map(students.map(s => [s.id, s]));
+  const activeInstruments = (id: number) => (byId.get(id)?.subscriptions ?? []).filter(x => (x.status ?? 'active') === 'active').map(x => x.instrument);
+  const consumption = countAbsences(lessons, activeInstruments);
+  const label = MONTHS[period.month - 1].toLowerCase();
+
+  for (const s of students) {
+    if ((s.status ?? 'active') !== 'active') continue;
+    for (const sub of s.subscriptions ?? []) {
+      if ((sub.status ?? 'active') !== 'active') continue;
+      const consumed = consumption.get(`${s.id}|${sub.instrument}`)?.consumed ?? 0;
+      const extra = extraLessons(consumed, sub.lessons);
+      const perLesson = perLessonPrice(sub.instrument, sub.plan);
+      const money = creditMoney(extra, perLesson);
+      if (money <= 0 || !perLesson) continue;
+      out.set(`${s.id}|${sub.instrument}`, {
+        student_id: s.id, service: sub.instrument, extra_lessons: extra, per_lesson: perLesson, extra_amount: money,
+        consumed, month: period.month, year: period.year, label,
       });
     }
   }
@@ -234,23 +300,29 @@ export async function createMonthlyPayments(
     }
   }
 
-  // Lesson credit from last month's serious-reason absences. If it can't be
-  // computed, rows are simply left as they are (never guessed).
+  // Lesson credit from last month's serious-reason absences, and lesson
+  // overage from THIS month's register going past the subscription's quota.
+  // If either can't be computed, those rows are simply left as they are
+  // (never guessed).
   let credits: Map<string, CreditInfo> | null = null;
   try { credits = await computeCredits(period, (students ?? []) as StudentRow[]); } catch { credits = null; }
+  let overage: Map<string, OverageInfo> | null = null;
+  try { overage = await computeOverage(period, (students ?? []) as StudentRow[]); } catch { overage = null; }
   const prevLabel = MONTHS[previousPeriod(period).month - 1].toLowerCase();
+  const curLabel = MONTHS[period.month - 1].toLowerCase();
 
-  // 3c) bring untouched unpaid rows in line with the current credit
+  // 3c) bring untouched unpaid rows in line with the current credit/overage
   let adjusted = 0;
-  if (credits) {
+  if (credits || overage) {
     for (const r of rows) {
       if (!r.service) continue;
       const sub = activeSubs(studentById.get(r.student_id)).find(x => x.instrument === r.service);
       if (!sub) continue;
-      const credit = credits.get(`${r.student_id}|${r.service}`)?.credit_lessons ?? 0;
+      const credit = credits?.get(`${r.student_id}|${r.service}`)?.credit_lessons ?? 0;
+      const extra = overage?.get(`${r.student_id}|${r.service}`)?.extra_lessons ?? 0;
       const change = planRowUpdate(
         { amount: r.amount, status: r.status, notes: r.notes }, Number(sub.monthly_fee) || 0,
-        perLessonPrice(sub.instrument, sub.plan), credit, prevLabel,
+        perLessonPrice(sub.instrument, sub.plan), credit, prevLabel, extra, curLabel,
       );
       if (!change) continue;
       const { error } = await supabase.from('payments').update({ amount: change.amount, notes: change.notes }).eq('id', r.id);
@@ -268,7 +340,8 @@ export async function createMonthlyPayments(
       if (have.has(`${s.id}|${sub.instrument}`)) { skipped++; continue; }
       have.add(`${s.id}|${sub.instrument}`);
       const credit = credits?.get(`${s.id}|${sub.instrument}`)?.credit_lessons ?? 0;
-      const first = initialRow(Number(sub.monthly_fee) || 0, perLessonPrice(sub.instrument, sub.plan), credit, prevLabel);
+      const extra = overage?.get(`${s.id}|${sub.instrument}`)?.extra_lessons ?? 0;
+      const first = initialRow(Number(sub.monthly_fee) || 0, perLessonPrice(sub.instrument, sub.plan), credit, prevLabel, extra, curLabel);
       toInsert.push({
         student_id: s.id,
         amount: first.amount,

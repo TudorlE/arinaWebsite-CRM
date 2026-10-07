@@ -12,7 +12,7 @@ import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { Payment, MONTHS, Student, StudentSubscription } from '@/lib/types';
-import { parseCredit } from '@/lib/credits';
+import { parseCredit, parseOverage } from '@/lib/credits';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -38,6 +38,14 @@ interface CreditRow {
   from_label: string;
 }
 
+interface OverageRow {
+  student_id: number;
+  service: string;
+  extra_lessons: number;
+  extra_amount: number;
+  label: string;
+}
+
 /** Lecții pierdute din motive serioase luna trecută — scăzute din abonamentul acesta. */
 function CreditNote({ credit, applied }: { credit: CreditRow; applied: boolean }) {
   return (
@@ -46,6 +54,18 @@ function CreditNote({ credit, applied }: { credit: CreditRow; applied: boolean }
       title={applied ? undefined : 'Suma acestei plăți nu include creditul (a fost deja plătită sau modificată manual). Scade manual dacă e cazul.'}
     >
       ↩ {credit.service !== '' ? `${credit.service}: ` : ''}credit {credit.credit_lessons} {credit.credit_lessons === 1 ? 'lecție' : 'lecții'} din {credit.from_label}: −{credit.credit_amount.toLocaleString()} MDL{applied ? '' : ' (neaplicat)'}
+    </p>
+  );
+}
+
+/** Lecții făcute luna asta peste câte are elevul în abonament — se adaugă la plată, la preț de lecție individuală. */
+function OverageNote({ overage, applied }: { overage: OverageRow; applied: boolean }) {
+  return (
+    <p
+      className={`text-[11px] font-semibold mt-1 ${applied ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'}`}
+      title={applied ? undefined : 'Suma acestei plăți nu include suplimentul (a fost deja plătită sau modificată manual). Adaugă manual dacă e cazul.'}
+    >
+      ⚠ {overage.service !== '' ? `${overage.service}: ` : ''}+{overage.extra_lessons} {overage.extra_lessons === 1 ? 'lecție' : 'lecții'} peste abonament ({overage.label}): +{overage.extra_amount.toLocaleString()} MDL{applied ? '' : ' (neaplicat)'}
     </p>
   );
 }
@@ -84,17 +104,31 @@ export default function PaymentsPage() {
   const { data: periodData, mutate: mutatePeriod } = useSWR(`/api/payments?${periodParams}`, fetcher, { keepPreviousData: true });
   const periodPayments: Payment[] = periodData?.payments ?? [];
 
-  // Lesson credits owed this month (serious-reason absences from last month).
-  const { data: creditsData, mutate: mutateCredits } = useSWR<{ credits: CreditRow[] }>(
+  // Lesson credits owed this month (serious-reason absences from last month),
+  // and lesson overage (register lessons this month past the subscription's quota).
+  const { data: creditsData, mutate: mutateCredits } = useSWR<{ credits: CreditRow[]; overage: OverageRow[] }>(
     `/api/payments/credits?month=${monthFilter}&year=${yearFilter}`, fetcher, { keepPreviousData: true },
   );
   const creditOf = (studentId: number, service?: string | null) =>
     (creditsData?.credits ?? []).find(c => c.student_id === studentId && c.service === service);
-  /** Is the credit really reflected in this payment (notes say so AND the amount was reduced by it)? */
+  const overageOf = (studentId: number, service?: string | null) =>
+    (creditsData?.overage ?? []).find(o => o.student_id === studentId && o.service === service);
+  /** What the amount SHOULD be right now, given the current credit and overage for that student/instrument. */
+  const expectedAmount = (studentId: number, service: string) => {
+    const fee = (studentSubsById.get(studentId) ?? []).find(x => x.instrument === service)?.monthly_fee ?? 0;
+    const credit = creditOf(studentId, service);
+    const overage = overageOf(studentId, service);
+    return Math.max(0, Math.round(fee) - (credit?.credit_amount ?? 0) + (overage?.extra_amount ?? 0));
+  };
+  /** Is the credit really reflected in this payment (notes say so AND the amount matches)? */
   const creditApplied = (p: Payment, credit: CreditRow, studentId: number) => {
-    const fee = (studentSubsById.get(studentId) ?? []).find(x => x.instrument === credit.service)?.monthly_fee ?? 0;
     if (p.status === 'unpaid' && !periodSettled) return true; // the automatic sync is still applying it
-    return parseCredit(p.notes) === credit.credit_lessons && Math.round(p.amount) === Math.max(0, Math.round(fee) - credit.credit_amount);
+    return parseCredit(p.notes) === credit.credit_lessons && Math.round(p.amount) === expectedAmount(studentId, credit.service);
+  };
+  /** Is the overage really reflected in this payment (notes say so AND the amount matches)? */
+  const overageApplied = (p: Payment, overage: OverageRow, studentId: number) => {
+    if (p.status === 'unpaid' && !periodSettled) return true;
+    return parseOverage(p.notes) === overage.extra_lessons && Math.round(p.amount) === expectedAmount(studentId, overage.service);
   };
 
   // Student status lookup — paused/inactive students are hidden by default (req. 11).
@@ -242,7 +276,7 @@ export default function PaymentsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast(`${data.created} plăți adăugate${data.removed ? `, ${data.removed} duplicate/inactivi eliminate` : ''}${data.adjusted ? `, ${data.adjusted} sume ajustate cu credit` : ''}`, 'success');
+        toast(`${data.created} plăți adăugate${data.removed ? `, ${data.removed} duplicate/inactivi eliminate` : ''}${data.adjusted ? `, ${data.adjusted} sume ajustate (credit/supliment)` : ''}`, 'success');
         mutate(); mutateRevenue(); mutatePeriod();
       } else {
         toast(data.error ?? 'Eroare la generare', 'error');
@@ -499,6 +533,10 @@ export default function PaymentsPage() {
                       const c = creditOf(payment.student_id, payment.service);
                       return c ? <CreditNote credit={{ ...c, service: '' }} applied={creditApplied(payment, c, payment.student_id)} /> : null;
                     })()}
+                    {(() => {
+                      const o = overageOf(payment.student_id, payment.service);
+                      return o ? <OverageNote overage={{ ...o, service: '' }} applied={overageApplied(payment, o, payment.student_id)} /> : null;
+                    })()}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
                     <div className="text-right">
@@ -566,8 +604,14 @@ export default function PaymentsPage() {
                   </div>
                   {row.subs.map(sub => {
                     const c = creditOf(row.studentId, sub.instrument);
+                    const o = overageOf(row.studentId, sub.instrument);
                     const match = periodPayments.find(pp => pp.student_id === row.studentId && pp.service === sub.instrument);
-                    return c ? <CreditNote key={sub.instrument} credit={c} applied={!!match && creditApplied(match, c, row.studentId)} /> : null;
+                    return (
+                      <div key={sub.instrument}>
+                        {c && <CreditNote credit={c} applied={!!match && creditApplied(match, c, row.studentId)} />}
+                        {o && <OverageNote overage={o} applied={!!match && overageApplied(match, o, row.studentId)} />}
+                      </div>
+                    );
                   })}
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-auto">

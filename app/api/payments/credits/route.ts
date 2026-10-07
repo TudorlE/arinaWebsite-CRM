@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { computeCredits, currentPeriod } from '@/lib/payments';
+import { computeCredits, computeOverage, currentPeriod } from '@/lib/payments';
 import type { StudentSubscription } from '@/lib/types';
 
 /**
  * GET /api/payments/credits?month=1-12&year=YYYY
  * Lesson credits owed for that month (from last month's serious-reason
- * absences) — what the Plăți page shows next to each affected row.
+ * absences), and lesson overage (register lessons this month past the
+ * subscription's quota) — what the Plăți page shows next to each affected row.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -19,8 +20,12 @@ export async function GET(request: NextRequest) {
   const { data: students, error } = await supabase.from('students').select('id, status, subscriptions');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   try {
-    const credits = await computeCredits({ month, year }, (students ?? []) as { id: number; status?: string | null; subscriptions: StudentSubscription[] | null }[]);
-    return NextResponse.json({ credits: Array.from(credits.values()) });
+    const typedStudents = (students ?? []) as { id: number; status?: string | null; subscriptions: StudentSubscription[] | null }[];
+    const [credits, overage] = await Promise.all([
+      computeCredits({ month, year }, typedStudents),
+      computeOverage({ month, year }, typedStudents),
+    ]);
+    return NextResponse.json({ credits: Array.from(credits.values()), overage: Array.from(overage.values()) });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Eroare' }, { status: 500 });
   }

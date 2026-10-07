@@ -70,6 +70,17 @@ export function creditLessons(abs: Absence | undefined, subscriptionLessons: num
   return Math.max(0, Math.min(netExcused, shortfall));
 }
 
+/**
+ * The inverse of a credit: lessons actually delivered (present, unexcused,
+ * replaced, late — same `consumed` tally used above) beyond the subscription's
+ * quota for the month. A student booked for extra sessions on top of their
+ * plan owes for those extra lessons at the per-lesson rate, same month.
+ */
+export function extraLessons(consumed: number, subscriptionLessons: number): number {
+  const lessons = Number(subscriptionLessons) || 0;
+  return Math.max(0, (Number(consumed) || 0) - lessons);
+}
+
 /** Money for that many lessons at the plan's per-lesson price. No per-lesson price (e.g. flat group lesson) → no credit. */
 export function creditMoney(lessons: number, perLesson: number | null | undefined): number {
   if (!perLesson || perLesson <= 0 || lessons <= 0) return 0;
@@ -109,38 +120,85 @@ export function withCreditNote(notes: string | null | undefined, line: string | 
   return out || null;
 }
 
+const OVERAGE_LINE = /^Supliment (\d+) lec[^\n]*$/m;
+const OVERAGE_LINE_DETAIL = /^Supliment (\d+) lec(?:ție|ții) × ([\d.]+) = \+([\d.]+) MDL/m;
+
+export function overageNoteLine(lessons: number, perLesson: number, money: number, label: string): string {
+  return `Supliment ${lessons} ${lessons === 1 ? 'lecție' : 'lecții'} × ${perLesson} = +${money} MDL (peste abonament, ${label})`;
+}
+
+/** Overage lessons recorded in a payment's notes (0 if none). */
+export function parseOverage(notes: string | null | undefined): number {
+  const m = (notes ?? '').match(OVERAGE_LINE);
+  return m ? Number(m[1]) : 0;
+}
+
+/** Money actually added by the overage line stored in `notes` (null if none, or unparsable). */
+export function parseOverageMoney(notes: string | null | undefined): number | null {
+  const m = (notes ?? '').match(OVERAGE_LINE_DETAIL);
+  return m ? Number(m[3]) : null;
+}
+
+/** Replace (or remove, with null) the overage line in the notes, leaving anything else intact. */
+export function withOverageNote(notes: string | null | undefined, line: string | null): string | null {
+  const rest = (notes ?? '').replace(/^Supliment \d+ lec[^\n]*(\n|$)/m, '').trim();
+  const out = [rest, line].filter(Boolean).join('\n');
+  return out || null;
+}
+
 /** Amount and notes for a brand-new payment row. */
-export function initialRow(base: number, perLesson: number | null, credit: number, fromLabel: string): { amount: number; notes: string | null } {
-  const money = creditMoney(credit, perLesson);
-  if (money <= 0) return { amount: Math.round(base), notes: null };
-  return { amount: amountAfterCredit(base, money), notes: creditNoteLine(credit, perLesson as number, money, fromLabel) };
+export function initialRow(
+  base: number,
+  perLesson: number | null,
+  credit: number,
+  creditLabel: string,
+  overage: number = 0,
+  overageLabel: string = '',
+): { amount: number; notes: string | null } {
+  const creditMoneyAmt = creditMoney(credit, perLesson);
+  const overageMoneyAmt = creditMoney(overage, perLesson);
+  if (creditMoneyAmt <= 0 && overageMoneyAmt <= 0) return { amount: Math.round(base), notes: null };
+  const lines: string[] = [];
+  if (creditMoneyAmt > 0) lines.push(creditNoteLine(credit, perLesson as number, creditMoneyAmt, creditLabel));
+  if (overageMoneyAmt > 0) lines.push(overageNoteLine(overage, perLesson as number, overageMoneyAmt, overageLabel));
+  return { amount: Math.max(0, Math.round(base) - creditMoneyAmt + overageMoneyAmt), notes: lines.join('\n') };
 }
 
 /**
- * What to change on an EXISTING row so it matches the current credit, or null to
- * leave it alone. Only unpaid rows still holding the exact amount the system set
- * are touched — paid/partial rows and amounts edited by hand are never changed.
+ * What to change on an EXISTING row so it matches the current credit and
+ * overage, or null to leave it alone. Only unpaid rows still holding the
+ * exact amount the system set are touched — paid/partial rows and amounts
+ * edited by hand are never changed.
  */
 export function planRowUpdate(
   row: { amount: number; status: string; notes: string | null },
   base: number,
   perLesson: number | null,
   newCredit: number,
-  fromLabel: string,
+  creditLabel: string,
+  newOverage: number = 0,
+  overageLabel: string = '',
 ): { amount: number; notes: string | null } | null {
   if (row.status !== 'unpaid') return null;
   const oldCredit = parseCredit(row.notes);
-  // The money actually deducted, as recorded in the note — not recomputed at
+  // The money actually applied, as recorded in the note — not recomputed at
   // today's per-lesson price. A price change (lib/pricing.ts) must never make
   // an untouched row look "manually edited" just because the live rate moved.
-  const oldMoney = oldCredit > 0 ? (parseCreditMoney(row.notes) ?? creditMoney(oldCredit, perLesson)) : 0;
-  if (Math.round(Number(row.amount)) !== amountAfterCredit(base, oldMoney)) return null;
-  const newMoney = creditMoney(newCredit, perLesson);
-  const effective = newMoney > 0 ? newCredit : 0;
-  const newAmount = amountAfterCredit(base, newMoney);
-  if (effective === oldCredit && newAmount === Math.round(Number(row.amount))) return null;
-  return {
-    amount: newAmount,
-    notes: withCreditNote(row.notes, effective > 0 ? creditNoteLine(effective, perLesson as number, newMoney, fromLabel) : null),
-  };
+  const oldCreditMoney = oldCredit > 0 ? (parseCreditMoney(row.notes) ?? creditMoney(oldCredit, perLesson)) : 0;
+  const oldOverage = parseOverage(row.notes);
+  const oldOverageMoney = oldOverage > 0 ? (parseOverageMoney(row.notes) ?? creditMoney(oldOverage, perLesson)) : 0;
+  const expectedOldAmount = Math.max(0, Math.round(base) - oldCreditMoney + oldOverageMoney);
+  if (Math.round(Number(row.amount)) !== expectedOldAmount) return null;
+
+  const newCreditMoney = creditMoney(newCredit, perLesson);
+  const newOverageMoney = creditMoney(newOverage, perLesson);
+  const effectiveCredit = newCreditMoney > 0 ? newCredit : 0;
+  const effectiveOverage = newOverageMoney > 0 ? newOverage : 0;
+  const newAmount = Math.max(0, Math.round(base) - newCreditMoney + newOverageMoney);
+  if (effectiveCredit === oldCredit && effectiveOverage === oldOverage && newAmount === Math.round(Number(row.amount))) return null;
+
+  let notes = withCreditNote(row.notes, effectiveCredit > 0 ? creditNoteLine(effectiveCredit, perLesson as number, newCreditMoney, creditLabel) : null);
+  notes = withOverageNote(notes, effectiveOverage > 0 ? overageNoteLine(effectiveOverage, perLesson as number, newOverageMoney, overageLabel) : null);
+
+  return { amount: newAmount, notes };
 }
