@@ -173,8 +173,15 @@ export default function PaymentsPage() {
     displayRows.push({ kind: 'group', studentId, studentName, subs, ids, billableIds, totalAmount, overallStatus, sortKey });
   }
 
-  // List reads bottom-up: oldest at top, most recent added at the bottom.
-  const sorted = displayRows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  // Neachitate (și parțiale) sus, plătite jos — în cadrul aceluiași status,
+  // cel mai vechi rând rămâne primul.
+  const STATUS_SORT_RANK: Record<string, number> = { unpaid: 0, overdue: 0, partial: 1, paused: 2, paid: 3 };
+  const statusOf = (r: DisplayRow) => r.kind === 'single' ? r.payment.status : r.overallStatus;
+  const sorted = displayRows.sort((a, b) => {
+    const rankDiff = (STATUS_SORT_RANK[statusOf(a)] ?? 1) - (STATUS_SORT_RANK[statusOf(b)] ?? 1);
+    if (rankDiff !== 0) return rankDiff;
+    return a.sortKey.localeCompare(b.sortKey);
+  });
 
   const summaryTotal = (summary?.paidCount ?? 0) + (summary?.unpaidCount ?? 0) + (summary?.partialCount ?? 0);
   const pct = (n: number) => summaryTotal > 0 ? Math.round((n / summaryTotal) * 100) : 0;
