@@ -113,22 +113,23 @@ export default function PaymentsPage() {
     (creditsData?.credits ?? []).find(c => c.student_id === studentId && c.service === service);
   const overageOf = (studentId: number, service?: string | null) =>
     (creditsData?.overage ?? []).find(o => o.student_id === studentId && o.service === service);
-  /** What the amount SHOULD be right now, given the current credit and overage for that student/instrument. */
-  const expectedAmount = (studentId: number, service: string) => {
-    const fee = (studentSubsById.get(studentId) ?? []).find(x => x.instrument === service)?.monthly_fee ?? 0;
-    const credit = creditOf(studentId, service);
-    const overage = overageOf(studentId, service);
-    return Math.max(0, Math.round(fee) - (credit?.credit_amount ?? 0) + (overage?.extra_amount ?? 0));
+  /** Every payment row for a student+instrument this period — usually one, but
+   * an overage billed after the subscription row was already settled lives
+   * on its own separate row, so this can legitimately return two. */
+  const rowsForInstrument = (studentId: number, instrument?: string | null) =>
+    periodPayments.filter(pp => pp.student_id === studentId && pp.service === instrument);
+  /** Is the credit for this instrument fully reflected across ALL of its rows? */
+  const creditApplied = (studentId: number, credit: CreditRow) => {
+    const rows = rowsForInstrument(studentId, credit.service);
+    if (rows.length === 0 && !periodSettled) return true; // the automatic sync hasn't created the row yet
+    return rows.reduce((s, r) => s + parseCredit(r.notes), 0) === credit.credit_lessons;
   };
-  /** Is the credit really reflected in this payment (notes say so AND the amount matches)? */
-  const creditApplied = (p: Payment, credit: CreditRow, studentId: number) => {
-    if (p.status === 'unpaid' && !periodSettled) return true; // the automatic sync is still applying it
-    return parseCredit(p.notes) === credit.credit_lessons && Math.round(p.amount) === expectedAmount(studentId, credit.service);
-  };
-  /** Is the overage really reflected in this payment (notes say so AND the amount matches)? */
-  const overageApplied = (p: Payment, overage: OverageRow, studentId: number) => {
-    if (p.status === 'unpaid' && !periodSettled) return true;
-    return parseOverage(p.notes) === overage.extra_lessons && Math.round(p.amount) === expectedAmount(studentId, overage.service);
+  /** Is the overage for this instrument fully reflected across ALL of its rows
+   * (the subscription row, a top-up row, or both put together)? */
+  const overageApplied = (studentId: number, overage: OverageRow) => {
+    const rows = rowsForInstrument(studentId, overage.service);
+    if (rows.length === 0 && !periodSettled) return true;
+    return rows.reduce((s, r) => s + parseOverage(r.notes), 0) === overage.extra_lessons;
   };
 
   // Student status lookup — paused/inactive students are hidden by default (req. 11).
@@ -136,9 +137,19 @@ export default function PaymentsPage() {
   const studentStatusById = new Map<number, string>((studentsData?.students ?? []).map((s: Student) => [s.id, s.status ?? 'active']));
   const studentSubsById = new Map<number, StudentSubscription[]>((studentsData?.students ?? []).map((s: Student) => [s.id, s.subscriptions ?? []]));
 
-  /** Per-instrument status for a student this period — 'unpaid' when no payment row exists yet, matching PaymentForm's own fallback. */
-  const instrumentStatus = (studentId: number, instrument: string): Payment['status'] =>
-    periodPayments.find(p => p.student_id === studentId && p.service === instrument)?.status ?? 'unpaid';
+  /** Combined status across every row of one instrument — 'unpaid' when no
+   * row exists yet; 'paid' only once ALL its (non-paused) rows are paid; a
+   * mix (e.g. the subscription paid, a later overage top-up still unpaid)
+   * reads as 'partial', exactly like it would for two different instruments. */
+  const instrumentStatus = (studentId: number, instrument: string): Payment['status'] => {
+    const rows = rowsForInstrument(studentId, instrument);
+    if (rows.length === 0) return 'unpaid';
+    const billable = rows.filter(r => r.status !== 'paused');
+    if (billable.length === 0) return 'paused';
+    if (billable.every(r => r.status === 'paid')) return 'paid';
+    if (billable.some(r => r.status === 'paid' || r.status === 'partial')) return 'partial';
+    return 'unpaid';
+  };
 
   const revenueParams = new URLSearchParams();
   if (monthFilter) revenueParams.set('month', monthFilter);
@@ -187,19 +198,22 @@ export default function PaymentsPage() {
     let sortKey = '';
     let anyPaid = false, anyUnpaid = false, anyPartial = false, anyBillable = false;
     for (const sub of subs) {
-      const match = periodPayments.find(pp => pp.student_id === studentId && pp.service === sub.instrument);
-      const st = match?.status ?? 'unpaid';
-      if (match) {
+      // Usually one row per instrument, but an overage billed after the
+      // subscription row was already settled lives on its own extra row —
+      // every row counts toward the total and the bulk "mark paid" action.
+      const matches = rowsForInstrument(studentId, sub.instrument);
+      for (const match of matches) {
         ids.push(match.id);
         totalAmount += match.amount;
         if (match.created_at > sortKey) sortKey = match.created_at;
       }
+      const st = instrumentStatus(studentId, sub.instrument);
       // A paused instrument carries no obligation — it doesn't drag the
       // student's overall status down to "unpaid", it's just excluded, and
       // it never gets swept into a bulk "mark paid".
       if (st === 'paused') continue;
       anyBillable = true;
-      if (match) billableIds.push(match.id);
+      billableIds.push(...matches.filter(m => m.status !== 'paused').map(m => m.id));
       if (st === 'paid') anyPaid = true; else if (st === 'partial') anyPartial = true; else anyUnpaid = true;
     }
     const overallStatus: Payment['status'] = !anyBillable ? 'paused'
@@ -531,11 +545,11 @@ export default function PaymentsPage() {
                     </p>
                     {(() => {
                       const c = creditOf(payment.student_id, payment.service);
-                      return c ? <CreditNote credit={{ ...c, service: '' }} applied={creditApplied(payment, c, payment.student_id)} /> : null;
+                      return c ? <CreditNote credit={{ ...c, service: '' }} applied={creditApplied(payment.student_id, c)} /> : null;
                     })()}
                     {(() => {
                       const o = overageOf(payment.student_id, payment.service);
-                      return o ? <OverageNote overage={{ ...o, service: '' }} applied={overageApplied(payment, o, payment.student_id)} /> : null;
+                      return o ? <OverageNote overage={{ ...o, service: '' }} applied={overageApplied(payment.student_id, o)} /> : null;
                     })()}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
@@ -605,11 +619,10 @@ export default function PaymentsPage() {
                   {row.subs.map(sub => {
                     const c = creditOf(row.studentId, sub.instrument);
                     const o = overageOf(row.studentId, sub.instrument);
-                    const match = periodPayments.find(pp => pp.student_id === row.studentId && pp.service === sub.instrument);
                     return (
                       <div key={sub.instrument}>
-                        {c && <CreditNote credit={c} applied={!!match && creditApplied(match, c, row.studentId)} />}
-                        {o && <OverageNote overage={o} applied={!!match && overageApplied(match, o, row.studentId)} />}
+                        {c && <CreditNote credit={c} applied={creditApplied(row.studentId, c)} />}
+                        {o && <OverageNote overage={o} applied={overageApplied(row.studentId, o)} />}
                       </div>
                     );
                   })}

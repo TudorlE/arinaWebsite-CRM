@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, friendlyDbError } from '@/lib/supabase';
 import { withTeacherNames } from '@/lib/pricing';
 import { currentPeriod } from '@/lib/payments';
-import { parseCreditMoney } from '@/lib/credits';
+import { parseCreditMoney, isOverageTopUpRow } from '@/lib/credits';
 import type { StudentSubscription } from '@/lib/types';
 
 type Params = { params: Promise<{ id: string }> };
@@ -83,6 +83,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
             .eq('student_id', id).eq('service', sub.instrument).eq('status', 'unpaid');
           for (const r of rows ?? []) {
             if (r.year < year || (r.year === year && r.month < month)) continue; // past period — leave it
+            if (isOverageTopUpRow(r.notes)) continue; // a supplementary overage row has no base fee to recompute
             const creditMoney = parseCreditMoney(r.notes) ?? 0;
             const newAmount = Math.max(0, Math.round(Number(sub.monthly_fee)) - creditMoney);
             if (newAmount === Math.round(Number(r.amount))) continue;

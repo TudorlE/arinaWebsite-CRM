@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { Payment, MONTHS, StudentSubscription } from '@/lib/types';
+import { isOverageTopUpRow } from '@/lib/credits';
 import {
   PRICING, SERVICE_KEYS, LESSON_COUNTS, subscriptionAmount, perLessonPrice, planSummary,
   type PlanType, type LessonCount,
@@ -57,6 +58,12 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   // payment `id` for that instrument/period (if any) so saving updates it
   // instead of creating a duplicate.
   const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }>>({});
+  // An instrument with more than one row this period (the subscription plus
+  // a separate overage top-up, say) can't be safely edited as a single
+  // Sumă+Status pair here without risking silently updating the wrong one —
+  // shown read-only instead, pointing at the list where each row is its own
+  // line with its own edit/delete.
+  const [splitInstruments, setSplitInstruments] = useState<Set<string>>(new Set());
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
   const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
@@ -114,10 +121,20 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     const periodPayments: Payment[] = (historyData?.payments ?? []).filter(
       (p: Payment) => p.month === monthNum && p.year === yearNum,
     );
+    const split = new Set<string>();
     setPerInstrument(() => {
       const next: Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }> = {};
       for (const sub of studentSubs) {
-        const existing = periodPayments.find((p: Payment) => p.service === sub.instrument);
+        const rows = periodPayments.filter((p: Payment) => p.service === sub.instrument);
+        if (rows.length > 1) {
+          split.add(sub.instrument);
+          // Still seeded (so the totals/labels below have something to show),
+          // but handleSubmit skips anything in `split` entirely.
+          const main = rows.find(r => !isOverageTopUpRow(r.notes)) ?? rows[0];
+          next[sub.instrument] = { status: main.status, amount: String(rows.reduce((s, r) => s + r.amount, 0)), notes: main.notes ?? null, comment: main.comment ?? '' };
+          continue;
+        }
+        const existing = rows[0];
         if (existing) {
           next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id, notes: existing.notes ?? null, comment: existing.comment ?? '' };
         } else {
@@ -127,6 +144,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       }
       return next;
     });
+    setSplitInstruments(split);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.student_id, form.month, form.year, studentSubs.length, historyData]);
 
@@ -190,7 +208,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         // this period, otherwise POST a new one.
         // Paused instruments are read-only here (system-managed by
         // createMonthlyPayments) — never submitted from this form.
-        const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused').map(sub => {
+        const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused' && !splitInstruments.has(sub.instrument)).map(sub => {
           const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
           const fallbackAmount = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
           // `Number(row.amount) || fallbackAmount` would silently replace an
@@ -294,6 +312,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                 // an editable Sumă+Status pair, so nobody can manually bill an instrument
                 // the student isn't actually taking right now.
                 const isPaused = sub.status === 'paused';
+                const isSplit = splitInstruments.has(sub.instrument);
                 return (
                   <div key={sub.instrument} className="rounded-lg border border-brand-200/70 dark:border-brand-900/40 bg-white/70 dark:bg-slate-900/30 p-2.5 space-y-2">
                     <div className="flex items-center justify-between">
@@ -306,6 +325,11 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                       <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
                         Pauză — fără taxă luna aceasta
+                      </div>
+                    ) : isSplit ? (
+                      <div className="flex flex-col gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-2.5 py-2">
+                        <span>Are mai multe plăți luna asta (abonament + supliment peste abonament) — total {Number(perInstrument[sub.instrument]?.amount ?? 0).toLocaleString()} MDL.</span>
+                        <span className="font-normal text-amber-600 dark:text-amber-500">Editează-le separat, din lista de Plăți.</span>
                       </div>
                     ) : (
                       <>
