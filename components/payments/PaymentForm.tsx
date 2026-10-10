@@ -55,10 +55,17 @@ const PAYMENT_DOT: Record<string, string> = {
  * unpaid row's amount — shown here so it's never missed or double-charged).
  */
 function FinancialSnapshot({ history }: { history: Payment[] }) {
-  const owed = history.filter(p => p.status === 'unpaid' || p.status === 'partial');
+  // A payment row for a future month (e.g. next year's abonament, generated
+  // ahead of time) isn't a debt yet — only what's due up to and including the
+  // current month counts here, otherwise the totals balloon with months that
+  // haven't even started.
+  const currentYear = now.getFullYear(), currentMonth = now.getMonth() + 1;
+  const due = history.filter(p => p.year < currentYear || (p.year === currentYear && p.month <= currentMonth));
+
+  const owed = due.filter(p => p.status === 'unpaid' || p.status === 'partial');
   const totalOwed = owed.reduce((s, p) => s + Number(p.amount), 0);
 
-  const creditRows = history
+  const creditRows = due
     .filter(p => p.status === 'unpaid')
     .map(p => ({ p, money: parseCreditMoney(p.notes) ?? 0 }))
     .filter(x => x.money > 0);
