@@ -11,6 +11,11 @@ export function todayChisinau(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Chisinau', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
+/** Current time ('HH:MM') in Moldova, independent of the server's (UTC) timezone. */
+export function nowHHMMChisinau(): string {
+  return new Intl.DateTimeFormat('ro-RO', { timeZone: 'Europe/Chisinau', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+}
+
 /** {month 1-12, year} right now in Moldova. */
 export function currentPeriodChisinau(): { month: number; year: number } {
   const [y, m] = todayChisinau().split('-');

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useSWR from 'swr';
-import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, MessageSquare, Check } from 'lucide-react';
+import { ClipboardList, ChevronLeft, ChevronRight, Pencil, Trash2, MessageSquare, Check, CheckCircle2, XCircle, AlertCircle, Repeat, UserCheck, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LessonForm from '@/components/lessons/LessonForm';
@@ -13,8 +13,8 @@ import { Lesson, Student, Teacher, INSTRUMENTS, SOLFEGIU_GROUPS } from '@/lib/ty
 
 const SOLFEGIU = 'Solfegiu și teoria muzicii';
 import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
-import { localDateStr } from '@/lib/dates';
-import { symbolsForLesson, markForLesson, nextState, type Mark, type MarkAction, type Sym } from '@/lib/attendanceMarks';
+import { localDateStr, todayChisinau } from '@/lib/dates';
+import { symbolsForLesson, markForLesson, nextState, outcomeOf, type Mark, type MarkAction, type Sym } from '@/lib/attendanceMarks';
 import { inRegister, pickInstrument } from '@/lib/rosters';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -55,6 +55,141 @@ type MarkTarget = Lesson | { studentId: number; date: string; extra?: boolean };
 
 let tempIdCounter = 0;
 const nowMs = () => Date.now();
+
+const OUTCOME_BADGE: Record<string, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
+  present:   { label: 'Prezent',            className: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: CheckCircle2 },
+  excused:   { label: 'Absență motivată',   className: 'bg-amber-50 text-amber-700 border-amber-200',       Icon: AlertCircle },
+  unexcused: { label: 'Absență nemotivată', className: 'bg-rose-50 text-rose-700 border-rose-200',          Icon: XCircle },
+  recovered: { label: 'Recuperare',         className: 'bg-sky-50 text-sky-700 border-sky-200',             Icon: Repeat },
+  replaced:  { label: 'Înlocuire',          className: 'bg-violet-50 text-violet-700 border-violet-200',    Icon: UserCheck },
+  cancelled: { label: 'Anulată',            className: 'bg-slate-100 text-slate-500 border-slate-200',      Icon: XCircle },
+  late:      { label: 'Întârziere',         className: 'bg-blue-50 text-blue-700 border-blue-200',          Icon: Clock },
+};
+
+function dayParts(dateStr: string): { weekday: string; day: number; month: string } {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const weekday = d.toLocaleDateString('ro-RO', { weekday: 'long' });
+  const month = d.toLocaleDateString('ro-RO', { month: 'short' });
+  return { weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1), day: d.getDate(), month: month.replace('.', '') };
+}
+
+/**
+ * A student's own attendance, presented as a personal school-report timeline —
+ * not the admin/teacher spreadsheet grid, which is built around marking many
+ * students at once and means nothing to someone who can only ever see one row
+ * of it. Reuses the same month data already fetched above (now scoped
+ * server-side to this student alone) and the same outcome logic as the
+ * register, so a lesson is labeled identically everywhere in the app.
+ */
+function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel }: {
+  monthLessons: Lesson[];
+  setMonthRef: (fn: (d: Date) => Date) => void;
+  monthLabel: string;
+}) {
+  const sorted = [...monthLessons].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''));
+  const byDate: Record<string, Lesson[]> = {};
+  for (const l of sorted) (byDate[l.date] ??= []).push(l);
+  const dates = Object.keys(byDate).sort();
+
+  const counts = { present: 0, excused: 0, unexcused: 0 };
+  for (const l of monthLessons) {
+    const outcome = outcomeOf(l);
+    if (outcome === 'present') counts.present++;
+    else if (outcome === 'excused') counts.excused++;
+    else if (outcome === 'unexcused') counts.unexcused++;
+  }
+
+  const today = todayChisinau();
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <PageBanner icon={ClipboardList} title="Registru Frecvență" subtitle="Frecvența ta" accent="#E08A3C" />
+
+      <main className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-5">
+          {/* Month nav */}
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex-shrink-0">
+              <ChevronLeft className="w-5 h-5 text-slate-500" />
+            </button>
+            <span className="min-w-40 text-lg font-extrabold text-slate-900 dark:text-white text-center truncate">{monthLabel}</span>
+            <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex-shrink-0">
+              <ChevronRight className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Monthly summary */}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/15 p-3 sm:p-3.5 text-center">
+              <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">{counts.present}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-500 mt-0.5">Prezențe</p>
+            </div>
+            <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/15 p-3 sm:p-3.5 text-center">
+              <p className="text-xl sm:text-2xl font-extrabold text-amber-700 dark:text-amber-400">{counts.excused}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-500 mt-0.5">Motivate</p>
+            </div>
+            <div className="rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-900/15 p-3 sm:p-3.5 text-center">
+              <p className="text-xl sm:text-2xl font-extrabold text-rose-700 dark:text-rose-400">{counts.unexcused}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-500 mt-0.5">Nemotivate</p>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          {dates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+              <ClipboardList className="w-10 h-10 text-slate-300" />
+              <p className="text-sm font-semibold text-slate-400">Nicio lecție în luna asta</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {dates.map(date => {
+                const { weekday, day, month } = dayParts(date);
+                const isToday = date === today;
+                return (
+                  <div key={date}>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className={`flex flex-col items-center justify-center w-11 h-11 rounded-xl flex-shrink-0 ${isToday ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'}`}>
+                        <span className="text-[9px] font-bold uppercase leading-none">{month}</span>
+                        <span className="text-base font-extrabold leading-tight">{day}</span>
+                      </div>
+                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{weekday}{isToday ? ' · azi' : ''}</p>
+                    </div>
+                    <div className="space-y-2 pl-1">
+                      {byDate[date].map(l => {
+                        const outcome = outcomeOf(l);
+                        const badge = outcome ? OUTCOME_BADGE[outcome] : null;
+                        const Icon = badge?.Icon;
+                        return (
+                          <div key={l.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 shadow-sm flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <div className="flex items-center gap-3 min-w-[160px] flex-1">
+                              <span className="font-mono font-bold text-sm text-slate-700 dark:text-slate-200 flex-shrink-0 w-11">
+                                {(l.time ?? '').slice(0, 5)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{l.discipline || 'Lecție'}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {outcome === 'replaced' && l.replacement_teacher_name ? l.replacement_teacher_name : l.teacher_name}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`flex items-center gap-1 flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badge?.className ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                              {Icon && <Icon className="w-3 h-3" />}
+                              {badge?.label ?? 'Programată'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
 
 export default function AttendanceRegisterPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -386,6 +521,13 @@ export default function AttendanceRegisterPage() {
     setPopoverPos({ top, left, maxHeight });
     setActiveCell(key);
   };
+
+  // A student gets a dedicated, read-only, personal timeline instead of the
+  // multi-student marking grid below — that grid means nothing to someone who
+  // can only ever see their own single row of it.
+  if (role === 'student') {
+    return <StudentAttendanceView monthLessons={monthLessons} setMonthRef={setMonthRef} monthLabel={monthLabel} />;
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
