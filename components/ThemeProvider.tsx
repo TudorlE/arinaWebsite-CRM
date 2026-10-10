@@ -9,16 +9,22 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ theme: 'dark', toggleTheme: () => {} });
+const ThemeContext = createContext<ThemeContextType>({ theme: 'light', toggleTheme: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem('arry-theme') as Theme | null;
-    const initial = saved ?? 'dark';
+    // The CRM's main content area is a fixed light cream (--cream lives only
+    // under :root, never overridden in .dark) — only the sidebar is always
+    // dark navy regardless of this toggle. Defaulting to 'dark' here used to
+    // silently activate every dark: utility class (washed-out/invisible text
+    // on components that still carry a dark: variant) against that backdrop
+    // that never actually turns dark, with no visible toggle to undo it.
+    const initial = saved ?? 'light';
     setTheme(initial);
     document.documentElement.classList.toggle('dark', initial === 'dark');
   }, []);
