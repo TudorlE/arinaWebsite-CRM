@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findOrCreateGoogleUser } from '@/lib/db';
+import { findOrCreateGoogleUser } from '@/lib/users';
 import { signToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find or create user in our DB (pending approval if new)
-    const user = findOrCreateGoogleUser(profile.sub, profile.name ?? profile.email, profile.email);
+    const user = await findOrCreateGoogleUser(profile.sub, profile.name ?? profile.email, profile.email);
 
     if (user.status === 'pending') {
       return clearState(NextResponse.redirect(`${baseUrl}/login?google=pending`));

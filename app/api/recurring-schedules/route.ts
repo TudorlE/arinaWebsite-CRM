@@ -4,7 +4,10 @@ import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGua
 
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  const forbidden = requireRole(ctx, ['admin', 'teacher']);
+  // 'student' and 'administrator' both need this for "Program General" — the
+  // one shared, unscoped timetable view (see /admin/general-schedule); only
+  // 'teacher' gets narrowed below to their own schedules.
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher', 'student']);
   if (forbidden) return forbidden;
 
   const { searchParams } = new URL(request.url);

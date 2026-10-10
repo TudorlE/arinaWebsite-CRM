@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { getUserByEmail } from '@/lib/db';
+import { getUserByEmail } from '@/lib/users';
 import { signToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = getUserByEmail(email);
-    if (!user) {
+    const user = await getUserByEmail(email.toLowerCase().trim());
+    if (!user || !user.password_hash) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
