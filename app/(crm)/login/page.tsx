@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Music, Mail, Lock, AlertCircle } from 'lucide-react';
-import Button from '@/components/ui/Button';
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,17 +47,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-100 dark:from-slate-950 dark:to-slate-900 px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center mb-4">
-            <Music className="w-6 h-6 text-white" />
-          </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Autentificare</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Acces rezervat echipei</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6">
+        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
@@ -69,7 +65,7 @@ export default function LoginPage() {
                   value={form.email}
                   onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                   placeholder="email@example.com"
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
                 />
               </div>
             </div>
@@ -83,7 +79,7 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-10 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="w-full pl-9 pr-10 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
                 />
                 <button type="button" tabIndex={-1} onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -107,9 +103,12 @@ export default function LoginPage() {
               <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
             )}
 
-            <Button type="submit" className="w-full justify-center py-2.5" disabled={loading}>
+            <button
+              type="submit" disabled={loading}
+              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {loading ? 'Se verifică…' : 'Intră în cont'}
-            </Button>
+            </button>
 
             <div className="flex items-center gap-3 py-1">
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
@@ -132,7 +131,7 @@ export default function LoginPage() {
 
         <p className="text-center text-xs text-slate-400 mt-6">
           Nu ai cont?{' '}
-          <Link href="/register" className="text-brand-600 dark:text-brand-400 font-semibold hover:underline">
+          <Link href="/register" className="text-slate-700 dark:text-slate-300 font-semibold hover:underline">
             Creează unul
           </Link>
         </p>
