@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { usePendingAutoLogin } from '@/lib/usePendingAutoLogin';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pendingNotice, setPendingNotice] = useState<'pending' | 'rejected' | null>(null);
+
+  // A cont aprobat chiar acum, cât timp era pe acest ecran, nu trebuie reintrodus
+  // manual — reîncearcă autentificarea singur, des, până intră.
+  usePendingAutoLogin(pendingNotice === 'pending', form.email, form.password, (ok, data) => {
+    if (ok) { router.push('/admin'); router.refresh(); }
+    else if (data.status === 'rejected') setPendingNotice('rejected');
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -90,7 +98,10 @@ export default function LoginPage() {
             {pendingNotice === 'pending' && (
               <div className="flex gap-2 px-3 py-2.5 rounded-lg bg-slate-100 border border-slate-200">
                 <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-600">Contul tău este în așteptare.</p>
+                <div>
+                  <p className="text-xs text-slate-600">Contul tău este în așteptare.</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Te conectăm automat de îndată ce ești aprobat — poți lăsa pagina deschisă.</p>
+                </div>
               </div>
             )}
             {pendingNotice === 'rejected' && (

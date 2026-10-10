@@ -1,15 +1,26 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Clock, Mail, User as UserIcon, Lock } from 'lucide-react';
+import { usePendingAutoLogin } from '@/lib/usePendingAutoLogin';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [rejected, setRejected] = useState(false);
+
+  // Chiar dacă rămâne pe acest ecran, intră automat de îndată ce un
+  // administrator îi aprobă contul — fără să mai revină să reintroducă datele.
+  usePendingAutoLogin(success && !rejected, form.email, form.password, (ok, data) => {
+    if (ok) { router.push('/admin'); router.refresh(); }
+    else if (data.status === 'rejected') setRejected(true);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +59,14 @@ export default function RegisterPage() {
         <div className="w-full max-w-sm text-center">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-200/70 p-8">
             <Clock className="w-8 h-8 mx-auto text-slate-400 mb-3" />
-            <p className="text-base font-semibold text-slate-900">Cererea ta este în așteptare.</p>
+            {rejected ? (
+              <p className="text-base font-semibold text-slate-900">Cont respins. Contactează un administrator.</p>
+            ) : (
+              <>
+                <p className="text-base font-semibold text-slate-900">Cererea ta este în așteptare.</p>
+                <p className="text-xs text-slate-400 mt-2">Te conectăm automat de îndată ce contul tău e aprobat.</p>
+              </>
+            )}
             <Link href="/login" className="inline-block mt-5 text-sm font-medium text-slate-700 hover:underline">
               Înapoi la conectare
             </Link>

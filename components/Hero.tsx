@@ -22,7 +22,7 @@ export default function Hero() {
       {/* Full-bleed background photo — spans the entire hero section, not just a side column */}
       <motion.div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} className="hero-img">
         <motion.img
-          style={{ scale: imgScale, position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}
+          style={{ scale: imgScale, position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }}
           src="/hero-arry.jpg"
           alt={h.imgAlt}
           className="ph"
@@ -39,15 +39,15 @@ export default function Hero() {
           </span>
 
           <RevealLines tag="h1"
-            style={{ fontSize: 'clamp(34px, 6.4vw, 82px)', lineHeight: 1.12, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, color: 'var(--tx)', textAlign: 'center' }}
+            style={{ fontSize: 'clamp(34px, 6.4vw, 82px)', lineHeight: 1.12, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, color: '#F7F3EC', textAlign: 'center' }}
             lines={h.lines}
           />
 
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--sand)', margin: '22px 0 0' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E3C9A4', margin: '22px 0 0' }}>
             {h.kicker}
           </p>
 
-          <p style={{ fontSize: 16, color: 'var(--tx-mut)', maxWidth: 440, margin: '26px auto 38px', lineHeight: 1.75 }}>
+          <p style={{ fontSize: 16, color: 'rgba(247,243,236,0.86)', maxWidth: 440, margin: '26px auto 38px', lineHeight: 1.75 }}>
             {h.desc}
           </p>
 
@@ -90,6 +90,12 @@ export default function Hero() {
         .hero-copy .eyebrow, .hero-copy h1, .hero-copy p {
           text-shadow: 0 2px 20px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.6);
         }
+        /* This section always sits over a photo with a dark scrim, regardless
+           of the site's light/dark theme — unlike the rest of the page, its
+           text must stay a fixed light color rather than following --tx
+           (which flips to dark in light mode and becomes unreadable here). */
+        .hero-copy .eyebrow { color: rgba(247,243,236,0.8); }
+        .hero-copy .eyebrow::before { background: #E3C9A4; }
         .hero-nav-scrim {
           background: linear-gradient(180deg, rgba(16,13,11,0.78) 0%, rgba(16,13,11,0.4) 55%, rgba(16,13,11,0) 100%);
           pointer-events: none;
