@@ -47,17 +47,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-100 dark:from-slate-950 dark:to-slate-900 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-100 px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Autentificare</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Acces rezervat echipei</p>
+          <h1 className="text-2xl font-bold text-slate-900">Autentificare</h1>
+          <p className="text-sm text-slate-500 mt-1">Acces rezervat echipei</p>
         </div>
 
-        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-200/70 dark:border-slate-800 p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-200/70 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+              <label className="text-sm font-medium text-slate-700">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
@@ -65,13 +65,13 @@ export default function LoginPage() {
                   value={form.email}
                   onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                   placeholder="email@example.com"
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-white text-slate-900 border-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Parolă</label>
+              <label className="text-sm font-medium text-slate-700">Parolă</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
@@ -79,7 +79,7 @@ export default function LoginPage() {
                   value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-10 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
+                  className="w-full pl-9 pr-10 py-2 text-sm rounded-lg border bg-white text-slate-900 border-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
                 />
                 <button type="button" tabIndex={-1} onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -88,36 +88,36 @@ export default function LoginPage() {
             </div>
 
             {pendingNotice === 'pending' && (
-              <div className="flex gap-2 px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div className="flex gap-2 px-3 py-2.5 rounded-lg bg-slate-100 border border-slate-200">
                 <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-600 dark:text-slate-300">Contul tău este în așteptare.</p>
+                <p className="text-xs text-slate-600">Contul tău este în așteptare.</p>
               </div>
             )}
             {pendingNotice === 'rejected' && (
-              <div className="flex gap-2 px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div className="flex gap-2 px-3 py-2.5 rounded-lg bg-slate-100 border border-slate-200">
                 <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-600 dark:text-slate-300">Cont respins. Contactează un administrator.</p>
+                <p className="text-xs text-slate-600">Cont respins. Contactează un administrator.</p>
               </div>
             )}
             {error && !pendingNotice && (
-              <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
+              <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
             )}
 
             <button
               type="submit" disabled={loading}
-              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Se verifică…' : 'Intră în cont'}
             </button>
 
             <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <div className="flex-1 h-px bg-slate-200" />
               <span className="text-xs text-slate-400">sau</span>
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <div className="flex-1 h-px bg-slate-200" />
             </div>
 
             <a href="/api/auth/google"
-              className="w-full h-10 flex items-center justify-center gap-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+              className="w-full h-10 flex items-center justify-center gap-2.5 rounded-lg border border-slate-300 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
               <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -131,7 +131,7 @@ export default function LoginPage() {
 
         <p className="text-center text-xs text-slate-400 mt-6">
           Nu ai cont?{' '}
-          <Link href="/register" className="text-slate-700 dark:text-slate-300 font-semibold hover:underline">
+          <Link href="/register" className="text-slate-700 font-semibold hover:underline">
             Creează unul
           </Link>
         </p>
