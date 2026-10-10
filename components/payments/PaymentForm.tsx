@@ -65,8 +65,11 @@ function FinancialSnapshot({ history }: { history: Payment[] }) {
   const owed = due.filter(p => p.status === 'unpaid' || p.status === 'partial');
   const totalOwed = owed.reduce((s, p) => s + Number(p.amount), 0);
 
+  // Not restricted to 'unpaid' — a credit can just as well already be baked
+  // into a row she already paid (a lower amount than the normal subscription
+  // price), and that's still worth surfacing here, not just while it's
+  // outstanding.
   const creditRows = due
-    .filter(p => p.status === 'unpaid')
     .map(p => ({ p, money: parseCreditMoney(p.notes) ?? 0 }))
     .filter(x => x.money > 0);
   const totalCredit = creditRows.reduce((s, x) => s + x.money, 0);
@@ -106,7 +109,7 @@ function FinancialSnapshot({ history }: { history: Payment[] }) {
           </p>
         </div>
       </div>
-      {owed.length > 0 && (
+      {(owed.length > 0 || creditRows.length > 0) && (
         <div className="px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30 space-y-1.5">
           {owed.map(p => (
             <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
