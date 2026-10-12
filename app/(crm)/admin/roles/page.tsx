@@ -14,17 +14,22 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   student:  { label: 'Elev',     color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 };
 
-type User = { id: number; name: string; email: string; role: string | null; status?: string; created_at: string };
+type User = { id: number; name: string; email: string; role: string | null; status?: string; created_at: string; teacher_id?: number | null; student_id?: number | null };
 type Me   = { id: number; name: string; email: string; role: string };
+type Fisa = { id: number; name: string };
 
 export default function RolesPage() {
   const { toasts, toast, remove } = useToast();
   const [me, setMe]           = useState<Me | null>(null);
   const [users, setUsers]     = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<Fisa[]>([]);
+  const [students, setStudents] = useState<Fisa[]>([]);
   const [updating, setUpdating] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setMe(d.user ?? null));
+    fetch('/api/teachers').then(r => r.json()).then(d => setTeachers(d.teachers ?? []));
+    fetch('/api/students').then(r => r.json()).then(d => setStudents(d.students ?? []));
   }, []);
 
   useEffect(() => {
@@ -50,6 +55,34 @@ export default function RolesPage() {
       if (res.ok) {
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
         toast(`Rol actualizat: ${ROLE_LABELS[newRole]?.label ?? newRole}`, 'success');
+      } else {
+        toast(data.error ?? 'Eroare', 'error');
+      }
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  /** Links (or relinks) a teacher/student account to its fișă — the only place
+      this can be done once the account is already approved (Approvals only
+      offers it while a request is still pending). */
+  const handleLinkChange = async (user: User, value: string) => {
+    setUpdating(user.id);
+    try {
+      const body = user.role === 'teacher'
+        ? { role: user.role, teacher_id: value || null }
+        : { role: user.role, student_id: value || null };
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === user.id
+          ? { ...u, teacher_id: data.user?.teacher_id ?? null, student_id: data.user?.student_id ?? null }
+          : u));
+        toast('Fișă actualizată', 'success');
       } else {
         toast(data.error ?? 'Eroare', 'error');
       }
@@ -140,6 +173,29 @@ export default function RolesPage() {
                   <option value="student">Elev</option>
                 </select>
               </div>
+
+              {/* Fișa legată — doar pentru profesor/elev; un cont fără fișă nu
+                  poate vedea de fapt nimic din datele lui odată logat. */}
+              {(u.role === 'teacher' || u.role === 'student') && (
+                <div className="sm:col-start-3 sm:col-span-2 flex items-center gap-2">
+                  {!u[u.role === 'teacher' ? 'teacher_id' : 'student_id'] && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
+                      Fără fișă
+                    </span>
+                  )}
+                  <select
+                    value={(u.role === 'teacher' ? u.teacher_id : u.student_id) ?? ''}
+                    disabled={updating === u.id}
+                    onChange={e => handleLinkChange(u, e.target.value)}
+                    className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 min-w-0"
+                  >
+                    <option value="">Asociază cu fișa de {u.role === 'teacher' ? 'profesor' : 'elev'}…</option>
+                    {(u.role === 'teacher' ? teachers : students).map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           ))}
 

@@ -24,12 +24,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const body = await request.json();
-  const { role } = body;
+  const { role, teacher_id, student_id } = body;
 
   if (!ASSIGNABLE_ROLES.includes(role)) {
     return NextResponse.json({ error: 'Rolul trebuie să fie profesor, elev sau administrator' }, { status: 400 });
   }
 
-  const updated = await updateUserRole(userId, role);
+  const updated = await updateUserRole(
+    userId, role,
+    teacher_id !== undefined ? (teacher_id ? Number(teacher_id) : null) : undefined,
+    student_id !== undefined ? (student_id ? Number(student_id) : null) : undefined,
+  );
   return NextResponse.json({ user: updated });
 }

@@ -81,11 +81,29 @@ function dayParts(dateStr: string): { weekday: string; day: number; month: strin
  * server-side to this student alone) and the same outcome logic as the
  * register, so a lesson is labeled identically everywhere in the app.
  */
-function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel }: {
+function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked }: {
   monthLessons: Lesson[];
   setMonthRef: (fn: (d: Date) => Date) => void;
   monthLabel: string;
+  /** True when the account has no linked fișă de elev yet (an admin approved
+      it without picking one — "poate fi setată mai târziu") — an empty
+      calendar would otherwise look identical to genuinely having no lessons. */
+  unlinked: boolean;
 }) {
+  if (unlinked) {
+    return (
+      <div className="flex flex-col flex-1 min-h-0">
+        <PageBanner icon={ClipboardList} title="Registru Frecvență" subtitle="Frecvența ta" accent="#E08A3C" />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-sm text-center">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contul tău nu este încă asociat cu o fișă de elev.</p>
+            <p className="text-xs text-slate-400 mt-2">Cere unui administrator să-ți lege contul de fișa ta din CRM, din pagina Roluri.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const sorted = [...monthLessons].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''));
   const byDate: Record<string, Lesson[]> = {};
   for (const l of sorted) (byDate[l.date] ??= []).push(l);
@@ -526,7 +544,7 @@ export default function AttendanceRegisterPage() {
   // multi-student marking grid below — that grid means nothing to someone who
   // can only ever see their own single row of it.
   if (role === 'student') {
-    return <StudentAttendanceView monthLessons={monthLessons} setMonthRef={setMonthRef} monthLabel={monthLabel} />;
+    return <StudentAttendanceView monthLessons={monthLessons} setMonthRef={setMonthRef} monthLabel={monthLabel} unlinked={lessonsData?.error != null} />;
   }
 
   return (

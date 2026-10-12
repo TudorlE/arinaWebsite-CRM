@@ -65,8 +65,18 @@ export async function rejectUser(id: number): Promise<UserRow | undefined> {
   return getUserById(id);
 }
 
-export async function updateUserRole(id: number, role: string): Promise<UserRow | undefined> {
-  await supabase.from('users').update({ role }).eq('id', id);
+/**
+ * Changes an already-approved account's role and, for teacher/student, its
+ * linked fișă — the only place that can be done once approval already
+ * happened (Approvals only offers the link while a request is still
+ * pending; "fără asociere, poate fi setată mai târziu" would otherwise be a
+ * promise with no way to follow through on).
+ */
+export async function updateUserRole(id: number, role: string, teacherId?: number | null, studentId?: number | null): Promise<UserRow | undefined> {
+  const update: Record<string, unknown> = { role };
+  if (teacherId !== undefined) update.teacher_id = role === 'teacher' ? teacherId : null;
+  if (studentId !== undefined) update.student_id = role === 'student' ? studentId : null;
+  await supabase.from('users').update(update).eq('id', id);
   return getUserById(id);
 }
 
