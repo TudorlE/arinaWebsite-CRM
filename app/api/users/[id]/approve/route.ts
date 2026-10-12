@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { approveUser, getUserById } from '@/lib/db';
+import { approveUser, getUserById } from '@/lib/users';
 
 const ASSIGNABLE_ROLES = ['teacher', 'student'] as const;
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const userId = parseInt(id, 10);
   if (isNaN(userId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
-  const target = getUserById(userId);
+  const target = await getUserById(userId);
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   const { role, teacher_id, student_id } = await request.json();
@@ -21,6 +21,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Rolul trebuie să fie teacher sau student' }, { status: 400 });
   }
 
-  const updated = approveUser(userId, role, teacher_id ? Number(teacher_id) : null, student_id ? Number(student_id) : null);
+  const updated = await approveUser(userId, role, teacher_id ? Number(teacher_id) : null, student_id ? Number(student_id) : null);
   return NextResponse.json({ user: updated });
 }

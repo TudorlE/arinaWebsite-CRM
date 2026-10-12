@@ -3,8 +3,13 @@ import { supabase, friendlyDbError } from '@/lib/supabase';
 import { createMonthlyPayments } from '@/lib/payments';
 import { withTeacherNames } from '@/lib/pricing';
 import type { StudentSubscription } from '@/lib/types';
+import { getAuthContext, requireRole, restrictToOwnStudent } from '@/lib/roleGuard';
 
 export async function GET(request: NextRequest) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher', 'student']);
+  if (forbidden) return forbidden;
+
   const { searchParams } = new URL(request.url);
   const search     = searchParams.get('search');
   const instrument = searchParams.get('instrument');
@@ -15,9 +20,15 @@ export async function GET(request: NextRequest) {
     .select('*, teachers(name), cabinets(name)')
     .order('name');
 
-  if (instrument) query = query.contains('instruments', [instrument]);
-  if (level)      query = query.eq('level', level);
-  if (search)     query = query.ilike('name', `%${search}%`);
+  if (ctx!.role === 'student') {
+    const guard = restrictToOwnStudent(ctx!);
+    if (guard) return guard;
+    query = query.eq('id', ctx!.studentId!);
+  } else {
+    if (instrument) query = query.contains('instruments', [instrument]);
+    if (level)      query = query.eq('level', level);
+    if (search)     query = query.ilike('name', `%${search}%`);
+  }
 
   const [{ data, error }, { data: teachersData }] = await Promise.all([
     query,
@@ -38,6 +49,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator']);
+  if (forbidden) return forbidden;
+
   try {
     const {
       name, birth_date, phone, email, instruments, level, monthly_fee, subscriptions,

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getAuthContext, requireRole } from '@/lib/roleGuard';
 
 export async function GET(request: NextRequest) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher', 'student']);
+  if (forbidden) return forbidden;
+
   const { searchParams } = new URL(request.url);
   const date = searchParams.get('date');
 
@@ -30,6 +35,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator']);
+  if (forbidden) return forbidden;
+
   try {
     const { name, color } = await request.json();
     if (!name) return NextResponse.json({ error: 'Numele cabinetului este obligatoriu' }, { status: 400 });

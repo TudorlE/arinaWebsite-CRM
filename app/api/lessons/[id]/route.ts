@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getAuthContext, requireRole } from '@/lib/roleGuard';
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher', 'student']);
+  if (forbidden) return forbidden;
+
   const { id } = await params;
   const { data, error } = await supabase
     .from('lessons')
@@ -11,6 +16,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
     .eq('id', id)
     .single();
   if (error || !data) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+  const row = data as unknown as { teacher_id: number; student_id: number };
+  if (ctx!.role === 'teacher' && row.teacher_id !== ctx!.teacherId) {
+    return NextResponse.json({ error: 'Nu poți accesa datele altui profesor.' }, { status: 403 });
+  }
+  if (ctx!.role === 'student' && row.student_id !== ctx!.studentId) {
+    return NextResponse.json({ error: 'Nu poți accesa datele altui elev.' }, { status: 403 });
+  }
   const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
   const { students, teachers, replacement, cabinets, ...rest } = data as Record<string, unknown>;
   const cab = one(cabinets as { name: string; color: string } | null);
@@ -36,6 +48,10 @@ function addMinutes(hhmm: string, minutes: number): string {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
+  if (forbidden) return forbidden;
+
   const { id } = await params;
   try {
     const body = await request.json();
@@ -45,10 +61,13 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     const { data: current, error: fetchErr } = await supabase
       .from('lessons')
-      .select('id, recurring_schedule_id, date')
+      .select('id, recurring_schedule_id, date, teacher_id')
       .eq('id', id)
       .single();
     if (fetchErr || !current) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+    if (ctx!.role === 'teacher' && current.teacher_id !== ctx!.teacherId) {
+      return NextResponse.json({ error: 'Nu poți accesa datele altui profesor.' }, { status: 403 });
+    }
 
     const isRecurring = current.recurring_schedule_id != null;
 
@@ -104,16 +123,23 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(request: NextRequest, { params }: Params) {
+  const ctx = await getAuthContext(request);
+  const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher']);
+  if (forbidden) return forbidden;
+
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const mode = (searchParams.get('mode') as 'occurrence' | 'future' | 'all' | null) ?? 'occurrence';
 
   const { data: current, error: fetchErr } = await supabase
     .from('lessons')
-    .select('id, recurring_schedule_id, date')
+    .select('id, recurring_schedule_id, date, teacher_id')
     .eq('id', id)
     .single();
   if (fetchErr || !current) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+  if (ctx!.role === 'teacher' && current.teacher_id !== ctx!.teacherId) {
+    return NextResponse.json({ error: 'Nu poți accesa datele altui profesor.' }, { status: 403 });
+  }
 
   const attendedIds = async (lessonIds: number[]): Promise<Set<number>> => {
     if (lessonIds.length === 0) return new Set();

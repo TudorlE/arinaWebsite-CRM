@@ -146,6 +146,25 @@ export function withOverageNote(notes: string | null | undefined, line: string |
   return out || null;
 }
 
+/**
+ * A row already marked paid/partial can never be silently resized (money
+ * already collected must never be touched) — so an overage that shows up
+ * AFTER that row settled gets a dedicated, separate unpaid row instead,
+ * holding only the still-uncollected part. This marker is how every other
+ * routine that scans "unpaid" rows (price-change recalcs, the base
+ * credit/overage sync, the duplicate-collapsing pass) recognizes such a row
+ * and leaves its own base-subscription assumptions out of it.
+ */
+const TOPUP_MARK = 'Plată suplimentară — peste o plată deja închisă.';
+
+export function isOverageTopUpRow(notes: string | null | undefined): boolean {
+  return (notes ?? '').startsWith(TOPUP_MARK);
+}
+
+export function topUpNote(line: string): string {
+  return `${TOPUP_MARK}\n${line}`;
+}
+
 /** Amount and notes for a brand-new payment row. */
 export function initialRow(
   base: number,

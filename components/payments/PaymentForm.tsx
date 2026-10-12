@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { Payment, MONTHS, StudentSubscription } from '@/lib/types';
+import { isOverageTopUpRow, parseCreditMoney } from '@/lib/credits';
+import { ShieldCheck, TrendingDown, TrendingUp, CircleCheck } from 'lucide-react';
 import {
   PRICING, SERVICE_KEYS, LESSON_COUNTS, subscriptionAmount, perLessonPrice, planSummary,
   type PlanType, type LessonCount,
@@ -45,6 +47,100 @@ const PAYMENT_DOT: Record<string, string> = {
   paid: 'bg-emerald-500', partial: 'bg-orange-500', unpaid: 'bg-red-500', overdue: 'bg-red-500', paused: 'bg-slate-400',
 };
 
+/**
+ * Situație financiară — the student's full money picture in one glance, right
+ * where an admin registers or edits a payment: what she still owes the studio
+ * (every unpaid/partial row, any period), and what the studio currently owes
+ * HER back (credit for serious-reason absences, already baked into a reduced
+ * unpaid row's amount — shown here so it's never missed or double-charged).
+ */
+function FinancialSnapshot({ history }: { history: Payment[] }) {
+  // A payment row for a future month (e.g. next year's abonament, generated
+  // ahead of time) isn't a debt yet — only what's due up to and including the
+  // current month counts here, otherwise the totals balloon with months that
+  // haven't even started.
+  const currentYear = now.getFullYear(), currentMonth = now.getMonth() + 1;
+  const due = history.filter(p => p.year < currentYear || (p.year === currentYear && p.month <= currentMonth));
+
+  const owed = due.filter(p => p.status === 'unpaid' || p.status === 'partial');
+  const totalOwed = owed.reduce((s, p) => s + Number(p.amount), 0);
+
+  // Not restricted to 'unpaid' — a credit can just as well already be baked
+  // into a row she already paid (a lower amount than the normal subscription
+  // price), and that's still worth surfacing here, not just while it's
+  // outstanding.
+  const creditRows = due
+    .map(p => ({ p, money: parseCreditMoney(p.notes) ?? 0 }))
+    .filter(x => x.money > 0);
+  const totalCredit = creditRows.reduce((s, x) => s + x.money, 0);
+
+  const isSettled = totalOwed === 0;
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700">
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Situație financiară</p>
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-slate-200 dark:divide-slate-700">
+        <div className="p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-red-500 dark:text-red-400">
+            <TrendingDown className="w-3.5 h-3.5" /> Datorii către studio
+          </div>
+          <p className={`text-2xl font-extrabold mt-1 ${totalOwed > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {totalOwed.toLocaleString()} <span className="text-xs font-semibold text-slate-400">MDL</span>
+          </p>
+          {isSettled ? (
+            <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+              <CircleCheck className="w-3.5 h-3.5" /> La zi — fără restanțe
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 mt-1">{owed.length} {owed.length === 1 ? 'plată neachitată' : 'plăți neachitate'}</p>
+          )}
+        </div>
+        <div className="p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-sky-500 dark:text-sky-400">
+            <TrendingUp className="w-3.5 h-3.5" /> Studioul îi datorează
+          </div>
+          <p className={`text-2xl font-extrabold mt-1 ${totalCredit > 0 ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`}>
+            {totalCredit.toLocaleString()} <span className="text-xs font-semibold text-slate-400">MDL</span>
+          </p>
+          <p className="text-xs text-slate-400 mt-1" title="Credit pentru lecții motivate neefectuate — deja scăzut din suma de mai sus, pe rândul neachitat corespunzător.">
+            {totalCredit > 0 ? 'credit pentru absențe motivate' : 'niciun credit activ'}
+          </p>
+        </div>
+      </div>
+      {(owed.length > 0 || creditRows.length > 0) && (
+        <div className="px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/30 space-y-1.5">
+          {owed.map(p => (
+            <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 min-w-0">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PAYMENT_DOT[p.status]}`} />
+                <span className="truncate">
+                  {MONTHS[p.month - 1]} {p.year}{p.service ? ` · ${p.service}` : ''}
+                  {isOverageTopUpRow(p.notes) && <span className="ml-1 text-amber-600 dark:text-amber-400 font-semibold">(supliment peste abonament)</span>}
+                </span>
+              </span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-slate-400">{PAYMENT_LABEL[p.status]}</span>
+                <span className="font-bold text-slate-700 dark:text-slate-200">{Number(p.amount).toLocaleString()} MDL</span>
+              </span>
+            </div>
+          ))}
+          {creditRows.map(({ p, money }) => (
+            <div key={`credit-${p.id}`} className="flex items-center justify-between gap-2 text-xs text-sky-600 dark:text-sky-400">
+              <span className="flex items-center gap-1.5 min-w-0">
+                <ShieldCheck className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">↩ {MONTHS[p.month - 1]} {p.year}{p.service ? ` · ${p.service}` : ''} — credit deja scăzut</span>
+              </span>
+              <span className="font-bold flex-shrink-0">−{money.toLocaleString()} MDL</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PaymentForm({ open, onClose, onSaved, payment, defaultStudentId, defaultMonth, defaultYear, showToast }: Props) {
   const [form, setForm]     = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -57,6 +153,12 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   // payment `id` for that instrument/period (if any) so saving updates it
   // instead of creating a duplicate.
   const [perInstrument, setPerInstrument] = useState<Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }>>({});
+  // An instrument with more than one row this period (the subscription plus
+  // a separate overage top-up, say) can't be safely edited as a single
+  // Sumă+Status pair here without risking silently updating the wrong one —
+  // shown read-only instead, pointing at the list where each row is its own
+  // line with its own edit/delete.
+  const [splitInstruments, setSplitInstruments] = useState<Set<string>>(new Set());
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const students = studentsData?.students ?? [];
   const selectedStudent = students.find((s: { id: number }) => String(s.id) === form.student_id);
@@ -70,6 +172,10 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
   const history: Payment[] = (historyData?.payments ?? [])
     .filter((p: Payment) => !payment || p.id !== payment.id)
     .sort((a: Payment, b: Payment) => (b.year - a.year) || (b.month - a.month));
+  // Unlike `history` above, this never hides the row currently being edited —
+  // her debts/credit must stay accurate even while that exact row is open.
+  const fullHistory: Payment[] = (historyData?.payments ?? [])
+    .slice().sort((a: Payment, b: Payment) => (b.year - a.year) || (b.month - a.month));
 
   useEffect(() => {
     if (payment) {
@@ -114,10 +220,20 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
     const periodPayments: Payment[] = (historyData?.payments ?? []).filter(
       (p: Payment) => p.month === monthNum && p.year === yearNum,
     );
+    const split = new Set<string>();
     setPerInstrument(() => {
       const next: Record<string, { status: string; amount: string; id?: number; notes?: string | null; comment?: string }> = {};
       for (const sub of studentSubs) {
-        const existing = periodPayments.find((p: Payment) => p.service === sub.instrument);
+        const rows = periodPayments.filter((p: Payment) => p.service === sub.instrument);
+        if (rows.length > 1) {
+          split.add(sub.instrument);
+          // Still seeded (so the totals/labels below have something to show),
+          // but handleSubmit skips anything in `split` entirely.
+          const main = rows.find(r => !isOverageTopUpRow(r.notes)) ?? rows[0];
+          next[sub.instrument] = { status: main.status, amount: String(rows.reduce((s, r) => s + r.amount, 0)), notes: main.notes ?? null, comment: main.comment ?? '' };
+          continue;
+        }
+        const existing = rows[0];
         if (existing) {
           next[sub.instrument] = { status: existing.status, amount: String(existing.amount), id: existing.id, notes: existing.notes ?? null, comment: existing.comment ?? '' };
         } else {
@@ -127,6 +243,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
       }
       return next;
     });
+    setSplitInstruments(split);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.student_id, form.month, form.year, studentSubs.length, historyData]);
 
@@ -190,7 +307,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
         // this period, otherwise POST a new one.
         // Paused instruments are read-only here (system-managed by
         // createMonthlyPayments) — never submitted from this form.
-        const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused').map(sub => {
+        const results = await Promise.all(studentSubs.filter(sub => sub.status !== 'paused' && !splitInstruments.has(sub.instrument)).map(sub => {
           const row = perInstrument[sub.instrument] ?? { status: 'unpaid', amount: '' };
           const fallbackAmount = subscriptionAmount(sub.instrument, sub.plan, sub.lessons);
           // `Number(row.amount) || fallbackAmount` would silently replace an
@@ -280,6 +397,8 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
           options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
         />
 
+        {form.student_id && <FinancialSnapshot history={fullHistory} />}
+
         {isMultiInstrument ? (
           <div className="rounded-xl border border-brand-200 dark:border-brand-900/50 bg-brand-50/60 dark:bg-brand-900/15 p-3 space-y-2.5">
             <p className="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Abonamente — o plată pentru fiecare instrument</p>
@@ -294,6 +413,7 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                 // an editable Sumă+Status pair, so nobody can manually bill an instrument
                 // the student isn't actually taking right now.
                 const isPaused = sub.status === 'paused';
+                const isSplit = splitInstruments.has(sub.instrument);
                 return (
                   <div key={sub.instrument} className="rounded-lg border border-brand-200/70 dark:border-brand-900/40 bg-white/70 dark:bg-slate-900/30 p-2.5 space-y-2">
                     <div className="flex items-center justify-between">
@@ -306,6 +426,11 @@ export default function PaymentForm({ open, onClose, onSaved, payment, defaultSt
                       <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg px-2.5 py-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
                         Pauză — fără taxă luna aceasta
+                      </div>
+                    ) : isSplit ? (
+                      <div className="flex flex-col gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-2.5 py-2">
+                        <span>Are mai multe plăți luna asta (abonament + supliment peste abonament) — total {Number(perInstrument[sub.instrument]?.amount ?? 0).toLocaleString()} MDL.</span>
+                        <span className="font-normal text-amber-600 dark:text-amber-500">Editează-le separat, din lista de Plăți.</span>
                       </div>
                     ) : (
                       <>

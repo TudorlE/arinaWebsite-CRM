@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { updateUserRole, getUserById } from '@/lib/db';
+import { updateUserRole, getUserById } from '@/lib/users';
 
 // Only teacher / student / administrator can be assigned via UI. 'admin' (the founder
 // account) is intentionally NOT assignable from the API — must be set manually in the database.
@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const userId = parseInt(id, 10);
   if (isNaN(userId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
 
-  const target = getUserById(userId);
+  const target = await getUserById(userId);
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   // Prevent demoting other admins via the role select
@@ -27,9 +27,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { role } = body;
 
   if (!ASSIGNABLE_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Rolul trebuie să fie teacher sau student' }, { status: 400 });
+    return NextResponse.json({ error: 'Rolul trebuie să fie profesor, elev sau administrator' }, { status: 400 });
   }
 
-  const updated = updateUserRole(userId, role);
+  const updated = await updateUserRole(userId, role);
   return NextResponse.json({ user: updated });
 }

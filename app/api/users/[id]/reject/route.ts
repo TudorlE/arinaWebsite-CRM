@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { rejectUser, getUserById } from '@/lib/db';
+import { rejectUser, getUserById } from '@/lib/users';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await getAuthUser(request);
@@ -14,9 +14,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Nu poți respinge propriul cont' }, { status: 400 });
   }
 
-  const target = getUserById(userId);
+  const target = await getUserById(userId);
   if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-  const updated = rejectUser(userId);
+  const updated = await rejectUser(userId);
   return NextResponse.json({ user: updated });
 }

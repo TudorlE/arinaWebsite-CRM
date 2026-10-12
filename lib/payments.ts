@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 import { StudentSubscription, MONTHS } from './types';
 import { todayChisinau, currentPeriodChisinau, monthEnd } from './dates';
 import { perLessonPrice } from './pricing';
-import { countAbsences, creditLessons, creditMoney, extraLessons, initialRow, planRowUpdate, type CreditLesson } from './credits';
+import { countAbsences, creditLessons, creditMoney, extraLessons, initialRow, planRowUpdate, isOverageTopUpRow, topUpNote, overageNoteLine, parseOverage, type CreditLesson } from './credits';
 
 /* ─────────────────────────────────────────────────────────────
  *  Types
@@ -229,7 +229,7 @@ export async function createMonthlyPayments(
   // 1) collapse duplicates of the same (student, instrument)
   const groups = new Map<string, PRow[]>();
   for (const r of rows) {
-    const k = `${r.student_id}|${r.service ?? ''}`;
+    const k = `${r.student_id}|${r.service ?? ''}|${isOverageTopUpRow(r.notes) ? 'topup' : 'main'}`;
     (groups.get(k) ?? groups.set(k, []).get(k)!).push(r);
   }
   for (const g of groups.values()) {
@@ -315,7 +315,7 @@ export async function createMonthlyPayments(
   let adjusted = 0;
   if (credits || overage) {
     for (const r of rows) {
-      if (!r.service) continue;
+      if (!r.service || isOverageTopUpRow(r.notes)) continue;
       const sub = activeSubs(studentById.get(r.student_id)).find(x => x.instrument === r.service);
       if (!sub) continue;
       const credit = credits?.get(`${r.student_id}|${r.service}`)?.credit_lessons ?? 0;
@@ -330,9 +330,54 @@ export async function createMonthlyPayments(
     }
   }
 
+  // 3d) a PAID/PARTIAL row can't be silently topped up — the overage it's
+  // now missing goes on a separate, dedicated unpaid row instead, so money
+  // already collected is never touched but extra lessons are never quietly
+  // left unbilled just because the subscription row happened to settle
+  // first. That row is kept in sync every run: grows, shrinks, or is removed
+  // as the register changes — but only for as long as IT stays unpaid; once
+  // the admin marks it paid too, it's as frozen as any other paid row.
+  const obsoleteTopUpIds = new Set<number>();
+  const toInsert: { student_id: number; amount: number; month: number; year: number; status: string; service: string; plan_type: string; lesson_count: number; notes?: string }[] = [];
+  if (overage) {
+    for (const r of rows) {
+      if (!r.service || isOverageTopUpRow(r.notes) || r.status === 'unpaid' || (STATUS_RANK[r.status] ?? 1) <= 1) continue;
+      const sub = activeSubs(studentById.get(r.student_id)).find(x => x.instrument === r.service);
+      if (!sub) continue;
+      const info = overage.get(`${r.student_id}|${r.service}`);
+      const totalLessons = info?.extra_lessons ?? 0;
+      const topUps = rows.filter(x => x.student_id === r.student_id && x.service === r.service && isOverageTopUpRow(x.notes));
+      const collectedLessons = topUps.filter(x => x.status !== 'unpaid').reduce((s, x) => s + parseOverage(x.notes), 0);
+      const stillDueLessons = Math.max(0, totalLessons - collectedLessons);
+      const unpaidTopUp = topUps.find(x => x.status === 'unpaid');
+      const perLesson = perLessonPrice(sub.instrument, sub.plan);
+      const stillDueMoney = creditMoney(stillDueLessons, perLesson);
+      if (stillDueMoney <= 0) {
+        if (unpaidTopUp) obsoleteTopUpIds.add(unpaidTopUp.id);
+        continue;
+      }
+      const line = overageNoteLine(stillDueLessons, perLesson as number, stillDueMoney, curLabel);
+      if (unpaidTopUp) {
+        if (Math.round(Number(unpaidTopUp.amount)) !== stillDueMoney || parseOverage(unpaidTopUp.notes) !== stillDueLessons) {
+          const { error } = await supabase.from('payments').update({ amount: stillDueMoney, notes: topUpNote(line) }).eq('id', unpaidTopUp.id);
+          if (!error) { unpaidTopUp.amount = stillDueMoney; unpaidTopUp.notes = topUpNote(line); adjusted++; }
+        }
+      } else {
+        toInsert.push({
+          student_id: r.student_id, amount: stillDueMoney, month: period.month, year: period.year,
+          status: 'unpaid', service: r.service, plan_type: sub.plan, lesson_count: sub.lessons,
+          notes: topUpNote(line),
+        });
+      }
+    }
+    if (obsoleteTopUpIds.size > 0) {
+      const { error } = await supabase.from('payments').delete().in('id', Array.from(obsoleteTopUpIds));
+      if (error) return fail(error.message);
+    }
+  }
+
   // 4) create whatever is still missing
   const have = new Set(rows.map(r => `${r.student_id}|${r.service ?? ''}`));
-  const toInsert: { student_id: number; amount: number; month: number; year: number; status: string; service: string; plan_type: string; lesson_count: number; notes?: string }[] = [];
   let skipped = 0;
   for (const s of (students ?? []) as StudentRow[]) {
     if (!isActive(s) || covered.has(s.id)) continue;
@@ -383,7 +428,7 @@ export async function createMonthlyPayments(
     if (insertErr) return fail(insertErr.message);
   }
 
-  return { created: toInsert.length, skipped, removed: toDelete.size, fixed, adjusted };
+  return { created: toInsert.length, skipped, removed: toDelete.size + obsoleteTopUpIds.size, fixed, adjusted };
 }
 
 /* ─────────────────────────────────────────────────────────────

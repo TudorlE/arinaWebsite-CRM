@@ -22,7 +22,7 @@ export default function Hero() {
       {/* Full-bleed background photo — spans the entire hero section, not just a side column */}
       <motion.div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }} className="hero-img">
         <motion.img
-          style={{ scale: imgScale, position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}
+          style={{ scale: imgScale, position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 8%' }}
           src="/hero-arry.jpg"
           alt={h.imgAlt}
           className="ph"
@@ -96,13 +96,13 @@ export default function Hero() {
            dark-on-dark and disappears into busier parts of the photo in light
            theme. Reverted back to theme-adaptive colors on mobile (below),
            where the scrim swaps to a solid opaque backing instead of the photo. */
-        .hero-copy .eyebrow { color: rgba(242,237,230,0.88) !important; }
-        .hero-copy .eyebrow::before { background: #D8B892 !important; }
-        .hero-copy h1 { color: #F2EDE6 !important; }
-        .hero-copy .hero-kicker { color: #D8B892 !important; }
-        .hero-copy .hero-desc { color: rgba(242,237,230,0.76) !important; }
-        .hero-btn-ghost { border-color: rgba(242,237,230,0.55) !important; color: #F2EDE6 !important; }
-        .hero-btn-ghost:hover { background: #F2EDE6 !important; color: #18140F !important; border-color: #F2EDE6 !important; }
+        .hero-copy .eyebrow { color: rgba(247,243,236,0.86) !important; }
+        .hero-copy .eyebrow::before { background: #E3C9A4 !important; }
+        .hero-copy h1 { color: #F7F3EC !important; }
+        .hero-copy .hero-kicker { color: #E3C9A4 !important; }
+        .hero-copy .hero-desc { color: rgba(247,243,236,0.86) !important; }
+        .hero-btn-ghost { border-color: rgba(247,243,236,0.55) !important; color: #F7F3EC !important; }
+        .hero-btn-ghost:hover { background: #F7F3EC !important; color: #18140F !important; border-color: #F7F3EC !important; }
         .hero-nav-scrim {
           background: linear-gradient(180deg, rgba(16,13,11,0.78) 0%, rgba(16,13,11,0.4) 55%, rgba(16,13,11,0) 100%);
           pointer-events: none;

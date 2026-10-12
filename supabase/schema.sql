@@ -280,3 +280,21 @@ CREATE POLICY "Allow all on cabinet_day_status" ON cabinet_day_status FOR ALL TO
 ALTER TABLE students ADD COLUMN IF NOT EXISTS birth_date date;
 ALTER TABLE students ALTER COLUMN age DROP NOT NULL;
 ALTER TABLE teachers ADD COLUMN IF NOT EXISTS birth_date date;
+
+-- ── Users (real login) ─────────────────────────────────────────
+-- See migrations/20261010_users_table.sql
+CREATE TABLE IF NOT EXISTS users (
+  id            bigserial PRIMARY KEY,
+  name          text        NOT NULL,
+  email         text        UNIQUE NOT NULL,
+  password_hash text,
+  google_id     text        UNIQUE,
+  role          text        CHECK (role IN ('admin', 'administrator', 'teacher', 'student')),
+  status        text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  teacher_id    bigint      REFERENCES teachers(id) ON DELETE SET NULL,
+  student_id    bigint      REFERENCES students(id) ON DELETE SET NULL,
+  created_at    timestamptz DEFAULT now()
+);
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all on users" ON users;
+CREATE POLICY "Allow all on users" ON users FOR ALL TO anon USING (true) WITH CHECK (true);

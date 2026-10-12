@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { getUserByEmail, createUser } from '@/lib/db';
+import { getUserByEmail, createUser } from '@/lib/users';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,13 +16,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email invalid' }, { status: 400 });
     }
 
-    const existing = getUserByEmail(email.toLowerCase().trim());
+    const existing = await getUserByEmail(email.toLowerCase().trim());
     if (existing) {
       return NextResponse.json({ error: 'Există deja un cont cu acest email' }, { status: 409 });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
-    const user = createUser({
+    const user = await createUser({
       name: String(name).trim(),
       email: email.toLowerCase().trim(),
       password_hash,
