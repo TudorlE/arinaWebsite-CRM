@@ -50,7 +50,16 @@ export async function proxy(request: NextRequest) {
     if (!allowed) return NextResponse.redirect(new URL('/admin/attendance', request.url));
   }
 
-  return NextResponse.next();
+  // Forwarded to Server Components via headers() — lets the admin layout
+  // pick sidebar vs. student-only chrome synchronously, server-side, before
+  // any HTML reaches the browser. Without this, the layout had to fetch
+  // /api/auth/me client-side first, which meant a real (if brief) flash of
+  // the full admin sidebar — nav links and all — for a student on every
+  // page load, exactly the kind of leak proxy.ts exists to prevent.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-user-role', user.role ?? '');
+  requestHeaders.set('x-user-name', encodeURIComponent(user.name ?? ''));
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

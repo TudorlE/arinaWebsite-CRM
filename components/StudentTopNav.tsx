@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { ClipboardList, CalendarRange, LogOut } from 'lucide-react';
 
 type NavItem = { href: string; label: string; shortLabel: string; icon: typeof ClipboardList };
@@ -23,14 +22,9 @@ const NAV: NavItem[] = [
  * not just "whatever space is left" — with the avatar pinned far left and
  * logout pinned far right, symmetric regardless of either side's width.
  */
-export default function StudentTopNav() {
+export default function StudentTopNav({ name }: { name: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [name, setName] = useState('');
-
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => setName(d.user?.name ?? '')).catch(() => {});
-  }, []);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

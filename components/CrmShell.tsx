@@ -1,6 +1,3 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import StudentTopNav from '@/components/StudentTopNav';
 
@@ -9,21 +6,17 @@ import StudentTopNav from '@/components/StudentTopNav';
  * student, whose reachable surface is exactly two pages (enforced server-side
  * by proxy.ts) — a dedicated top nav with no sidebar and no "Arry Studio"
  * branding, requested explicitly as a simpler, more personal experience.
- * Defaults to the sidebar while the role is still loading (same brief flash
- * the sidebar's own nav-item filtering already has today), only swapping to
- * the student layout once the role is confirmed.
+ *
+ * `role`/`name` arrive from the parent (Server Component) layout, which reads
+ * them from the request headers proxy.ts already set — resolved before this
+ * ever reaches the browser, so there's no client-side fetch and no flash of
+ * the wrong chrome while a role is "still loading".
  */
-export default function CrmShell({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
-  }, []);
-
+export default function CrmShell({ children, role, name }: { children: React.ReactNode; role: string | null; name: string }) {
   if (role === 'student') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--cream)' }}>
-        <StudentTopNav />
+        <StudentTopNav name={name} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {children}
         </div>
