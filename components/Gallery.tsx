@@ -5,12 +5,7 @@ import { Play, X } from 'lucide-react';
 import { Reveal, Stagger, StaggerItem, EASE } from '@/components/motionx';
 import { useLocale } from '@/lib/i18n';
 
-/**
- * TODO: înlocuiește `id` cu ID-urile reale ale videoclipurilor de pe
- * canalul de YouTube Arry Production (recitaluri, elevi, concursuri).
- * ID-ul e partea de după `watch?v=` din link-ul YouTube.
- */
-const videoIds = ['jNQXAC9IVRw', 'M7lc1UVf-VE', 'aqz-KE-bpKQ', 'ScMzIvxBSi4', 'kJQP7kiw5Fk', 'e-ORhEE9VVg'];
+const videoIds = ['r4h5YqQF7Rs', 'k04GGj1a0K0', '2Ix-CAnzRfc', 'V-UnhRETJiI'];
 
 const photoSrcs = ['/studio-1.jpg', '/studio-2.jpg', '/studio-3.jpg', '/studio-4.jpg', '/studio-5.jpg'];
 
@@ -144,10 +139,10 @@ export default function Gallery() {
 
       <style>{`
         .photo-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
-        .vid-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        .vid-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .vid-card { transition: border-color 0.3s ease; }
         .vid-card:hover { border-color: var(--sand-deep); }
-        @media (max-width: 880px) { .vid-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 880px) { .photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @media (max-width: 540px) { .vid-grid { grid-template-columns: minmax(0, 1fr); } .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       `}</style>
     </section>
