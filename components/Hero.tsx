@@ -39,21 +39,21 @@ export default function Hero() {
           </span>
 
           <RevealLines tag="h1"
-            style={{ fontSize: 'clamp(34px, 6.4vw, 82px)', lineHeight: 1.12, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, color: '#F7F3EC', textAlign: 'center' }}
+            style={{ fontSize: 'clamp(34px, 6.4vw, 82px)', lineHeight: 1.12, letterSpacing: '-0.02em', textTransform: 'uppercase', fontWeight: 800, textAlign: 'center' }}
             lines={h.lines}
           />
 
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E3C9A4', margin: '22px 0 0' }}>
+          <p className="hero-kicker" style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '22px 0 0' }}>
             {h.kicker}
           </p>
 
-          <p style={{ fontSize: 16, color: 'rgba(247,243,236,0.86)', maxWidth: 440, margin: '26px auto 38px', lineHeight: 1.75 }}>
+          <p className="hero-desc" style={{ fontSize: 16, maxWidth: 440, margin: '26px auto 38px', lineHeight: 1.75 }}>
             {h.desc}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 14 }}>
             <button onClick={openBooking} className="btn-outline solid" style={{ minWidth: 'min(340px, 100%)' }}>{h.ctaBook}</button>
-            <button onClick={() => go('#cursuri')} className="btn-outline" style={{ minWidth: 'min(216px, 100%)' }}>{h.ctaCourses}</button>
+            <button onClick={() => go('#cursuri')} className="btn-outline hero-btn-ghost" style={{ minWidth: 'min(216px, 100%)' }}>{h.ctaCourses}</button>
           </div>
         </motion.div>
 
@@ -90,12 +90,19 @@ export default function Hero() {
         .hero-copy .eyebrow, .hero-copy h1, .hero-copy p {
           text-shadow: 0 2px 20px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.6);
         }
-        /* This section always sits over a photo with a dark scrim, regardless
-           of the site's light/dark theme — unlike the rest of the page, its
-           text must stay a fixed light color rather than following --tx
-           (which flips to dark in light mode and becomes unreadable here). */
-        .hero-copy .eyebrow { color: rgba(247,243,236,0.8); }
-        .hero-copy .eyebrow::before { background: #E3C9A4; }
+        /* The hero sits directly on the photo + dark scrim, which doesn't change
+           with the site theme — so unlike body copy elsewhere, this text must
+           stay fixed light/warm regardless of light/dark mode, or it goes
+           dark-on-dark and disappears into busier parts of the photo in light
+           theme. Reverted back to theme-adaptive colors on mobile (below),
+           where the scrim swaps to a solid opaque backing instead of the photo. */
+        .hero-copy .eyebrow { color: rgba(247,243,236,0.86) !important; }
+        .hero-copy .eyebrow::before { background: #E3C9A4 !important; }
+        .hero-copy h1 { color: #F7F3EC !important; }
+        .hero-copy .hero-kicker { color: #E3C9A4 !important; }
+        .hero-copy .hero-desc { color: rgba(247,243,236,0.86) !important; }
+        .hero-btn-ghost { border-color: rgba(247,243,236,0.55) !important; color: #F7F3EC !important; }
+        .hero-btn-ghost:hover { background: #F7F3EC !important; color: #18140F !important; border-color: #F7F3EC !important; }
         .hero-nav-scrim {
           background: linear-gradient(180deg, rgba(16,13,11,0.78) 0%, rgba(16,13,11,0.4) 55%, rgba(16,13,11,0) 100%);
           pointer-events: none;
@@ -112,6 +119,14 @@ export default function Hero() {
           .hero-copy { max-width: none !important; padding: 40px 22px 30px !important; }
           .hero-scrim { background: linear-gradient(180deg, var(--bg) 0%, var(--bg) 34%, rgba(16,13,11,0.5) 55%, rgba(16,13,11,0.15) 75%, rgba(16,13,11,0) 100%) !important; }
           .hero-phone { position: static !important; margin: 0 22px 24px !important; max-width: none !important; }
+          /* Only the eyebrow/h1 land inside mobile's solid opaque top ~34% band
+             — back to theme-adaptive colors there. The kicker, description and
+             ghost button sit further down, where the scrim fades back toward
+             the raw photo, so they keep the fixed light/photo-safe colors
+             (same as desktop) instead of going dark-on-photo in light theme. */
+          .hero-copy .eyebrow { color: var(--tx-faint) !important; }
+          .hero-copy .eyebrow::before { background: var(--sand-deep) !important; }
+          .hero-copy h1 { color: var(--tx) !important; }
         }
         @media (max-width: 380px) {
           .hero-copy h1 { font-size: 40px !important; }
