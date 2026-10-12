@@ -80,8 +80,6 @@ export default function Sidebar() {
   const activeNavItem = [...nav].sort((a, b) => b.href.length - a.href.length).find(n => isActive(n.href));
   const CurrentIcon = activeNavItem?.icon ?? Menu;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001';
-
   return (
     <>
       {/* Mobile trigger — shows the current section's icon once inside one,
@@ -204,7 +202,10 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div style={{ padding: '10px 12px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <a href={siteUrl} target="_blank" rel="noopener noreferrer" style={{
+        {/* Relative, not an env-configured absolute URL — the public site is
+            served from this same domain/deployment, just a different route
+            group, so this always works regardless of environment. */}
+        <a href="/" target="_blank" rel="noopener noreferrer" style={{
           display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', borderRadius: 12,
           fontSize: 13.5, fontWeight: 500, textDecoration: 'none',
           color: 'rgba(255,255,255,0.42)', transition: 'all 0.18s',
