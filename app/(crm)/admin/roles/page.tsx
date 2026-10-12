@@ -28,8 +28,13 @@ export default function RolesPage() {
   }, []);
 
   useEffect(() => {
+    // Only already-approved accounts — a pending one changed here would get a
+    // role but never flip to 'approved' (that only happens via the proper
+    // Aprobări flow, which also asks for the teacher_id/student_id link).
+    // Showing it here made it look "done" while the account stayed stuck,
+    // unable to log in at all.
     if (me?.role === 'admin') {
-      fetch('/api/users').then(r => r.json()).then(d => setUsers(d.users ?? []));
+      fetch('/api/users?status=approved').then(r => r.json()).then(d => setUsers(d.users ?? []));
     }
   }, [me]);
 
@@ -73,6 +78,8 @@ export default function RolesPage() {
           <strong>Administrator (acces limitat)</strong> — vede doar Program General, Audiții, Registru Frecvență,
           Profesori General, Profesori Frecvență, Elevi General și Elevi Frecvență. Restul secțiunilor
           (Dashboard, Program Privat, Plăți, Roluri, Setări) rămân vizibile doar pentru Fondator.
+          <br />
+          Un cont nou, în așteptare, nu apare aici — se aprobă din <strong>Aprobări</strong>, unde i se atribuie rolul și, pentru profesor/elev, fișa corespunzătoare.
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
 
