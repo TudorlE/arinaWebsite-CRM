@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { CalendarRange, Clock, MapPin } from 'lucide-react';
 import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
@@ -61,6 +61,14 @@ export default function GeneralSchedulePage() {
   const selectedDow = dowForIdx(selectedDayIdx);
   const isToday = selectedDayIdx === todayDayIdx();
 
+  // A student already has the modern gradient top nav (CrmShell/StudentTopNav)
+  // in place of the sidebar — the dark PageBanner underneath it would just
+  // double up on the header, so it's skipped for that role only.
+  const [role, setRole] = useState<string | null>(null);
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.user?.role ?? null)).catch(() => {});
+  }, []);
+
   const { data: allData } = useSWR('/api/recurring-schedules?active=true', fetcher);
   const allSchedules: RecurringSchedule[] = allData?.schedules ?? [];
   const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
@@ -95,12 +103,14 @@ export default function GeneralSchedulePage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* ── Banner ────────────────────────────────────────── */}
-      <PageBanner
-        icon={CalendarRange}
-        title="Program General"
-        subtitle="Orarul fix al elevilor — doar citire"
-        accent="#5934DC"
-      />
+      {role !== 'student' && (
+        <PageBanner
+          icon={CalendarRange}
+          title="Program General"
+          subtitle="Orarul fix al elevilor — doar citire"
+          accent="#5934DC"
+        />
+      )}
 
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col p-3 sm:p-4 gap-3 sm:gap-4">
         {/* min-h-0 below is load-bearing: without it, a flex-1 child defaults to

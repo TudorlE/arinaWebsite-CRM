@@ -92,15 +92,12 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
 }) {
   if (unlinked) {
     return (
-      <div className="flex flex-col flex-1 min-h-0">
-        <PageBanner icon={ClipboardList} title="Registru Frecvență" subtitle="Frecvența ta" accent="#E08A3C" />
-        <main className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-sm text-center">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contul tău nu este încă asociat cu o fișă de elev.</p>
-            <p className="text-xs text-slate-400 mt-2">Cere unui administrator să-ți lege contul de fișa ta din CRM, din pagina Roluri.</p>
-          </div>
-        </main>
-      </div>
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <p className="text-sm font-semibold text-slate-700">Contul tău nu este încă asociat cu o fișă de elev.</p>
+          <p className="text-xs text-slate-400 mt-2">Cere unui administrator să-ți lege contul de fișa ta din CRM, din pagina Roluri.</p>
+        </div>
+      </main>
     );
   }
 
@@ -119,93 +116,110 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
 
   const today = todayChisinau();
 
+  const OUTCOME_ACCENT: Record<string, string> = {
+    present: '#10B981', excused: '#F59E0B', unexcused: '#F43F5E',
+    recovered: '#0EA5E9', replaced: '#8B5CF6', cancelled: '#94A3B8', late: '#3B82F6',
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <PageBanner icon={ClipboardList} title="Registru Frecvență" subtitle="Frecvența ta" accent="#E08A3C" />
-
-      <main className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 bg-slate-50 dark:bg-slate-950">
-        <div className="max-w-2xl mx-auto space-y-4 sm:space-y-5">
-          {/* Month nav */}
-          <div className="flex items-center justify-center gap-3">
-            <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex-shrink-0">
-              <ChevronLeft className="w-5 h-5 text-slate-500" />
-            </button>
-            <span className="min-w-40 text-lg font-extrabold text-slate-900 dark:text-white text-center truncate">{monthLabel}</span>
-            <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex-shrink-0">
-              <ChevronRight className="w-5 h-5 text-slate-500" />
-            </button>
-          </div>
-
-          {/* Monthly summary */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/15 p-3 sm:p-3.5 text-center">
-              <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">{counts.present}</p>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-500 mt-0.5">Prezențe</p>
-            </div>
-            <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/15 p-3 sm:p-3.5 text-center">
-              <p className="text-xl sm:text-2xl font-extrabold text-amber-700 dark:text-amber-400">{counts.excused}</p>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-500 mt-0.5">Motivate</p>
-            </div>
-            <div className="rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-900/15 p-3 sm:p-3.5 text-center">
-              <p className="text-xl sm:text-2xl font-extrabold text-rose-700 dark:text-rose-400">{counts.unexcused}</p>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-500 mt-0.5">Nemotivate</p>
-            </div>
-          </div>
-
-          {/* Timeline */}
-          {dates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
-              <ClipboardList className="w-10 h-10 text-slate-300" />
-              <p className="text-sm font-semibold text-slate-400">Nicio lecție în luna asta</p>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {dates.map(date => {
-                const { weekday, day, month } = dayParts(date);
-                const isToday = date === today;
-                return (
-                  <div key={date}>
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className={`flex flex-col items-center justify-center w-11 h-11 rounded-xl flex-shrink-0 ${isToday ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'}`}>
-                        <span className="text-[9px] font-bold uppercase leading-none">{month}</span>
-                        <span className="text-base font-extrabold leading-tight">{day}</span>
-                      </div>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{weekday}{isToday ? ' · azi' : ''}</p>
-                    </div>
-                    <div className="space-y-2 pl-1">
-                      {byDate[date].map(l => {
-                        const outcome = outcomeOf(l);
-                        const badge = outcome ? OUTCOME_BADGE[outcome] : null;
-                        const Icon = badge?.Icon;
-                        return (
-                          <div key={l.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 shadow-sm flex flex-wrap items-center gap-x-3 gap-y-2">
-                            <div className="flex items-center gap-3 min-w-[160px] flex-1">
-                              <span className="font-mono font-bold text-sm text-slate-700 dark:text-slate-200 flex-shrink-0 w-11">
-                                {(l.time ?? '').slice(0, 5)}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{l.discipline || 'Lecție'}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                  {outcome === 'replaced' && l.replacement_teacher_name ? l.replacement_teacher_name : l.teacher_name}
-                                </p>
-                              </div>
-                            </div>
-                            <span className={`flex items-center gap-1 flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badge?.className ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                              {Icon && <Icon className="w-3 h-3" />}
-                              {badge?.label ?? 'Programată'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+    <main
+      className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6"
+      style={{ background: 'linear-gradient(180deg, #FAF8FF 0%, #F6F3FE 220px, #FAF8FF 100%)' }}
+    >
+      <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6">
+        {/* Month nav */}
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-violet-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all flex-shrink-0">
+            <ChevronLeft className="w-5 h-5 text-violet-500" />
+          </button>
+          <span className="min-w-40 text-lg font-extrabold text-slate-900 text-center truncate">{monthLabel}</span>
+          <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-violet-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all flex-shrink-0">
+            <ChevronRight className="w-5 h-5 text-violet-500" />
+          </button>
         </div>
-      </main>
-    </div>
+
+        {/* Monthly summary — bold gradient tiles */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {[
+            { n: counts.present, label: 'Prezențe', from: '#34D399', to: '#059669', Icon: CheckCircle2 },
+            { n: counts.excused, label: 'Motivate', from: '#FBBF24', to: '#D97706', Icon: AlertCircle },
+            { n: counts.unexcused, label: 'Nemotivate', from: '#FB7185', to: '#E11D48', Icon: XCircle },
+          ].map(({ n, label, from, to, Icon }) => (
+            <div
+              key={label}
+              className="rounded-2xl p-3 sm:p-4 text-center relative overflow-hidden shadow-lg"
+              style={{ background: `linear-gradient(145deg, ${from}, ${to})`, boxShadow: `0 8px 20px -6px ${to}66` }}
+            >
+              <Icon className="w-4 h-4 text-white/70 mx-auto mb-1" />
+              <p className="text-2xl sm:text-3xl font-extrabold text-white leading-none">{n}</p>
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-white/85 mt-1.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Timeline */}
+        {dates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+            <ClipboardList className="w-10 h-10 text-violet-200" />
+            <p className="text-sm font-semibold text-slate-400">Nicio lecție în luna asta</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {dates.map(date => {
+              const { weekday, day, month } = dayParts(date);
+              const isToday = date === today;
+              return (
+                <div key={date}>
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div
+                      className="flex flex-col items-center justify-center w-11 h-11 rounded-xl flex-shrink-0 text-white"
+                      style={isToday
+                        ? { background: 'linear-gradient(135deg, #5934DC, #AC2A88)', boxShadow: '0 6px 16px -4px rgba(89,52,220,0.5)' }
+                        : { background: '#fff', border: '1px solid #EDE9FE', color: '#4C1D95' }}
+                    >
+                      <span className="text-[9px] font-bold uppercase leading-none">{month}</span>
+                      <span className="text-base font-extrabold leading-tight">{day}</span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">{weekday}{isToday ? ' · azi' : ''}</p>
+                  </div>
+                  <div className="space-y-2 pl-1">
+                    {byDate[date].map(l => {
+                      const outcome = outcomeOf(l);
+                      const badge = outcome ? OUTCOME_BADGE[outcome] : null;
+                      const Icon = badge?.Icon;
+                      const accent = outcome ? OUTCOME_ACCENT[outcome] : '#C4B5FD';
+                      return (
+                        <div
+                          key={l.id}
+                          className="rounded-2xl bg-white p-3 sm:p-3.5 shadow-sm hover:shadow-md transition-shadow flex flex-wrap items-center gap-x-3 gap-y-2"
+                          style={{ borderLeft: `4px solid ${accent}`, boxShadow: '0 1px 3px rgba(76,29,149,0.06)' }}
+                        >
+                          <div className="flex items-center gap-3 min-w-[160px] flex-1">
+                            <span className="font-mono font-bold text-sm text-violet-900 flex-shrink-0 w-11">
+                              {(l.time ?? '').slice(0, 5)}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-bold text-sm text-slate-800 truncate">{l.discipline || 'Lecție'}</p>
+                              <p className="text-xs text-slate-500 truncate">
+                                {outcome === 'replaced' && l.replacement_teacher_name ? l.replacement_teacher_name : l.teacher_name}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={`flex items-center gap-1 flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badge?.className ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                            {Icon && <Icon className="w-3 h-3" />}
+                            {badge?.label ?? 'Programată'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
 
