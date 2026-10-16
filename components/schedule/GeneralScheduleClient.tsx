@@ -89,8 +89,10 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
 
   // Mobile view: a chronological timeline, grouped by time, across all cabinets —
-  // no empty-slot rows and no cramped multi-column table to scroll sideways on a phone.
-  const occupiedSlots = timeSlots.filter(t => daySchedules.some(s => (s.start_time ?? '').slice(0, 5) === t));
+  // no cramped multi-column table to scroll sideways on a phone. Shows every
+  // fixed hour slot for the day (same Mon–Fri / Sat–Sun ranges as the desktop
+  // CRM grid, from timeSlotsForDay), not just the ones with a lesson booked —
+  // an elev checking "Program General" needs the same fixed hours either way.
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -197,18 +199,22 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
             )}
           </div>
 
-          {/* ── Mobile: chronological timeline, no sideways table scroll ── */}
+          {/* ── Mobile: chronological timeline, no sideways table scroll ──
+              Shows every fixed slot of the day (same as the desktop grid —
+              13:15-20:45 Luni-Vineri, 09:00-17:15 Sâmbătă-Duminică), each
+              marked "Liber" when nothing's booked there, instead of only
+              the occupied ones — so the hours match the CRM exactly. */}
           <div className="sm:hidden flex-1 min-h-0 overflow-y-auto p-3">
-            {occupiedSlots.length === 0 ? (
+            {timeSlots.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <CalendarRange className="w-8 h-8 text-slate-300" />
                 <p className="text-sm font-semibold text-slate-400">Nicio lecție în ziua asta</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {occupiedSlots.map((time, idx) => {
+                {timeSlots.map((time, idx) => {
                   const lessons = daySchedules.filter(s => (s.start_time ?? '').slice(0, 5) === time);
-                  const current = isCurrentSlot(time, occupiedSlots[idx + 1], isToday);
+                  const current = isCurrentSlot(time, timeSlots[idx + 1], isToday);
                   return (
                     <div key={time} className="flex gap-3">
                       <div className="flex flex-col items-center flex-shrink-0 w-14">
@@ -216,10 +222,12 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
                           <Clock className="w-3 h-3" />
                           {time}
                         </div>
-                        {idx < occupiedSlots.length - 1 && <div className="w-px flex-1 bg-slate-200 dark:bg-slate-700 mt-1.5" />}
+                        {idx < timeSlots.length - 1 && <div className="w-px flex-1 bg-slate-200 dark:bg-slate-700 mt-1.5" />}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1.5 pb-1">
-                        {lessons.map(s => {
+                        {lessons.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">Liber</p>
+                        ) : lessons.map(s => {
                           const cab = cabinets.find(c => c.id === s.cabinet_id);
                           const accent = cabinetAccent(cab?.color);
                           return (
