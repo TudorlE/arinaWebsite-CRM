@@ -84,6 +84,11 @@ export async function updateUserPassword(id: number, passwordHash: string): Prom
   await supabase.from('users').update({ password_hash: passwordHash }).eq('id', id);
 }
 
+/** Deletes a login account. Does NOT touch the linked teacher/student fișă (a separate, much bigger action). */
+export async function deleteUser(id: number): Promise<void> {
+  await supabase.from('users').delete().eq('id', id);
+}
+
 export async function findOrCreateGoogleUser(googleId: string, name: string, email: string): Promise<UserRow> {
   const { data: byGoogle } = await supabase.from('users').select(PUBLIC_COLUMNS).eq('google_id', googleId).maybeSingle();
   if (byGoogle) return byGoogle as UserRow;

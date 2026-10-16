@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { ShieldCheck, UserCheck, UserX, Clock, Mail, Calendar, GraduationCap, Music2, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -56,6 +56,13 @@ export default function AdminUsersPage() {
     fetch('/api/teachers').then(r => r.json()).then(d => setTeachers(d.teachers ?? []));
     fetch('/api/students').then(r => r.json()).then(d => setStudents(d.students ?? []));
     refresh();
+  }, []);
+
+  // Poll so a brand-new registration shows up here without a manual refresh.
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    pollRef.current = setInterval(refresh, 6000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
   const counts = useMemo(() => ({

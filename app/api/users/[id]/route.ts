@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { updateUserRole, getUserById } from '@/lib/users';
+import { updateUserRole, getUserById, deleteUser } from '@/lib/users';
 
 // Only teacher / student / administrator can be assigned via UI. 'admin' (the founder
 // account) is intentionally NOT assignable from the API — must be set manually in the database.
@@ -36,4 +36,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     student_id !== undefined ? (student_id ? Number(student_id) : null) : undefined,
   );
   return NextResponse.json({ user: updated });
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await getAuthUser(request);
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (auth.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const { id } = await params;
+  const userId = parseInt(id, 10);
+  if (isNaN(userId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+  if (userId === auth.userId) return NextResponse.json({ error: 'Nu îți poți șterge propriul cont' }, { status: 403 });
+
+  const target = await getUserById(userId);
+  if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  if ((target as { role?: string }).role === 'admin') {
+    return NextResponse.json({ error: 'Un cont de Fondator nu poate fi șters din UI' }, { status: 403 });
+  }
+
+  await deleteUser(userId);
+  return NextResponse.json({ success: true });
 }
