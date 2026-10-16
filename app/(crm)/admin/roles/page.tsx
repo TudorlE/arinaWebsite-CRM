@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { ShieldCheck, UserCheck, UserX, Trash2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, UserCheck, UserX, Trash2, AlertTriangle, X, UserPlus } from 'lucide-react';
 import PageBanner from '@/components/ui/PageBanner';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -21,7 +21,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 // without the admin needing to hit refresh/reopen the tab.
 const POLL_MS = 6000;
 
-type User = { id: number; name: string; email: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; created_at: string; teacher_id?: number | null; student_id?: number | null };
+type User = { id: number; name: string; email: string; role: string | null; status: 'pending' | 'approved' | 'rejected'; created_at: string; teacher_id?: number | null; student_id?: number | null; student_ids?: number[] };
 type Me   = { id: number; name: string; email: string; role: string };
 type Fisa = { id: number; name: string };
 
@@ -97,9 +97,52 @@ export default function RolesPage() {
       const data = await res.json();
       if (res.ok) {
         setUsers(prev => prev.map(u => u.id === user.id
-          ? { ...u, teacher_id: data.user?.teacher_id ?? null, student_id: data.user?.student_id ?? null }
+          ? { ...u, teacher_id: data.user?.teacher_id ?? null, student_id: data.user?.student_id ?? null, student_ids: data.user?.student_ids ?? [] }
           : u));
         toast('Fișă actualizată', 'success');
+      } else {
+        toast(data.error ?? 'Eroare', 'error');
+      }
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  /** Adds ANOTHER student fișă to an account already linked to one — e.g. a sibling. */
+  const handleAddStudentLink = async (user: User, studentId: string) => {
+    if (!studentId) return;
+    setUpdating(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'link_student', student_id: Number(studentId) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, student_id: data.user?.student_id ?? null, student_ids: data.user?.student_ids ?? [] } : u));
+        toast('Elev adăugat la cont', 'success');
+      } else {
+        toast(data.error ?? 'Eroare', 'error');
+      }
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  /** Removes one linked student fișă (the account keeps any other siblings still linked). */
+  const handleRemoveStudentLink = async (user: User, studentId: number) => {
+    setUpdating(user.id);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlink_student', student_id: studentId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, student_id: data.user?.student_id ?? null, student_ids: data.user?.student_ids ?? [] } : u));
+        toast('Elev scos din cont', 'success');
       } else {
         toast(data.error ?? 'Eroare', 'error');
       }
@@ -188,10 +231,14 @@ export default function RolesPage() {
     );
   }
 
+  // "Șterge cont + fișă" only offered when there's exactly ONE linked fișă to
+  // name unambiguously — with siblings sharing an account, which one would it
+  // even mean? Unlink the extra ones first (the chips below) if that's the goal.
+  const deleteTargetStudentIds = deleteTarget?.student_ids ?? (deleteTarget?.student_id != null ? [deleteTarget.student_id] : []);
   const fisaName = deleteTarget?.role === 'teacher'
     ? teachers.find(t => t.id === deleteTarget.teacher_id)?.name
-    : deleteTarget?.role === 'student'
-      ? students.find(s => s.id === deleteTarget.student_id)?.name
+    : deleteTarget?.role === 'student' && deleteTargetStudentIds.length === 1
+      ? students.find(s => s.id === deleteTargetStudentIds[0])?.name
       : undefined;
 
   return (
@@ -303,28 +350,77 @@ export default function RolesPage() {
                       </div>
                     </div>
 
-                    {/* Fișa legată — doar pentru profesor/elev; un cont fără fișă nu
-                        poate vedea de fapt nimic din datele lui odată logat. */}
-                    {(u.role === 'teacher' || u.role === 'student') && (
+                    {/* Fișa legată — profesorul are o singură fișă; elevul poate avea
+                        mai multe (frați/surori care împart un singur cont de părinte).
+                        Un cont fără NICIO fișă nu poate vedea de fapt nimic odată logat. */}
+                    {u.role === 'teacher' && (
                       <div className="sm:col-start-3 sm:col-span-2 flex items-center gap-2">
-                        {!u[u.role === 'teacher' ? 'teacher_id' : 'student_id'] && (
+                        {!u.teacher_id && (
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
                             Fără fișă
                           </span>
                         )}
                         <select
-                          value={(u.role === 'teacher' ? u.teacher_id : u.student_id) ?? ''}
+                          value={u.teacher_id ?? ''}
                           disabled={updating === u.id}
                           onChange={e => handleLinkChange(u, e.target.value)}
                           className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 min-w-0"
                         >
-                          <option value="">Asociază cu fișa de {u.role === 'teacher' ? 'profesor' : 'elev'}…</option>
-                          {(u.role === 'teacher' ? teachers : students).map(f => (
+                          <option value="">Asociază cu fișa de profesor…</option>
+                          {teachers.map(f => (
                             <option key={f.id} value={f.id}>{f.name}</option>
                           ))}
                         </select>
                       </div>
                     )}
+
+                    {u.role === 'student' && (() => {
+                      const linkedIds = u.student_ids ?? (u.student_id != null ? [u.student_id] : []);
+                      const linkedStudents = linkedIds.map(id => students.find(s => s.id === id)).filter((s): s is Fisa => !!s);
+                      const unlinkedOptions = students.filter(s => !linkedIds.includes(s.id));
+                      return (
+                        <div className="sm:col-start-3 sm:col-span-2 flex flex-wrap items-center gap-1.5">
+                          {linkedIds.length === 0 && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
+                              Fără fișă
+                            </span>
+                          )}
+                          {linkedStudents.map(s => (
+                            <span key={s.id} className="inline-flex items-center gap-1 text-xs font-medium pl-2.5 pr-1 py-1 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50">
+                              {s.name}
+                              <button
+                                type="button"
+                                disabled={updating === u.id}
+                                onClick={() => handleRemoveStudentLink(u, s.id)}
+                                title="Scoate din acest cont"
+                                className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-amber-200 dark:hover:bg-amber-800/50 disabled:opacity-50"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                          {unlinkedOptions.length > 0 && (
+                            <div className="relative inline-flex items-center">
+                              <select
+                                value=""
+                                disabled={updating === u.id}
+                                onChange={e => handleAddStudentLink(u, e.target.value)}
+                                title={linkedIds.length === 0 ? 'Asociază cu fișa de elev' : 'Adaugă un alt elev existent pe acest cont (ex. frate/soră)'}
+                                className="text-xs border border-dashed border-slate-300 dark:border-slate-600 rounded-full pl-6 pr-2 py-1 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500 max-w-[180px]"
+                              >
+                                <option value="" disabled>
+                                  {linkedIds.length === 0 ? 'Asociază cu fișa de elev…' : '+ adaugă alt elev existent…'}
+                                </option>
+                                {unlinkedOptions.map(f => (
+                                  <option key={f.id} value={f.id}>{f.name}</option>
+                                ))}
+                              </select>
+                              <UserPlus className="w-3 h-3 absolute left-2 text-slate-400 pointer-events-none" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
               </div>

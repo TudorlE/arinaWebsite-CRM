@@ -10,10 +10,13 @@ export interface AuthContext {
   auth: JWTPayload;
   role: string | null;
   teacherId: number | null;
+  /** Primary/first linked student — a representative id for any code that only needs one. */
   studentId: number | null;
+  /** EVERY student fișă this account can see (siblings sharing one account included). Use this for access checks. */
+  studentIds: number[];
 }
 
-/** Resolves the caller's auth + current role/teacher_id/student_id, read fresh
+/** Resolves the caller's auth + current role/teacher_id/student_id(s), read fresh
  * from the users table on every call — so a role change or approval takes
  * effect immediately, without waiting for the JWT to expire. */
 export async function getAuthContext(request: NextRequest): Promise<AuthContext | null> {
@@ -21,7 +24,7 @@ export async function getAuthContext(request: NextRequest): Promise<AuthContext 
   if (!auth) return null;
   const user = await getUserById(auth.userId);
   if (!user || user.status !== 'approved') return null;
-  return { auth, role: user.role ?? null, teacherId: user.teacher_id ?? null, studentId: user.student_id ?? null };
+  return { auth, role: user.role ?? null, teacherId: user.teacher_id ?? null, studentId: user.student_id ?? null, studentIds: user.student_ids ?? [] };
 }
 
 /** Returns a 401/403 NextResponse if the caller's role isn't in `roles`, otherwise null. */
@@ -60,10 +63,10 @@ export function restrictToOwnTeacher(ctx: AuthContext, targetTeacherId?: number 
 export function restrictToOwnStudent(ctx: AuthContext, targetStudentId?: number | null): NextResponse | null {
   if (ctx.role === 'admin' || ctx.role === 'administrator') return null;
   if (ctx.role === 'student') {
-    if (ctx.studentId == null) {
+    if (ctx.studentIds.length === 0) {
       return NextResponse.json({ error: 'Contul tău de elev nu este asociat unei fișe de elev.' }, { status: 403 });
     }
-    if (targetStudentId != null && Number(targetStudentId) !== ctx.studentId) {
+    if (targetStudentId != null && !ctx.studentIds.includes(Number(targetStudentId))) {
       return NextResponse.json({ error: 'Nu poți accesa datele altui elev.' }, { status: 403 });
     }
     return null;

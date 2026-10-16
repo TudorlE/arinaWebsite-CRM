@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   if (ctx!.role === 'student') {
     const guard = restrictToOwnStudent(ctx!);
     if (guard) return guard;
-    query = query.eq('id', ctx!.studentId!);
+    query = query.in('id', ctx!.studentIds);
   } else {
     if (instrument) query = query.contains('instruments', [instrument]);
     if (level)      query = query.eq('level', level);

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   if (ctx!.role === 'teacher' && row.teacher_id !== ctx!.teacherId) {
     return NextResponse.json({ error: 'Nu poți accesa datele altui profesor.' }, { status: 403 });
   }
-  if (ctx!.role === 'student' && row.student_id !== ctx!.studentId) {
+  if (ctx!.role === 'student' && !ctx!.studentIds.includes(row.student_id)) {
     return NextResponse.json({ error: 'Nu poți accesa datele altui elev.' }, { status: 403 });
   }
   const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);

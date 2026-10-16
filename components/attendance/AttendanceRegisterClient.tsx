@@ -105,6 +105,11 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
   const byDate: Record<string, Lesson[]> = {};
   for (const l of sorted) (byDate[l.date] ??= []).push(l);
   const dates = Object.keys(byDate).sort();
+  // A parent account linked to more than one child (siblings sharing a login)
+  // sees everyone's lessons mixed into the same timeline — label each by
+  // name so it's clear whose lesson it is. A single-child account never
+  // shows this (nothing to disambiguate), exactly as before.
+  const showStudentName = new Set(monthLessons.map(l => l.student_id)).size > 1;
 
   const counts = { present: 0, excused: 0, unexcused: 0 };
   for (const l of monthLessons) {
@@ -205,6 +210,11 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
                               </p>
                             </div>
                           </div>
+                          {showStudentName && l.student_name && (
+                            <span className="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 border border-violet-200">
+                              {l.student_name}
+                            </span>
+                          )}
                           <span className={`flex items-center gap-1 flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badge?.className ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                             {Icon && <Icon className="w-3 h-3" />}
                             {badge?.label ?? 'Programată'}
@@ -230,20 +240,23 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
   // used to flash before this client-side fetch resolved.
   const [role, setRole] = useState<string | null>(initialRole);
   const [myTeacherId, setMyTeacherId] = useState<number | null>(null);
-  const [myStudentId, setMyStudentId] = useState<number | null>(null);
+  // Every student fișă this account can see — more than one when siblings
+  // share a single parent login (see Roluri).
+  const [myStudentIds, setMyStudentIds] = useState<number[]>([]);
   useEffect(() => {
-    // Teacher/student id for immediate paint — role itself is NOT taken from
+    // Teacher/student id(s) for immediate paint — role itself is NOT taken from
     // this cache (only used as a fallback before the fetch below lands): it's
     // already correct from initialRole (server-verified via proxy.ts), and
     // trusting a per-browser cache here could flash a stale role left behind
     // by a previous account signed in on the same device.
     try {
       const cached = JSON.parse(localStorage.getItem('arry-register-role') ?? 'null');
-      if (cached) { setMyTeacherId(cached.teacherId ?? null); setMyStudentId(cached.studentId ?? null); }
+      if (cached) { setMyTeacherId(cached.teacherId ?? null); setMyStudentIds(cached.studentIds ?? []); }
     } catch { /* no cache */ }
     fetch('/api/auth/me').then(r => r.json()).then(d => {
-      setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); setMyStudentId(d.user?.student_id ?? null);
-      try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null, studentId: d.user?.student_id ?? null })); } catch { /* ignore */ }
+      const studentIds: number[] = d.user?.student_ids ?? [];
+      setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); setMyStudentIds(studentIds);
+      try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null, studentIds })); } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
   const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
@@ -352,9 +365,10 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
   // Strict roster: only students actually enrolled (per-instrument subscription
   // and its teacher), active, and never paused/inactive ones — see lib/rosters.ts.
   // At Solfegiu, an extra group filter (mică/medie/mare) narrows it further.
-  // A logged-in student only ever sees their own row, never their classmates'.
+  // A logged-in student only ever sees their own row(s) — usually one, or every
+  // sibling linked to the same account — never a classmate's.
   const students = allStudents
-    .filter(s => role !== 'student' || s.id === myStudentId)
+    .filter(s => role !== 'student' || myStudentIds.includes(s.id))
     .filter(s => inRegister(s, fDiscipline, effectiveTeacherId))
     .filter(s => fDiscipline !== SOLFEGIU || !fGroup || s.subscriptions?.find(x => x.instrument === SOLFEGIU)?.group === fGroup);
 

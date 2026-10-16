@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   } else if (ctx!.role === 'student') {
     const guard = restrictToOwnStudent(ctx!);
     if (guard) return guard;
-    query = query.eq('student_id', ctx!.studentId!);
+    query = query.in('student_id', ctx!.studentIds);
   } else {
     // admin / administrator — honor the optional filters as before.
     if (studentId) query = query.eq('student_id', Number(studentId));
