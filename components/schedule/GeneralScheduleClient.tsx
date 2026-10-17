@@ -139,9 +139,13 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
                 <p className="text-sm font-semibold text-slate-500">Nu există cabinete configurate</p>
               </div>
             ) : (
-              <table className="w-full border-separate border-spacing-0" style={{ minWidth: 320 }}>
+              <table className="w-full border-separate border-spacing-0" style={{ minWidth: 320, tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
+                    {/* table-layout: fixed (above) + an explicit width here is what makes every
+                        cabinet column — and so every cell/"square" below — exactly the same size,
+                        instead of a column with a longer name/discipline silently growing wider
+                        than its neighbors. Columns with no width share the rest equally. */}
                     <th className="sticky top-0 z-10 bg-brand-50 dark:bg-brand-950/60 border-b-2 border-brand-200 dark:border-brand-900 px-4 py-3.5 text-sm font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 text-left w-24 rounded-tl-xl">
                       Ora
                     </th>
@@ -182,9 +186,13 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
                           const key = `${col.id}|${time}`;
                           const cellSchedules = byCabinetTime[key] ?? [];
                           return (
-                            <td key={col.id} className="border-b border-slate-100 dark:border-slate-800 px-2 py-2 align-top min-w-[180px]">
-                              <div className="flex flex-col gap-1.5">
-                                {cellSchedules.map(s => (
+                            <td key={col.id} className="border-b border-slate-100 dark:border-slate-800 px-2 py-2 align-top overflow-hidden">
+                              {/* Fixed min-height so an empty cell is the same size as one with a
+                                  lesson — only genuinely stacked double-bookings grow taller. */}
+                              <div className="flex flex-col gap-1.5 min-h-[52px]">
+                                {cellSchedules.length === 0 ? (
+                                  <div className="h-full min-h-[48px] rounded-lg border border-dashed border-slate-200 dark:border-slate-700" />
+                                ) : cellSchedules.map(s => (
                                   <LessonBlock key={s.id} s={s} accentColor={cabinetAccent(typeof col.id === 'number' ? col.color : undefined)} />
                                 ))}
                               </div>
@@ -226,7 +234,9 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
                       </div>
                       <div className="flex-1 min-w-0 space-y-1.5 pb-1">
                         {lessons.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">Liber</p>
+                          <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-3">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">Liber</p>
+                          </div>
                         ) : lessons.map(s => {
                           const cab = cabinets.find(c => c.id === s.cabinet_id);
                           const accent = cabinetAccent(cab?.color);
