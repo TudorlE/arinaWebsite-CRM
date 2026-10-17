@@ -81,7 +81,7 @@ function dayParts(dateStr: string): { weekday: string; day: number; month: strin
  * server-side to this student alone) and the same outcome logic as the
  * register, so a lesson is labeled identically everywhere in the app.
  */
-function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked }: {
+function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked, students, activeStudentId, onSelectStudent }: {
   monthLessons: Lesson[];
   setMonthRef: (fn: (d: Date) => Date) => void;
   monthLabel: string;
@@ -89,6 +89,10 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
       it without picking one — "poate fi setată mai târziu") — an empty
       calendar would otherwise look identical to genuinely having no lessons. */
   unlinked: boolean;
+  /** Every child linked to this account — a parent sees a name switcher only when there's more than one. */
+  students: Student[];
+  activeStudentId: number | null;
+  onSelectStudent: (id: number) => void;
 }) {
   if (unlinked) {
     return (
@@ -105,18 +109,14 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
   const byDate: Record<string, Lesson[]> = {};
   for (const l of sorted) (byDate[l.date] ??= []).push(l);
   const dates = Object.keys(byDate).sort();
-  // A parent account linked to more than one child (siblings sharing a login)
-  // sees everyone's lessons mixed into the same timeline — label each by
-  // name so it's clear whose lesson it is. A single-child account never
-  // shows this (nothing to disambiguate), exactly as before.
-  const showStudentName = new Set(monthLessons.map(l => l.student_id)).size > 1;
 
-  const counts = { present: 0, excused: 0, unexcused: 0 };
+  const counts = { present: 0, excused: 0, unexcused: 0, recovered: 0 };
   for (const l of monthLessons) {
     const outcome = outcomeOf(l);
     if (outcome === 'present') counts.present++;
     else if (outcome === 'excused') counts.excused++;
     else if (outcome === 'unexcused') counts.unexcused++;
+    else if (outcome === 'recovered') counts.recovered++;
   }
 
   const today = todayChisinau();
@@ -132,6 +132,26 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
       style={{ background: 'linear-gradient(180deg, #FAF8FF 0%, #F6F3FE 220px, #FAF8FF 100%)' }}
     >
       <div className="max-w-2xl mx-auto space-y-5 sm:space-y-6">
+        {/* Child switcher — only when this account has more than one linked
+            fișă (siblings sharing a parent login). Picking a name shows that
+            child's details alone; nothing is ever shown merged together. */}
+        {students.length > 1 && (
+          <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
+            {students.map(s => {
+              const active = s.id === activeStudentId;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => onSelectStudent(s.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-sm font-bold transition-all ${active ? 'bg-violet-600 text-white shadow-md shadow-violet-600/25' : 'bg-white text-slate-500 border border-violet-100 hover:border-violet-300'}`}
+                >
+                  {s.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Month nav */}
         <div className="flex items-center justify-center gap-3 pt-1">
           <button onClick={() => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-violet-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all flex-shrink-0">
@@ -144,11 +164,12 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
         </div>
 
         {/* Monthly summary — bold gradient tiles */}
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
           {[
             { n: counts.present, label: 'Prezențe', from: '#34D399', to: '#059669', Icon: CheckCircle2 },
             { n: counts.excused, label: 'Motivate', from: '#FBBF24', to: '#D97706', Icon: AlertCircle },
             { n: counts.unexcused, label: 'Nemotivate', from: '#FB7185', to: '#E11D48', Icon: XCircle },
+            { n: counts.recovered, label: 'Recuperări', from: '#38BDF8', to: '#0284C7', Icon: Repeat },
           ].map(({ n, label, from, to, Icon }) => (
             <div
               key={label}
@@ -210,11 +231,6 @@ function StudentAttendanceView({ monthLessons, setMonthRef, monthLabel, unlinked
                               </p>
                             </div>
                           </div>
-                          {showStudentName && l.student_name && (
-                            <span className="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 border border-violet-200">
-                              {l.student_name}
-                            </span>
-                          )}
                           <span className={`flex items-center gap-1 flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badge?.className ?? 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                             {Icon && <Icon className="w-3 h-3" />}
                             {badge?.label ?? 'Programată'}
@@ -243,6 +259,10 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
   // Every student fișă this account can see — more than one when siblings
   // share a single parent login (see Roluri).
   const [myStudentIds, setMyStudentIds] = useState<number[]>([]);
+  // Which ONE of those is currently being viewed — a parent with two kids on
+  // one account sees exactly one child's personal register at a time, picked
+  // via the name switcher below, never both mixed into the same timeline.
+  const [activeStudentId, setActiveStudentId] = useState<number | null>(null);
   useEffect(() => {
     // Teacher/student id(s) for immediate paint — role itself is NOT taken from
     // this cache (only used as a fallback before the fetch below lands): it's
@@ -252,13 +272,21 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
     try {
       const cached = JSON.parse(localStorage.getItem('arry-register-role') ?? 'null');
       if (cached) { setMyTeacherId(cached.teacherId ?? null); setMyStudentIds(cached.studentIds ?? []); }
+      const cachedActive = Number(localStorage.getItem('arry-active-student') ?? '');
+      if (cachedActive) setActiveStudentId(cachedActive);
     } catch { /* no cache */ }
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       const studentIds: number[] = d.user?.student_ids ?? [];
       setRole(d.user?.role ?? null); setMyTeacherId(d.user?.teacher_id ?? null); setMyStudentIds(studentIds);
+      setActiveStudentId(prev => (prev != null && studentIds.includes(prev)) ? prev : (studentIds[0] ?? null));
       try { localStorage.setItem('arry-register-role', JSON.stringify({ role: d.user?.role ?? null, teacherId: d.user?.teacher_id ?? null, studentIds })); } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
+
+  const selectStudent = (id: number) => {
+    setActiveStudentId(id);
+    try { localStorage.setItem('arry-active-student', String(id)); } catch { /* ignore */ }
+  };
   const canEdit = role === 'admin' || role === 'administrator' || role === 'teacher';
   const isFullAdmin = role === 'admin' || role === 'administrator';
 
@@ -578,9 +606,23 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
 
   // A student gets a dedicated, read-only, personal timeline instead of the
   // multi-student marking grid below — that grid means nothing to someone who
-  // can only ever see their own single row of it.
+  // can only ever see their own single row of it. When the account has more
+  // than one linked child, only the ACTIVE one's lessons go in — the switcher
+  // (name pills) lives inside StudentAttendanceView itself.
   if (role === 'student') {
-    return <StudentAttendanceView monthLessons={monthLessons} setMonthRef={setMonthRef} monthLabel={monthLabel} unlinked={lessonsData?.error != null} />;
+    const myStudents = allStudents.filter(s => myStudentIds.includes(s.id));
+    const activeLessons = activeStudentId != null ? monthLessons.filter(l => l.student_id === activeStudentId) : monthLessons;
+    return (
+      <StudentAttendanceView
+        monthLessons={activeLessons}
+        setMonthRef={setMonthRef}
+        monthLabel={monthLabel}
+        unlinked={lessonsData?.error != null}
+        students={myStudents}
+        activeStudentId={activeStudentId}
+        onSelectStudent={selectStudent}
+      />
+    );
   }
 
   return (

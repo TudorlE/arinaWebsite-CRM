@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGuard';
 import { fetchShapedLesson } from '@/lib/lessonShape';
 import { nextState, type MarkAction } from '@/lib/attendanceMarks';
-import { DEFAULT_TIME_SLOTS } from '@/lib/timeSlots';
+import { timeSlotsForDay } from '@/lib/timeSlots';
 import type { StudentSubscription } from '@/lib/types';
 
 const ACTIONS: MarkAction[] = ['present', 'excused_absence', 'unexcused_absence', 'recovered', 'replacement', 'clear_replacement', 'cancelled'];
@@ -66,8 +66,29 @@ export async function POST(request: NextRequest) {
         const guard = restrictToOwnTeacher(ctx!, teacherId);
         if (guard) return guard;
 
+        // A lesson marked straight from the register (never scheduled ahead of
+        // time) used to always land on the first free slot of a hardcoded
+        // weekday ladder (13:15 onward) — completely disconnected from that
+        // student's actual fixed time in Program General/Privat, so every
+        // such lesson showed 13:15 regardless of when it really happened.
+        // Prefer the student's real recurring_schedules slot for this exact
+        // discipline + day of week; only fall back to the generic ladder
+        // (now at least day-correct — weekday vs weekend) when there's none.
+        const [y, m, d] = date.split('-').map(Number);
+        const dayOfWeek = new Date(y, m - 1, d).getDay();
+        const { data: recurringMatches } = await supabase
+          .from('recurring_schedules')
+          .select('start_time')
+          .eq('student_id', studentId)
+          .eq('discipline', discipline as string)
+          .eq('day_of_week', dayOfWeek)
+          .eq('active', true)
+          .order('start_time');
+
         const usedTimes = new Set(lessons.filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
-        const time = DEFAULT_TIME_SLOTS.find(t => !usedTimes.has(t)) ?? DEFAULT_TIME_SLOTS[0];
+        const scheduledTime = (recurringMatches ?? []).map(r => (r.start_time ?? '').slice(0, 5)).find(t => !usedTimes.has(t));
+        const fallbackSlots = timeSlotsForDay(dayOfWeek);
+        const time = scheduledTime ?? fallbackSlots.find(t => !usedTimes.has(t)) ?? fallbackSlots[0];
         const { data: inserted, error: insErr } = await supabase.from('lessons')
           .insert({ student_id: studentId, teacher_id: teacherId, date, time, duration: 45, status: 'scheduled', discipline })
           .select('id').single();
