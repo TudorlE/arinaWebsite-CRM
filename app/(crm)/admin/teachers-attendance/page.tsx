@@ -12,7 +12,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 
-type DetailKind = 'recovered' | 'excused' | 'unexcused' | 'replaced';
+type DetailKind = 'completed' | 'recovered' | 'excused' | 'unexcused' | 'replaced';
 type DetailChip = { key: string; text: string; count: number; dates: LessonOccurrence[] };
 
 const plain = (list?: { name: string; count: number; dates?: LessonOccurrence[] }[]): DetailChip[] =>
@@ -30,6 +30,12 @@ const DETAIL_KINDS: {
   number: string; hover: string; panel: string; chip: string;
   count: (t: MonthlyStats) => number; students: (t: MonthlyStats) => DetailChip[];
 }[] = [
+  {
+    kind: 'completed', label: 'Finalizate', title: 'Lecții finalizate', empty: 'Nicio lecție finalizată luna asta',
+    number: 'text-emerald-600 dark:text-emerald-400', hover: 'enabled:hover:bg-emerald-50 dark:enabled:hover:bg-emerald-900/20',
+    panel: 'bg-emerald-50/60 dark:bg-emerald-900/10', chip: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300',
+    count: t => t.completed, students: t => plain(t.completed_students),
+  },
   {
     kind: 'recovered', label: 'Recuperate', title: 'Recuperări', empty: 'Nicio recuperare luna asta',
     number: 'text-accent-600 dark:text-accent-400', hover: 'enabled:hover:bg-sky-50 dark:enabled:hover:bg-sky-900/20',
@@ -121,10 +127,6 @@ export default function TeachersAttendancePage() {
                   <div className="text-center">
                     <p className="text-xl font-extrabold text-slate-800 dark:text-slate-100">{t.total}</p>
                     <p className="text-[10px] text-slate-400">Total așteptat</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">{t.completed}</p>
-                    <p className="text-[10px] text-slate-400">Finalizate</p>
                   </div>
                   {DETAIL_KINDS.map(k => {
                     const count = k.count(t);

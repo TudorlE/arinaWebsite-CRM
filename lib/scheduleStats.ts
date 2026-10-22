@@ -261,7 +261,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
   // Per-teacher breakdown of WHICH students had a recovery / excused /
   // unexcused absence, and how many times — surfaced when clicking that
   // counter in Profesori Frecvență.
-  type StudentKind = 'recovered' | 'excused' | 'unexcused';
+  type StudentKind = 'completed' | 'recovered' | 'excused' | 'unexcused';
   // Each occurrence keeps its date + time, so the admin sees exactly WHEN.
   type Occurrence = { date: string; time: string | null };
   const byKind = new Map<string, Map<string, Occurrence[]>>(); // key: `${teacherId}|${kind}`
@@ -299,7 +299,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
     }
     if (filters.teacherId && r.teacher_id !== filters.teacherId) continue;
     const t = ensureTally(r.teacher_id);
-    if (outcome === 'present' || outcome === 'late') t.completed++;
+    if (outcome === 'present' || outcome === 'late') { t.completed++; bumpStudent(r.teacher_id, 'completed', r); }
     else if (outcome === 'recovered') { t.recovered++; bumpStudent(r.teacher_id, 'recovered', r); }
     else if (outcome === 'unexcused') { t.unexcused_absence++; bumpStudent(r.teacher_id, 'unexcused', r); }
     else if (outcome === 'excused') { t.excused_absence++; bumpStudent(r.teacher_id, 'excused', r); }
@@ -321,6 +321,7 @@ export async function computeTeacherWorkload(month: string, filters: StatsFilter
       unexcused_absence: tal.unexcused_absence,
       replaced: tal.replaced,
       students: Array.from(studentsByTeacher.get(id) ?? []).sort(),
+      completed_students: studentsOf(id, 'completed'),
       excused_students: studentsOf(id, 'excused'),
       unexcused_students: studentsOf(id, 'unexcused'),
       recovered_students: studentsOf(id, 'recovered'),

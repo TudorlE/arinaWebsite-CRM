@@ -19,6 +19,15 @@ import { getUserById } from '@/lib/users';
 // register and the shared general schedule. Everything else under /admin is
 // off-limits, per the owner's explicit requirement.
 const STUDENT_ALLOWED_PREFIXES = ['/admin/general-schedule', '/admin/attendance'];
+// A teacher's surface mirrors exactly what components/Sidebar.tsx marks
+// `teacherAllowed` — their own schedule, the shared boards, their own
+// students/frequency, never Dashboard/Plăți/Roluri (those pages only hid the
+// nav link before; a direct URL hit wasn't actually stopped until now).
+const TEACHER_ALLOWED_PREFIXES = [
+  '/admin/schedule', '/admin/general-schedule', '/admin/auditions', '/admin/attendance',
+  '/admin/teachers', '/admin/teachers-attendance', '/admin/students', '/admin/students-attendance',
+  '/admin/settings',
+];
 const AUTH_PAGES = ['/login', '/register'];
 
 function isUnderPrefix(pathname: string, prefix: string) {
@@ -48,6 +57,11 @@ export async function proxy(request: NextRequest) {
   if (user.role === 'student') {
     const allowed = STUDENT_ALLOWED_PREFIXES.some((prefix) => isUnderPrefix(pathname, prefix));
     if (!allowed) return NextResponse.redirect(new URL('/admin/attendance', request.url));
+  }
+
+  if (user.role === 'teacher') {
+    const allowed = TEACHER_ALLOWED_PREFIXES.some((prefix) => isUnderPrefix(pathname, prefix));
+    if (!allowed) return NextResponse.redirect(new URL('/admin/schedule', request.url));
   }
 
   // Forwarded to Server Components via headers() — lets the admin layout

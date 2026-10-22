@@ -117,6 +117,8 @@ export interface RecurringSchedule {
   teacher_id: number;
   teacher_name?: string;
   discipline?: string | null;
+  /** The student's own subscription group for this discipline — only meaningful for Solfegiu. */
+  student_group?: 'mica' | 'medie' | 'mare' | null;
   cabinet_id?: number | null;
   cabinet_name?: string | null;
   day_of_week: number; // 0=Sun … 6=Sat
@@ -192,6 +194,8 @@ export interface MonthlyStats {
   /** Per-teacher only: lessons this teacher taught as a substitute for another teacher. */
   replaced?: number;
   students?: string[]; // for per-teacher stats: the teacher's OWN students (never the ones they only substituted for)
+  /** Per-teacher only: which students had a completed (✓/Î) lesson with this teacher, and how many times. */
+  completed_students?: { name: string; count: number; dates?: LessonOccurrence[] }[];
   /** Per-teacher only: which students had an excused absence with this teacher, and how many times. */
   excused_students?: { name: string; count: number; dates?: LessonOccurrence[] }[];
   /** Per-teacher only: same breakdown for unexcused absences (N). */

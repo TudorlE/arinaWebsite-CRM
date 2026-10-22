@@ -6,10 +6,11 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { RecurringSchedule, INSTRUMENTS, DAYS_OF_WEEK } from '@/lib/types';
+import { RecurringSchedule, StudentSubscription, INSTRUMENTS, DAYS_OF_WEEK, SOLFEGIU_GROUPS } from '@/lib/types';
 import { GraduationCap, Calendar, DoorOpen, FileText } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+const SOLFEGIU = 'Solfegiu și teoria muzicii';
 
 interface Props {
   open: boolean;
@@ -37,10 +38,24 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
+  // Solfegiu is taught in groups (mică/medie/mare) — the group itself lives on
+  // the student's own Solfegiu subscription (set in Elevi), not on the
+  // schedule row. This just lets the admin see/set it right here too, while
+  // scheduling the lesson, instead of needing a separate trip to the student.
+  const [solfegiuGroup, setSolfegiuGroup] = useState('');
 
   const { data: studentsData } = useSWR('/api/students', fetcher);
   const { data: teachersData } = useSWR('/api/teachers', fetcher);
   const { data: cabinetsData } = useSWR('/api/cabinets', fetcher);
+  const students: { id: number; name: string; subscriptions?: StudentSubscription[] }[] = studentsData?.students ?? [];
+
+  useEffect(() => {
+    if (form.discipline !== SOLFEGIU || !form.student_id) { setSolfegiuGroup(''); return; }
+    const student = students.find(s => s.id === Number(form.student_id));
+    const sub = student?.subscriptions?.find(x => x.instrument === SOLFEGIU);
+    setSolfegiuGroup(sub?.group ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.discipline, form.student_id, studentsData]);
 
   useEffect(() => {
     if (schedule) {
@@ -101,17 +116,35 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
       if (!res.ok) {
         const data = await res.json();
         showToast(data.error ?? 'Eroare la salvare', 'error');
-      } else {
-        showToast(schedule ? 'Orar fix actualizat!' : 'Orar fix adăugat!', 'success');
-        onSaved();
-        onClose();
+        return;
       }
+
+      // Solfegiu: persist the group pick onto the student's own subscription
+      // (same field Elevi edits), only if it actually changed.
+      if (form.discipline === SOLFEGIU) {
+        const student = students.find(s => s.id === Number(form.student_id));
+        const currentSub = student?.subscriptions?.find(x => x.instrument === SOLFEGIU);
+        const currentGroup = currentSub?.group ?? '';
+        if (student?.subscriptions && currentGroup !== solfegiuGroup) {
+          const nextSubs = student.subscriptions.map(x =>
+            x.instrument === SOLFEGIU ? { ...x, group: (solfegiuGroup || null) as StudentSubscription['group'] } : x,
+          );
+          await fetch(`/api/students/${student.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscriptions: nextSubs }),
+          });
+        }
+      }
+
+      showToast(schedule ? 'Orar fix actualizat!' : 'Orar fix adăugat!', 'success');
+      onSaved();
+      onClose();
     } finally {
       setLoading(false);
     }
   };
 
-  const students = studentsData?.students ?? [];
   const teachers = teachersData?.teachers ?? [];
   const cabinets = cabinetsData?.cabinets ?? [];
 
@@ -131,7 +164,7 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
               onChange={set('student_id')}
               shake={errors.student_id}
               placeholder="Selectează elev"
-              options={students.map((s: { id: number; name: string }) => ({ value: s.id, label: s.name }))}
+              options={students.map(s => ({ value: s.id, label: s.name }))}
             />
             <Select
               label="Profesor"
@@ -142,7 +175,7 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
               options={teachers.map((t: { id: number; name: string }) => ({ value: t.id, label: t.name }))}
             />
           </div>
-          <div className="mt-3">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Disciplină"
               value={form.discipline}
@@ -150,6 +183,15 @@ export default function RecurringScheduleForm({ open, onClose, onSaved, schedule
               placeholder="Fără disciplină specificată"
               options={INSTRUMENTS.map(i => ({ value: i, label: i }))}
             />
+            {form.discipline === SOLFEGIU && (
+              <Select
+                label="Grupă"
+                value={solfegiuGroup}
+                onChange={e => setSolfegiuGroup(e.target.value)}
+                placeholder="Fără grupă atribuită"
+                options={SOLFEGIU_GROUPS}
+              />
+            )}
           </div>
         </div>
 

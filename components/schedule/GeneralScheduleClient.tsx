@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { CalendarRange, Clock, MapPin } from 'lucide-react';
-import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
+import { CalendarRange, Clock, MapPin, Users2 } from 'lucide-react';
+import { RecurringSchedule, Cabinet, CabinetDayStatus, SOLFEGIU_GROUPS } from '@/lib/types';
 import PageBanner from '@/components/ui/PageBanner';
 import { timeSlotsForDay } from '@/lib/timeSlots';
 import { todayChisinau, nowHHMMChisinau } from '@/lib/dates';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
+const SOLFEGIU = 'Solfegiu și teoria muzicii';
 
 // Same day-by-day cabinet table as Program Privat, but strictly read-only —
 // this page mirrors the fixed weekly schedule for staff to see, not to
@@ -87,6 +88,16 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
   ];
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
+
+  // Solfegiu groups — who's in each (mică/medie/mare), regardless of which
+  // day they attend. Visible to everyone who can see this page, parents
+  // included, same as the rest of this shared timetable board.
+  const solfegiuByGroup = new Map<string, Set<string>>();
+  for (const s of allSchedules) {
+    if (s.discipline !== SOLFEGIU || !s.student_group || !s.student_name) continue;
+    (solfegiuByGroup.get(s.student_group) ?? solfegiuByGroup.set(s.student_group, new Set()).get(s.student_group)!).add(s.student_name);
+  }
+  const hasSolfegiuGroups = solfegiuByGroup.size > 0;
 
   // Mobile view: a chronological timeline, grouped by time, across all cabinets —
   // no cramped multi-column table to scroll sideways on a phone. Shows every
@@ -264,6 +275,38 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
             )}
           </div>
         </div>
+
+        {/* ── Solfegiu groups — who's in each, and how many ── */}
+        {hasSolfegiuGroups && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Users2 className="w-4 h-4 text-cyan-500" />
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Grupe Solfegiu</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {SOLFEGIU_GROUPS.map(g => {
+                const names = Array.from(solfegiuByGroup.get(g.value) ?? []).sort();
+                return (
+                  <div key={g.value} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{g.label}</p>
+                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300">{names.length}</span>
+                    </div>
+                    {names.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {names.map(n => (
+                          <span key={n} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">{n}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 italic">Niciun elev</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Legend ──────────────────────────────────────── */}
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 pb-1">

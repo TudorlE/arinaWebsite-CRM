@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('recurring_schedules')
-    .select('*, students(name), teachers(name), cabinets(name)')
+    .select('*, students(name, subscriptions), teachers(name), cabinets(name)')
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
@@ -31,8 +31,9 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  type Sub = { instrument: string; group?: 'mica' | 'medie' | 'mare' | null };
   const schedules = (data ?? []).map(({ students, teachers, cabinets, ...s }: {
-    students: { name: string } | null;
+    students: { name: string; subscriptions: Sub[] | null } | null;
     teachers: { name: string } | null;
     cabinets: { name: string } | null;
     [key: string]: unknown;
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
     student_name: students?.name ?? null,
     teacher_name: teachers?.name ?? null,
     cabinet_name: cabinets?.name ?? null,
+    student_group: students?.subscriptions?.find(x => x.instrument === s.discipline)?.group ?? null,
   }));
 
   return NextResponse.json({ schedules });

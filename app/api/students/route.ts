@@ -3,7 +3,7 @@ import { supabase, friendlyDbError } from '@/lib/supabase';
 import { createMonthlyPayments } from '@/lib/payments';
 import { withTeacherNames } from '@/lib/pricing';
 import type { StudentSubscription } from '@/lib/types';
-import { getAuthContext, requireRole, restrictToOwnStudent } from '@/lib/roleGuard';
+import { getAuthContext, requireRole, restrictToOwnStudent, restrictToOwnTeacher } from '@/lib/roleGuard';
 
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
@@ -25,9 +25,18 @@ export async function GET(request: NextRequest) {
     if (guard) return guard;
     query = query.in('id', ctx!.studentIds);
   } else {
+    // A teacher still gets the usual filters — narrowing to THEIR OWN
+    // students (legacy teacher_id, or any active per-instrument subscription
+    // taught by them) happens after the fetch below, since that condition
+    // spans a scalar column and a JSONB array the query builder can't OR
+    // together cleanly in one request.
     if (instrument) query = query.contains('instruments', [instrument]);
     if (level)      query = query.eq('level', level);
     if (search)     query = query.ilike('name', `%${search}%`);
+    if (ctx!.role === 'teacher') {
+      const guard = restrictToOwnTeacher(ctx!);
+      if (guard) return guard;
+    }
   }
 
   const [{ data, error }, { data: teachersData }] = await Promise.all([
@@ -38,12 +47,21 @@ export async function GET(request: NextRequest) {
 
   const teacherMap = new Map<number, string>((teachersData ?? []).map((t: { id: number; name: string }) => [t.id, t.name]));
 
-  const students = (data ?? []).map(({ teachers, cabinets, subscriptions, ...s }: { teachers: { name: string } | null; cabinets: { name: string } | null; subscriptions?: StudentSubscription[]; [key: string]: unknown }) => ({
+  let students = (data ?? []).map(({ teachers, cabinets, subscriptions, ...s }: { teachers: { name: string } | null; cabinets: { name: string } | null; subscriptions?: StudentSubscription[]; [key: string]: unknown }) => ({
     ...s,
     teacher_name: teachers?.name ?? null,
     cabinet_name: cabinets?.name ?? null,
     subscriptions: withTeacherNames(subscriptions, teacherMap),
   }));
+
+  // Only the teacher's own students — legacy single teacher_id, or any
+  // active per-instrument subscription taught by them.
+  if (ctx!.role === 'teacher') {
+    const myId = ctx!.teacherId!;
+    students = students.filter((s: { teacher_id?: number | null; subscriptions?: StudentSubscription[] }) =>
+      s.teacher_id === myId || (s.subscriptions ?? []).some(x => x.teacher_id === myId),
+    );
+  }
 
   return NextResponse.json({ students });
 }
