@@ -16,3 +16,43 @@ export function formatBirthDate(birthDate?: string | null): string {
   const formatted = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
   return `${formatted} (${calculateAge(birthDate)} ani)`;
 }
+
+export interface UpcomingBirthday {
+  id: number;
+  name: string;
+  kind: 'student' | 'teacher';
+  /** Days until the next birthday — 0 means today. */
+  daysUntil: number;
+  /** Age they turn on that birthday. */
+  turning: number;
+  /** The next birthday as a local Date (this year or next). */
+  date: Date;
+}
+
+/**
+ * Next birthday for each person within `withinDays` (today included), sorted
+ * soonest first. 29 Feb birthdays fall on 28 Feb in non-leap years.
+ */
+export function upcomingBirthdays(
+  people: { id: number; name: string; birth_date?: string | null; kind: 'student' | 'teacher' }[],
+  withinDays = 30,
+  today = new Date(),
+): UpcomingBirthday[] {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const atYear = (y: number, m: number, d: number) => {
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    return new Date(y, m, Math.min(d, lastDay));
+  };
+  const out: UpcomingBirthday[] = [];
+  for (const p of people) {
+    if (!p.birth_date) continue;
+    const [by, bm, bd] = p.birth_date.slice(0, 10).split('-').map(Number);
+    if (!by || !bm || !bd) continue;
+    let next = atYear(start.getFullYear(), bm - 1, bd);
+    if (next < start) next = atYear(start.getFullYear() + 1, bm - 1, bd);
+    const daysUntil = Math.round((next.getTime() - start.getTime()) / 86400000);
+    if (daysUntil > withinDays) continue;
+    out.push({ id: p.id, name: p.name, kind: p.kind, daysUntil, turning: next.getFullYear() - by, date: next });
+  }
+  return out.sort((a, b) => a.daysUntil - b.daysUntil || a.name.localeCompare(b.name));
+}

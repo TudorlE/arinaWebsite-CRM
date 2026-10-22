@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DashboardStats, MONTHS, Payment } from '@/lib/types';
 import AccessDenied from '@/components/AccessDenied';
+import { BirthdayTodayBanner, UpcomingBirthdaysCard } from '@/components/dashboard/Birthdays';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -343,6 +344,9 @@ export default function DashboardPage() {
 
       <main className="flex-1 min-h-0 p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto overflow-x-hidden">
 
+        {/* ── Birthday today (only shows when someone has one) ── */}
+        <BirthdayTodayBanner />
+
         {/* ── Stats cards ──────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-brand-500" sub="Elevi activi" trend={{ value: 12, label: 'față de luna trecută' }} />
@@ -393,8 +397,9 @@ export default function DashboardPage() {
           <PaymentStatusCard summary={revSummary} payments={allPaymentsArr} router={router} now={now} />
         </div>
 
-        {/* ── Upcoming Lessons (full width) ────────────────── */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* ── Upcoming Lessons + Birthdays ─────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 min-w-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-800/50">
             <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center">
@@ -419,6 +424,9 @@ export default function DashboardPage() {
               )
             }
           </div>
+        </div>
+
+          <UpcomingBirthdaysCard />
         </div>
 
       </main>
