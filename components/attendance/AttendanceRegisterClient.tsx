@@ -374,6 +374,18 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
   }));
   const disciplineTeachers: { discipline: string; teacher_id: number | null; teacher_name: string | null }[] = disciplineTeachersData?.assignments ?? [];
 
+  // A teacher only ever sees the instruments THEY teach — clicking into one
+  // they don't was showing an empty roster but still leaking whichever other
+  // teacher happened to be assigned to it in the header label below.
+  const myInstruments = teachers.find(t => t.id === myTeacherId)?.instruments ?? [];
+  const visibleInstruments = role === 'teacher' ? INSTRUMENTS.filter(i => myInstruments.includes(i)) : INSTRUMENTS;
+  useEffect(() => {
+    if (role === 'teacher' && myInstruments.length > 0 && !myInstruments.includes(fDiscipline)) {
+      setFDiscipline(myInstruments[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, myTeacherId, teachers.length]);
+
   const monthLessons = allLessons.filter(l => l.date >= from && l.date <= to);
 
   const disciplineTeacherAssignment = fDiscipline ? disciplineTeachers.find(a => a.discipline === fDiscipline) : undefined;
@@ -649,7 +661,7 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
 
         {/* ── Service / discipline picker — 4 equal + Solfegiu full width on phone ── */}
         <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
-          {INSTRUMENTS.map(i => (
+          {visibleInstruments.map(i => (
             <button
               key={i}
               onClick={() => chooseDiscipline(i)}
@@ -698,7 +710,12 @@ export default function AttendanceRegisterClient({ initialRole }: { initialRole:
                   {fDiscipline ? (
                     <div className="flex flex-col gap-0.5 mb-1 sm:mb-2 p-1 sm:p-2 rounded-lg bg-white border-2 border-amber-400 shadow-sm normal-case">
                       <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-wider text-amber-600">{fDiscipline}</span>
-                      {fDiscipline === SOLFEGIU ? null : isFullAdmin ? (
+                      {fDiscipline === SOLFEGIU ? null : role === 'teacher' ? (
+                        // A teacher's own name, always — never the discipline's globally
+                        // assigned teacher (which could be someone else entirely and
+                        // would otherwise leak another teacher's name into this view).
+                        <span className="text-[10px] sm:text-xs font-semibold text-slate-700">{teacherName(myTeacherId) ?? '—'}</span>
+                      ) : isFullAdmin ? (
                         <select
                           value={disciplineTeacherAssignment?.teacher_id ?? ''}
                           onChange={e => setDisciplineTeacher(fDiscipline, e.target.value)}

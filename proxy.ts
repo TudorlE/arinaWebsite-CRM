@@ -20,14 +20,16 @@ import { getUserById } from '@/lib/users';
 // off-limits, per the owner's explicit requirement.
 const STUDENT_ALLOWED_PREFIXES = ['/admin/general-schedule', '/admin/attendance'];
 // A teacher's surface mirrors exactly what components/Sidebar.tsx marks
-// `teacherAllowed` — their own schedule, the shared boards, their own
-// students/frequency, never Dashboard/Plăți/Roluri (those pages only hid the
-// nav link before; a direct URL hit wasn't actually stopped until now).
-// '/admin/teachers' (Profesori General — the full roster of every teacher)
-// is deliberately excluded: a teacher should only ever see their own row,
-// which '/admin/teachers-attendance' already provides scoped.
+// `teacherAllowed` — the shared boards, their own students/frequency, never
+// Dashboard/Plăți/Roluri (those pages only hid the nav link before; a direct
+// URL hit wasn't actually stopped until now).
+// '/admin/schedule' (Program Privat, the editable admin-only view) and
+// '/admin/teachers' (Profesori General, the full roster of every teacher)
+// are deliberately excluded — a teacher's own schedule now lives on the
+// shared, unscoped '/admin/general-schedule' board instead, and their own
+// teacher row is already on '/admin/teachers-attendance'.
 const TEACHER_ALLOWED_PREFIXES = [
-  '/admin/schedule', '/admin/general-schedule', '/admin/auditions', '/admin/attendance',
+  '/admin/general-schedule', '/admin/auditions', '/admin/attendance',
   '/admin/teachers-attendance', '/admin/students', '/admin/students-attendance',
   '/admin/settings',
 ];
@@ -64,7 +66,7 @@ export async function proxy(request: NextRequest) {
 
   if (user.role === 'teacher') {
     const allowed = TEACHER_ALLOWED_PREFIXES.some((prefix) => isUnderPrefix(pathname, prefix));
-    if (!allowed) return NextResponse.redirect(new URL('/admin/schedule', request.url));
+    if (!allowed) return NextResponse.redirect(new URL('/admin/general-schedule', request.url));
   }
 
   // Forwarded to Server Components via headers() — lets the admin layout

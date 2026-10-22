@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { getAuthContext, requireRole, restrictToOwnTeacher } from '@/lib/roleGuard';
+import { getAuthContext, requireRole } from '@/lib/roleGuard';
 
 export async function GET(request: NextRequest) {
   const ctx = await getAuthContext(request);
-  // 'student' and 'administrator' both need this for "Program General" — the
-  // one shared, unscoped timetable view (see /admin/general-schedule); only
-  // 'teacher' gets narrowed below to their own schedules.
+  // This is the one shared, unscoped timetable view — "Program General" (see
+  // /admin/general-schedule) shows every lesson to every role that can see
+  // it, teachers included; teachers no longer have their own private schedule
+  // view (that was Program Privat, admin-only now).
   const forbidden = requireRole(ctx, ['admin', 'administrator', 'teacher', 'student']);
   if (forbidden) return forbidden;
 
@@ -22,11 +23,6 @@ export async function GET(request: NextRequest) {
 
   if (active !== null) query = query.eq('active', active === 'true');
   if (teacherId) query = query.eq('teacher_id', teacherId);
-  if (ctx!.role === 'teacher') {
-    const guard = restrictToOwnTeacher(ctx!);
-    if (guard) return guard;
-    query = query.eq('teacher_id', ctx!.teacherId!);
-  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
