@@ -8,8 +8,10 @@ import type { Student, Teacher } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-/** How far ahead the "upcoming" list looks. */
-const WINDOW_DAYS = 30;
+/** How many of the closest upcoming birthdays to show — not a day window, so
+ *  the card always has something as long as anyone has a birth_date saved,
+ *  even if their birthday is months away. */
+const SHOWN_COUNT = 5;
 
 function useBirthdays() {
   const { data: studentsData } = useSWR<{ students: Student[] }>('/api/students', fetcher);
@@ -21,7 +23,7 @@ function useBirthdays() {
     ...(teachersData?.teachers ?? [])
       .map(t => ({ id: t.id, name: t.name, birth_date: t.birth_date, kind: 'teacher' as const })),
   ];
-  return upcomingBirthdays(people, WINDOW_DAYS);
+  return upcomingBirthdays(people, SHOWN_COUNT);
 }
 
 const kindLabel = (b: UpcomingBirthday) => (b.kind === 'teacher' ? 'Profesor' : 'Elev');
@@ -70,7 +72,7 @@ export function BirthdayTodayBanner() {
   );
 }
 
-/** List of birthdays in the next WINDOW_DAYS days. */
+/** List of the closest upcoming birthdays, whatever their actual distance. */
 export function UpcomingBirthdaysCard() {
   const router = useRouter();
   const list = useBirthdays();
@@ -83,7 +85,7 @@ export function UpcomingBirthdaysCard() {
         </div>
         <div>
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">Zile de naștere</h2>
-          <p className="text-xs text-slate-400">Următoarele {WINDOW_DAYS} de zile · {list.length}</p>
+          <p className="text-xs text-slate-400">Cele mai apropiate · {list.length}</p>
         </div>
       </div>
 
@@ -129,7 +131,7 @@ export function UpcomingBirthdaysCard() {
               <Cake className="w-6 h-6 text-slate-400" />
             </div>
             <p className="text-sm text-slate-400 text-center px-6">
-              Nicio zi de naștere în următoarele {WINDOW_DAYS} de zile
+              Nicio zi de naștere salvată încă
             </p>
           </div>
         )}

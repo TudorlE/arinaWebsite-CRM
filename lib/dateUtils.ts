@@ -30,12 +30,14 @@ export interface UpcomingBirthday {
 }
 
 /**
- * Next birthday for each person within `withinDays` (today included), sorted
- * soonest first. 29 Feb birthdays fall on 28 Feb in non-leap years.
+ * The `limit` closest upcoming birthdays (today included), soonest first —
+ * always returns something as long as at least one person has a birth_date,
+ * regardless of how far off it is (no fixed day window to come up empty
+ * against). 29 Feb birthdays fall on 28 Feb in non-leap years.
  */
 export function upcomingBirthdays(
   people: { id: number; name: string; birth_date?: string | null; kind: 'student' | 'teacher' }[],
-  withinDays = 30,
+  limit = 5,
   today = new Date(),
 ): UpcomingBirthday[] {
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -51,8 +53,7 @@ export function upcomingBirthdays(
     let next = atYear(start.getFullYear(), bm - 1, bd);
     if (next < start) next = atYear(start.getFullYear() + 1, bm - 1, bd);
     const daysUntil = Math.round((next.getTime() - start.getTime()) / 86400000);
-    if (daysUntil > withinDays) continue;
     out.push({ id: p.id, name: p.name, kind: p.kind, daysUntil, turning: next.getFullYear() - by, date: next });
   }
-  return out.sort((a, b) => a.daysUntil - b.daysUntil || a.name.localeCompare(b.name));
+  return out.sort((a, b) => a.daysUntil - b.daysUntil || a.name.localeCompare(b.name)).slice(0, limit);
 }
