@@ -31,6 +31,29 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (ruleErr || !rule) return NextResponse.json({ error: 'Recurring schedule not found' }, { status: 404 });
     if (!rule.active) return NextResponse.json({ error: 'Acest orar fix este dezactivat.' }, { status: 400 });
 
+    // A Solfegiu GROUP schedule (no single student_id) fans out into one
+    // lesson row per student CURRENTLY in that group — looked up live from
+    // their subscription, not fixed at the time the schedule was created.
+    let studentIds: number[];
+    if (rule.student_id != null) {
+      studentIds = [rule.student_id];
+    } else if (rule.group_name) {
+      type Sub = { instrument: string; group?: string | null; status?: string | null };
+      const { data: students, error: stErr } = await supabase.from('students').select('id, status, subscriptions');
+      if (stErr) return NextResponse.json({ error: stErr.message }, { status: 500 });
+      studentIds = ((students ?? []) as { id: number; status: string | null; subscriptions: Sub[] | null }[])
+        .filter(s => (s.status ?? 'active') === 'active')
+        .filter(s => (s.subscriptions ?? []).some(x =>
+          x.instrument === rule.discipline && (x.status ?? 'active') === 'active' && x.group === rule.group_name,
+        ))
+        .map(s => s.id);
+      if (studentIds.length === 0) {
+        return NextResponse.json({ success: true, inserted: 0, checked: 0, note: 'Niciun elev activ în această grupă încă.' });
+      }
+    } else {
+      return NextResponse.json({ error: 'Orarul fix nu are nici elev, nici grupă atribuită.' }, { status: 400 });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startFrom = rule.generated_until ? new Date(rule.generated_until + 'T00:00:00') : new Date(today);
@@ -44,26 +67,28 @@ export async function POST(request: NextRequest, { params }: Params) {
     const rows: Record<string, unknown>[] = [];
     for (const d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
       if (d.getDay() !== rule.day_of_week) continue;
-      rows.push({
-        student_id: rule.student_id,
-        teacher_id: rule.teacher_id,
-        date: fmt(d),
-        time: rule.start_time,
-        duration,
-        status: 'scheduled',
-        notes: rule.notes,
-        cabinet_id: rule.cabinet_id,
-        discipline: rule.discipline,
-        recurring_schedule_id: rule.id,
-        is_customized: false,
-      });
+      for (const studentId of studentIds) {
+        rows.push({
+          student_id: studentId,
+          teacher_id: rule.teacher_id,
+          date: fmt(d),
+          time: rule.start_time,
+          duration,
+          status: 'scheduled',
+          notes: rule.notes,
+          cabinet_id: rule.cabinet_id,
+          discipline: rule.discipline,
+          recurring_schedule_id: rule.id,
+          is_customized: false,
+        });
+      }
     }
 
     let inserted = 0;
     if (rows.length > 0) {
       const { data, error } = await supabase
         .from('lessons')
-        .upsert(rows, { onConflict: 'recurring_schedule_id,date', ignoreDuplicates: true })
+        .upsert(rows, { onConflict: 'recurring_schedule_id,date,student_id', ignoreDuplicates: true })
         .select();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       inserted = data?.length ?? 0;

@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import useSWRImmutable from 'swr/immutable';
 import { useRouter } from 'next/navigation';
 import {
-  Users, DollarSign, Music2, BookCheck,
+  Users, Music2, BookCheck,
   TrendingUp, TrendingDown,
   LayoutDashboard, ChevronRight, ChevronLeft,
 } from 'lucide-react';
@@ -25,20 +25,21 @@ function trendPct(cur: number, prev: number): number | null {
 }
 
 function StatCard({
-  label, value, sub, icon: Icon, color, trend,
+  label, value, sub, icon: Icon, color, glow, trend,
 }: {
   label: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string; trend?: number | null;
+  icon: React.ElementType; color: string; glow: string; trend?: number | null;
 }) {
   const up = (trend ?? 0) >= 0;
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-          <Icon className="w-5 h-5 text-white" />
+    <div className="relative overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7">
+      <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-10" style={{ background: glow, filter: 'blur(28px)' }} />
+      <div className="relative flex items-start justify-between mb-4">
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm ${color}`}>
+          <Icon className="w-7 h-7 text-white" />
         </div>
         {trend != null && (
-          <span className={`flex items-center gap-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+          <span className={`flex items-center gap-0.5 text-xs font-bold px-2.5 py-1 rounded-full ${
             up ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
                : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
           }`}>
@@ -47,9 +48,9 @@ function StatCard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{sub}</p>}
+      <p className="relative text-4xl font-extrabold text-slate-900 dark:text-white leading-none">{value}</p>
+      <p className="relative text-base font-semibold text-slate-600 dark:text-slate-300 mt-2">{label}</p>
+      {sub && <p className="relative text-xs text-slate-400 dark:text-slate-500 mt-1.5">{sub}</p>}
     </div>
   );
 }
@@ -157,38 +158,34 @@ export default function DashboardPage() {
         <BirthdayTodayBanner />
 
         {/* ── Stats cards — all real numbers, real month-over-month trends ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <StatCard
-            label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-brand-500" sub="Elevi activi"
+            label="Elevi înscriși" value={stats?.totalStudents ?? '—'} icon={Users} color="bg-brand-500" glow="#6d4cea" sub="Elevi activi"
             trend={stats && prevStats ? trendPct(stats.totalStudents, prevStats.totalStudents) : null}
           />
           <StatCard
-            label="Venituri lunare" value={stats ? `${stats.totalMonthlyIncome.toLocaleString()} MDL` : '—'} icon={DollarSign} color="bg-emerald-500" sub={`${stats?.paidThisMonth?.toLocaleString() ?? 0} MDL colectate`}
-            trend={stats && prevStats ? trendPct(stats.totalMonthlyIncome, prevStats.totalMonthlyIncome) : null}
-          />
-          <StatCard
-            label="Profesori" value={stats?.totalTeachers ?? '—'} icon={Music2} color="bg-violet-500" sub="Activi în școală"
+            label="Profesori" value={stats?.totalTeachers ?? '—'} icon={Music2} color="bg-violet-500" glow="#8b5cf6" sub="Activi în școală"
             trend={stats && prevStats ? trendPct(stats.totalTeachers, prevStats.totalTeachers) : null}
           />
           <StatCard
-            label="Lecții finalizate" value={stats?.completedLessonsThisMonth ?? '—'} icon={BookCheck} color="bg-sky-500" sub={`${MONTHS[selMonth - 1]}`}
+            label="Lecții finalizate" value={stats?.completedLessonsThisMonth ?? '—'} icon={BookCheck} color="bg-sky-500" glow="#0ea5e9" sub={`${MONTHS[selMonth - 1]}`}
             trend={stats && prevStats ? trendPct(stats.completedLessonsThisMonth, prevStats.completedLessonsThisMonth) : null}
           />
         </div>
 
         {/* ── Revenue overview + Birthdays ─────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
           {/* Area chart */}
-          <div className="lg:col-span-2 min-w-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-2 min-w-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 flex flex-col">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Prezentare venituri</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Plăți încasate — ultimele 6 luni</p>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Prezentare venituri</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Plăți încasate — ultimele 6 luni</p>
               </div>
-              <TrendingUp className="w-4 h-4 text-emerald-500" />
+              <TrendingUp className="w-5 h-5 text-emerald-500" />
             </div>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={320}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">

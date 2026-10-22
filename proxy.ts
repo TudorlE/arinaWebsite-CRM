@@ -23,9 +23,12 @@ const STUDENT_ALLOWED_PREFIXES = ['/admin/general-schedule', '/admin/attendance'
 // `teacherAllowed` — their own schedule, the shared boards, their own
 // students/frequency, never Dashboard/Plăți/Roluri (those pages only hid the
 // nav link before; a direct URL hit wasn't actually stopped until now).
+// '/admin/teachers' (Profesori General — the full roster of every teacher)
+// is deliberately excluded: a teacher should only ever see their own row,
+// which '/admin/teachers-attendance' already provides scoped.
 const TEACHER_ALLOWED_PREFIXES = [
   '/admin/schedule', '/admin/general-schedule', '/admin/auditions', '/admin/attendance',
-  '/admin/teachers', '/admin/teachers-attendance', '/admin/students', '/admin/students-attendance',
+  '/admin/teachers-attendance', '/admin/students', '/admin/students-attendance',
   '/admin/settings',
 ];
 const AUTH_PAGES = ['/login', '/register'];

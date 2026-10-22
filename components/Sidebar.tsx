@@ -27,7 +27,7 @@ const nav: NavItem[] = [
   { href: '/admin/auditions',          label: 'Audiții',             icon: Mic2,          teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/attendance',         label: 'Registru Frecvență', icon: ClipboardList, studentAllowed: true, teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/payments',     label: 'Plăți',       icon: CreditCard },
-  { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      teacherAllowed: true, administratorAllowed: true },
+  { href: '/admin/teachers',     label: 'Profesori General',   icon: Music2,                      administratorAllowed: true },
   { href: '/admin/teachers-attendance', label: 'Profesori Frecvență', icon: ClipboardList,         teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/students',     label: 'Elevi General', icon: Users,                              teacherAllowed: true, administratorAllowed: true },
   { href: '/admin/students-attendance', label: 'Elevi Frecvență', icon: ClipboardList,             teacherAllowed: true, administratorAllowed: true },

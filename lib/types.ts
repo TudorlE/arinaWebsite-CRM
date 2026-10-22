@@ -56,6 +56,13 @@ export const SOLFEGIU_GROUPS: { value: 'mica' | 'medie' | 'mare'; label: string 
   { value: 'mare',  label: 'Grupa mare' },
 ];
 
+/** One distinct, pleasant color per Solfegiu group — used anywhere a group shows up on a schedule grid. */
+export const SOLFEGIU_GROUP_COLORS: Record<'mica' | 'medie' | 'mare', { block: string; badge: string; dot: string }> = {
+  mica:  { block: 'bg-amber-50 border-amber-300 text-amber-800',   badge: 'bg-amber-100 text-amber-700',   dot: '#D97706' },
+  medie: { block: 'bg-cyan-50 border-cyan-300 text-cyan-800',      badge: 'bg-cyan-100 text-cyan-700',     dot: '#0891B2' },
+  mare:  { block: 'bg-violet-50 border-violet-300 text-violet-800', badge: 'bg-violet-100 text-violet-700', dot: '#7C3AED' },
+};
+
 export interface Student {
   id: number;
   name: string;
@@ -112,13 +119,16 @@ export interface Lesson {
 
 export interface RecurringSchedule {
   id: number;
-  student_id: number;
+  /** Null for a Solfegiu GROUP schedule (see group_name below) — every other
+   *  instrument is always tied to one specific student. */
+  student_id: number | null;
   student_name?: string;
   teacher_id: number;
   teacher_name?: string;
   discipline?: string | null;
-  /** The student's own subscription group for this discipline — only meaningful for Solfegiu. */
-  student_group?: 'mica' | 'medie' | 'mare' | null;
+  /** Set instead of student_id for a Solfegiu group class — the whole group
+   *  attends this one weekly slot, not one individual student. */
+  group_name?: 'mica' | 'medie' | 'mare' | null;
   cabinet_id?: number | null;
   cabinet_name?: string | null;
   day_of_week: number; // 0=Sun … 6=Sat

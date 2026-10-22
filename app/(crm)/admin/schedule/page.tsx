@@ -7,7 +7,7 @@ import RecurringScheduleForm from '@/components/recurring-schedule/RecurringSche
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { RecurringSchedule, Cabinet, CabinetDayStatus } from '@/lib/types';
+import { RecurringSchedule, Cabinet, CabinetDayStatus, SOLFEGIU_GROUPS, SOLFEGIU_GROUP_COLORS } from '@/lib/types';
 import AccessDenied from '@/components/AccessDenied';
 import PageBanner from '@/components/ui/PageBanner';
 import { timeSlotsForDay } from '@/lib/timeSlots';
@@ -38,6 +38,12 @@ function diffMinutes(start: string, end: string): number {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   return (eh * 60 + em) - (sh * 60 + sm);
+}
+
+/** A Solfegiu group schedule has no single student — show the group's label instead. */
+function displayName(s: { student_name?: string; group_name?: 'mica' | 'medie' | 'mare' | null }): string {
+  if (s.group_name) return SOLFEGIU_GROUPS.find(g => g.value === s.group_name)?.label ?? s.group_name;
+  return s.student_name ?? '—';
 }
 
 export default function SchedulePage() {
@@ -177,7 +183,7 @@ export default function SchedulePage() {
       s.id !== id && (s.cabinet_id ?? null) === newCabinetId && s.start_time?.slice(0, 5) === time,
     );
     if (conflict) {
-      toast(`Conflict: cabinetul e deja ocupat la ${time} de ${conflict.student_name}`, 'error');
+      toast(`Conflict: cabinetul e deja ocupat la ${time} de ${displayName(conflict)}`, 'error');
       return;
     }
 
@@ -360,6 +366,7 @@ export default function SchedulePage() {
                             {cellSchedules.map(s => {
                               const isDragging = draggingId === s.id;
                               const isMenu     = activeMenu === s.id;
+                              const groupColor = s.group_name ? SOLFEGIU_GROUP_COLORS[s.group_name] : null;
                               return (
                                 <div
                                   key={s.id}
@@ -372,7 +379,7 @@ export default function SchedulePage() {
                                   }}
                                   onDragEnd={isStudent ? undefined : () => { setDraggingId(null); setDropCell(null); }}
                                   onClick={isStudent ? undefined : e => { e.stopPropagation(); setActiveMenu(isMenu ? null : s.id); }}
-                                  className={`relative text-[10px] sm:text-sm px-1.5 py-1 sm:px-3 sm:py-2.5 rounded-lg border mb-1 last:mb-0 select-none bg-brand-50 border-brand-300 text-brand-800 ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
+                                  className={`relative text-[10px] sm:text-sm px-1.5 py-1 sm:px-3 sm:py-2.5 rounded-lg border mb-1 last:mb-0 select-none ${groupColor?.block ?? 'bg-brand-50 border-brand-300 text-brand-800'} ${isStudent ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
                                     transition-all duration-150
                                     ${isDragging ? 'opacity-40 scale-95' : 'hover:shadow-md'}
                                     ${isMenu ? 'ring-2 ring-brand-400 shadow-lg' : ''}`}
@@ -380,7 +387,7 @@ export default function SchedulePage() {
                                   <div className="flex items-start gap-1.5">
                                     <GripVertical className="w-3 h-3 sm:w-3.5 sm:h-3.5 mt-0.5 opacity-40 flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-semibold truncate">{s.student_name}</p>
+                                      <p className="font-semibold truncate">{displayName(s)}</p>
                                       <p className="truncate text-[9px] sm:text-xs mt-0.5">
                                         <span className="font-semibold" style={{ color: 'inherit' }}>{s.discipline || '—'}</span>
                                         <span className="opacity-70"> · {s.teacher_name}</span>
@@ -450,7 +457,7 @@ export default function SchedulePage() {
 
       <Modal open={!!generateTarget} onClose={() => setGenerateTarget(null)} title="Generează lecții" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Generează lecțiile viitoare pentru <strong className="text-slate-900 dark:text-slate-100">{generateTarget?.student_name}</strong>
+          Generează lecțiile viitoare pentru <strong className="text-slate-900 dark:text-slate-100">{generateTarget ? displayName(generateTarget) : ''}</strong>
           {generateTarget && <> ({DAY_LABELS[(generateTarget.day_of_week + 6) % 7]}, {generateTarget.start_time?.slice(0, 5)})</>}. Regenerarea e sigură — lecțiile deja generate nu se duplică.
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -464,7 +471,7 @@ export default function SchedulePage() {
 
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Șterge orarul" size="sm">
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Elimină din program orarul fix al lui <strong className="text-slate-900 dark:text-slate-100">{deleteTarget?.student_name}</strong>
+          Elimină din program orarul fix al lui <strong className="text-slate-900 dark:text-slate-100">{deleteTarget ? displayName(deleteTarget) : ''}</strong>
           {deleteTarget && <> din {DAY_LABELS[(deleteTarget.day_of_week + 6) % 7]} la {deleteTarget.start_time?.slice(0, 5)}</>}?
         </p>
         <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3">

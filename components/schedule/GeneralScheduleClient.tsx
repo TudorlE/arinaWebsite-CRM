@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { CalendarRange, Clock, MapPin, Users2 } from 'lucide-react';
-import { RecurringSchedule, Cabinet, CabinetDayStatus, SOLFEGIU_GROUPS } from '@/lib/types';
+import { RecurringSchedule, Cabinet, CabinetDayStatus, SOLFEGIU_GROUPS, SOLFEGIU_GROUP_COLORS } from '@/lib/types';
 import PageBanner from '@/components/ui/PageBanner';
 import { timeSlotsForDay } from '@/lib/timeSlots';
 import { todayChisinau, nowHHMMChisinau } from '@/lib/dates';
@@ -42,15 +42,22 @@ function cabinetAccent(color?: string | null): string {
   return color || '#5934DC';
 }
 
+/** A Solfegiu group schedule has no single student — show the group's label instead. */
+function displayName(s: { student_name?: string; group_name?: 'mica' | 'medie' | 'mare' | null }): string {
+  if (s.group_name) return SOLFEGIU_GROUPS.find(g => g.value === s.group_name)?.label ?? s.group_name;
+  return s.student_name ?? '—';
+}
+
 function LessonBlock({ s, accentColor }: { s: RecurringSchedule; accentColor: string }) {
+  const groupColor = s.group_name ? SOLFEGIU_GROUP_COLORS[s.group_name] : null;
   return (
     <div
-      className="rounded-lg border bg-white dark:bg-slate-900 px-2.5 py-2 shadow-sm hover:shadow-md transition-shadow"
-      style={{ borderLeftWidth: 3, borderLeftColor: accentColor, borderTopColor: 'rgb(226 232 240)', borderRightColor: 'rgb(226 232 240)', borderBottomColor: 'rgb(226 232 240)' }}
+      className={`rounded-lg border px-2.5 py-2 shadow-sm hover:shadow-md transition-shadow ${groupColor ? groupColor.block : 'bg-white dark:bg-slate-900'}`}
+      style={groupColor ? undefined : { borderLeftWidth: 3, borderLeftColor: accentColor, borderTopColor: 'rgb(226 232 240)', borderRightColor: 'rgb(226 232 240)', borderBottomColor: 'rgb(226 232 240)' }}
     >
-      <p className="font-semibold text-[11px] sm:text-sm text-slate-800 dark:text-slate-100 truncate">{s.student_name}</p>
-      <p className="truncate text-[9px] sm:text-xs mt-0.5 text-slate-500 dark:text-slate-400">
-        <span className="font-medium" style={{ color: accentColor }}>{s.discipline || '—'}</span>
+      <p className={`font-semibold text-[11px] sm:text-sm truncate ${groupColor ? '' : 'text-slate-800 dark:text-slate-100'}`}>{displayName(s)}</p>
+      <p className={`truncate text-[9px] sm:text-xs mt-0.5 ${groupColor ? 'opacity-80' : 'text-slate-500 dark:text-slate-400'}`}>
+        <span className="font-medium" style={groupColor ? undefined : { color: accentColor }}>{s.discipline || '—'}</span>
         <span className="opacity-70"> · {s.teacher_name}</span>
       </p>
     </div>
@@ -89,15 +96,12 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
   const dayStatusFor = (cabinetId: number): 'liber' | 'ocupat' =>
     dayStatuses.find(s => s.cabinet_id === cabinetId && s.day_of_week === selectedDow)?.status ?? 'liber';
 
-  // Solfegiu groups — who's in each (mică/medie/mare), regardless of which
-  // day they attend. Visible to everyone who can see this page, parents
-  // included, same as the rest of this shared timetable board.
-  const solfegiuByGroup = new Map<string, Set<string>>();
-  for (const s of allSchedules) {
-    if (s.discipline !== SOLFEGIU || !s.student_group || !s.student_name) continue;
-    (solfegiuByGroup.get(s.student_group) ?? solfegiuByGroup.set(s.student_group, new Set()).get(s.student_group)!).add(s.student_name);
-  }
-  const hasSolfegiuGroups = solfegiuByGroup.size > 0;
+  // Solfegiu groups — each group's own weekly session(s): day, hour, teacher.
+  // Visible to everyone who can see this page, parents included, same as the
+  // rest of this shared timetable board (sourced from the same unscoped
+  // recurring-schedules fetch above, not from per-student data).
+  const solfegiuSchedules = allSchedules.filter(s => s.discipline === SOLFEGIU && s.group_name);
+  const hasSolfegiuGroups = solfegiuSchedules.length > 0;
 
   // Mobile view: a chronological timeline, grouped by time, across all cabinets —
   // no cramped multi-column table to scroll sideways on a phone. Shows every
@@ -251,15 +255,20 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
                         ) : lessons.map(s => {
                           const cab = cabinets.find(c => c.id === s.cabinet_id);
                           const accent = cabinetAccent(cab?.color);
+                          const groupColor = s.group_name ? SOLFEGIU_GROUP_COLORS[s.group_name] : null;
                           return (
-                            <div key={s.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm" style={{ borderLeftWidth: 3, borderLeftColor: accent }}>
-                              <p className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{s.student_name}</p>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                <span className="font-semibold" style={{ color: accent }}>{s.discipline || '—'}</span>
+                            <div
+                              key={s.id}
+                              className={`rounded-xl border p-3 shadow-sm ${groupColor ? groupColor.block : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}
+                              style={groupColor ? undefined : { borderLeftWidth: 3, borderLeftColor: accent }}
+                            >
+                              <p className={`font-bold text-sm truncate ${groupColor ? '' : 'text-slate-800 dark:text-slate-100'}`}>{displayName(s)}</p>
+                              <div className={`flex items-center gap-2 mt-1 text-xs ${groupColor ? 'opacity-80' : 'text-slate-500 dark:text-slate-400'}`}>
+                                <span className="font-semibold" style={groupColor ? undefined : { color: accent }}>{s.discipline || '—'}</span>
                                 <span>· {s.teacher_name}</span>
                               </div>
                               {cab && (
-                                <div className="flex items-center gap-1 mt-1.5 text-[11px] text-slate-400">
+                                <div className={`flex items-center gap-1 mt-1.5 text-[11px] ${groupColor ? 'opacity-70' : 'text-slate-400'}`}>
                                   <MapPin className="w-3 h-3" />
                                   {/cabinet/i.test(cab.name) ? cab.name : `Cabinet ${cab.name}`}
                                 </div>
@@ -276,7 +285,7 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
           </div>
         </div>
 
-        {/* ── Solfegiu groups — who's in each, and how many ── */}
+        {/* ── Solfegiu groups — each group's own weekly session(s) ── */}
         {hasSolfegiuGroups && (
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -285,21 +294,24 @@ export default function GeneralScheduleClient({ role }: { role: string | null })
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {SOLFEGIU_GROUPS.map(g => {
-                const names = Array.from(solfegiuByGroup.get(g.value) ?? []).sort();
+                const sessions = solfegiuSchedules.filter(s => s.group_name === g.value);
+                const color = SOLFEGIU_GROUP_COLORS[g.value];
                 return (
-                  <div key={g.value} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3">
+                  <div key={g.value} className={`rounded-xl border p-3 ${color.block}`}>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">{g.label}</p>
-                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300">{names.length}</span>
+                      <p className="text-xs font-bold uppercase tracking-wide">{g.label}</p>
+                      <span className={`text-xs font-extrabold px-2 py-0.5 rounded-full ${color.badge}`}>{sessions.length}</span>
                     </div>
-                    {names.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {names.map(n => (
-                          <span key={n} className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">{n}</span>
+                    {sessions.length > 0 ? (
+                      <div className="space-y-1">
+                        {sessions.map(s => (
+                          <p key={s.id} className="text-[11px] font-medium">
+                            {DAY_LABELS[(s.day_of_week + 6) % 7]} · {(s.start_time ?? '').slice(0, 5)} — {s.teacher_name}
+                          </p>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[11px] text-slate-400 italic">Niciun elev</p>
+                      <p className="text-[11px] italic opacity-70">Nicio oră programată</p>
                     )}
                   </div>
                 );

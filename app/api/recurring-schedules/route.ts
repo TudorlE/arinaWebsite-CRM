@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('recurring_schedules')
-    .select('*, students(name, subscriptions), teachers(name), cabinets(name)')
+    .select('*, students(name), teachers(name), cabinets(name)')
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
@@ -31,9 +31,8 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  type Sub = { instrument: string; group?: 'mica' | 'medie' | 'mare' | null };
   const schedules = (data ?? []).map(({ students, teachers, cabinets, ...s }: {
-    students: { name: string; subscriptions: Sub[] | null } | null;
+    students: { name: string } | null;
     teachers: { name: string } | null;
     cabinets: { name: string } | null;
     [key: string]: unknown;
@@ -42,7 +41,6 @@ export async function GET(request: NextRequest) {
     student_name: students?.name ?? null,
     teacher_name: teachers?.name ?? null,
     cabinet_name: cabinets?.name ?? null,
-    student_group: students?.subscriptions?.find(x => x.instrument === s.discipline)?.group ?? null,
   }));
 
   return NextResponse.json({ schedules });
@@ -54,14 +52,16 @@ export async function POST(request: NextRequest) {
   if (forbidden) return forbidden;
 
   try {
-    const { student_id, teacher_id, discipline, cabinet_id, day_of_week, start_time, end_time, notes } = await request.json();
-    if (!student_id || !teacher_id || day_of_week === undefined || day_of_week === null || !start_time || !end_time) {
+    const { student_id, group_name, teacher_id, discipline, cabinet_id, day_of_week, start_time, end_time, notes } = await request.json();
+    // Either an individual student OR a Solfegiu group — never neither.
+    if ((!student_id && !group_name) || !teacher_id || day_of_week === undefined || day_of_week === null || !start_time || !end_time) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     const { data, error } = await supabase
       .from('recurring_schedules')
       .insert({
-        student_id: Number(student_id),
+        student_id: student_id ? Number(student_id) : null,
+        group_name: group_name || null,
         teacher_id: Number(teacher_id),
         discipline: discipline ?? null,
         cabinet_id: cabinet_id ? Number(cabinet_id) : null,

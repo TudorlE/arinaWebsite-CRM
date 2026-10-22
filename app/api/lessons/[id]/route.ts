@@ -99,9 +99,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const { error: bulkErr } = await siblingQuery;
     if (bulkErr) return NextResponse.json({ error: bulkErr.message }, { status: 400 });
 
-    // Keep the rule template in sync so future multi-month generation uses the new values.
+    // Keep the rule template in sync so future multi-month generation uses the
+    // new values. A Solfegiu GROUP rule has no single student_id — cascading
+    // one occurrence's student onto the template would wrongly turn the whole
+    // group's schedule into a single-student one, so that field never
+    // cascades when the rule is group-based.
+    const { data: rule } = await supabase.from('recurring_schedules').select('group_name').eq('id', current.recurring_schedule_id).maybeSingle();
     const ruleUpdate: Record<string, unknown> = {};
-    if ('student_id' in update) ruleUpdate.student_id = update.student_id;
+    if ('student_id' in update && !rule?.group_name) ruleUpdate.student_id = update.student_id;
     if ('teacher_id' in update) ruleUpdate.teacher_id = update.teacher_id;
     if ('discipline' in update) ruleUpdate.discipline = update.discipline;
     if ('cabinet_id' in update) ruleUpdate.cabinet_id = update.cabinet_id;

@@ -7,6 +7,7 @@ import { timeSlotsForDay } from '@/lib/timeSlots';
 import type { StudentSubscription } from '@/lib/types';
 
 const ACTIONS: MarkAction[] = ['present', 'excused_absence', 'unexcused_absence', 'recovered', 'replacement', 'clear_replacement', 'cancelled'];
+const SOLFEGIU = 'Solfegiu și teoria muzicii';
 
 /**
  * POST /api/register/mark — one atomic call for a register button press.
@@ -71,19 +72,27 @@ export async function POST(request: NextRequest) {
         // weekday ladder (13:15 onward) — completely disconnected from that
         // student's actual fixed time in Program General/Privat, so every
         // such lesson showed 13:15 regardless of when it really happened.
-        // Prefer the student's real recurring_schedules slot for this exact
-        // discipline + day of week; only fall back to the generic ladder
-        // (now at least day-correct — weekday vs weekend) when there's none.
+        // Prefer the real recurring_schedules slot for this exact discipline +
+        // day of week; only fall back to the generic ladder (now at least
+        // day-correct — weekday vs weekend) when there's none. Solfegiu is
+        // taught by GROUP (mică/medie/mare) — those schedules have no
+        // student_id at all, so they're matched by the student's own
+        // subscription group instead.
         const [y, m, d] = date.split('-').map(Number);
         const dayOfWeek = new Date(y, m - 1, d).getDay();
-        const { data: recurringMatches } = await supabase
+        let recurringQuery = supabase
           .from('recurring_schedules')
           .select('start_time')
-          .eq('student_id', studentId)
           .eq('discipline', discipline as string)
           .eq('day_of_week', dayOfWeek)
-          .eq('active', true)
-          .order('start_time');
+          .eq('active', true);
+        if (discipline === SOLFEGIU) {
+          const myGroup = subs.find(x => x.instrument === SOLFEGIU)?.group;
+          recurringQuery = myGroup ? recurringQuery.eq('group_name', myGroup) : recurringQuery.eq('student_id', -1);
+        } else {
+          recurringQuery = recurringQuery.eq('student_id', studentId);
+        }
+        const { data: recurringMatches } = await recurringQuery.order('start_time');
 
         const usedTimes = new Set(lessons.filter(l => (l.discipline ?? null) === discipline).map(l => (l.time ?? '').slice(0, 5)));
         const scheduledTime = (recurringMatches ?? []).map(r => (r.start_time ?? '').slice(0, 5)).find(t => !usedTimes.has(t));

@@ -78,7 +78,7 @@ export function UpcomingBirthdaysCard() {
   const list = useBirthdays();
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-800/50">
         <div className="w-8 h-8 rounded-xl bg-pink-100 dark:bg-pink-900/40 flex items-center justify-center">
           <Cake className="w-4 h-4 text-pink-500" />
@@ -89,7 +89,7 @@ export function UpcomingBirthdaysCard() {
         </div>
       </div>
 
-      <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
+      <div className="flex-1 min-h-0 divide-y divide-slate-100 dark:divide-slate-800 overflow-y-auto">
         {list.length > 0 ? list.map(b => {
           const isToday = b.daysUntil === 0;
           const soon = b.daysUntil <= 7;
@@ -126,7 +126,7 @@ export function UpcomingBirthdaysCard() {
             </div>
           );
         }) : (
-          <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <div className="h-full flex flex-col items-center justify-center py-10 gap-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               <Cake className="w-6 h-6 text-slate-400" />
             </div>

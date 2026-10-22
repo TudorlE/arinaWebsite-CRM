@@ -44,7 +44,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   const { id } = await params;
   try {
     const body = await request.json();
-    const allowed = ['student_id', 'teacher_id', 'discipline', 'cabinet_id', 'day_of_week', 'start_time', 'end_time', 'notes', 'active'];
+    const allowed = ['student_id', 'group_name', 'teacher_id', 'discipline', 'cabinet_id', 'day_of_week', 'start_time', 'end_time', 'notes', 'active'];
     const update = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
 
     const { data, error } = await supabase.from('recurring_schedules').update(update).eq('id', id).select().single();
@@ -52,9 +52,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     // Cascade content changes to future, non-customized generated lessons.
     // Note: day_of_week changes only affect *future generation* (new lessons),
-    // they never move dates of lessons already materialized.
+    // they never move dates of lessons already materialized. A Solfegiu GROUP
+    // schedule has no single student_id (it's null) — individual lesson rows
+    // generated from it each keep their own real student_id, which must never
+    // get cascaded over with null (lessons.student_id is NOT NULL).
     const lessonUpdate: Record<string, unknown> = {};
-    if ('student_id' in update) lessonUpdate.student_id = update.student_id;
+    if ('student_id' in update && update.student_id != null) lessonUpdate.student_id = update.student_id;
     if ('teacher_id' in update) lessonUpdate.teacher_id = update.teacher_id;
     if ('discipline' in update) lessonUpdate.discipline = update.discipline;
     if ('cabinet_id' in update) lessonUpdate.cabinet_id = update.cabinet_id;
